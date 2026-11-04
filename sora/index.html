@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/sora/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <title>空を歩く、光を編む</title>
+    <script type="module" crossorigin src="/sora/assets/index-C9W4nDuF.js"></script>
+    <link rel="stylesheet" crossorigin href="/sora/assets/index-K8GxOr7v.css">
+  </head>
+  <body>
+
+    <!-- Nothing is shown until the first real frame exists.
+         The class is set here rather than from the module script so it applies
+         before the first paint: main.ts is a module and therefore deferred, so
+         by the time it could add a class the browser has already shown the page
+         once, which is the flash this exists to prevent. main.ts takes it off
+         again when the photograph has settled and the scene has actually been
+         drawn (see the boot gate there). -->
+    <script>document.documentElement.classList.add('is-booting');</script>
+    <div class="boot" aria-hidden="true"></div>
+
+    <!-- The canvas covers the whole page and sits behind everything, so the
+         picture and the cloud echo under it are drawn in one frame by the GPU
+         with nothing read back (core/compose.ts). `.stage` below reserves the
+         band, tells the compose pass where to put the picture — and, unlike in
+         the window app, takes the pointer: it is the water you press. -->
+    <div id="app" aria-hidden="true"></div>
+
+    <header class="title">
+      <h1 class="title__main">空を歩く、光を編む</h1>
+      <div class="title__rule" aria-hidden="true"></div>
+      <p class="title__sub">Walking the Sky, Weaving the Light</p>
+    </header>
+
+    <div class="stage"></div>
+
+    <!-- The only instruction the app gives, and it sits *outside* the picture.
+         It was over the water, which is the one place in this app where nothing
+         should be printed: the water is the artwork and it is also the control,
+         so a caption on it is a caption on both. Below the frame it reads as a
+         label for the thing above it, which is what it is. It fades on the
+         first press (style.css) and does not come back. -->
+    <p class="hint">水面にふれる</p>
+
+    <!-- Below the picture, in the darkness the canvas paints at the foot of the
+         page. The app has no console, so this is the only DOM under the
+         picture and it is static. -->
+    <section class="story">
+      <p>雨上がりのアスファルトに、小さな空が落ちていた。</p>
+      <p>踏めば消えてしまうとわかっていながら、彼女はそっと足を踏み入れる。水面に波紋が広がり、雲は形を崩し、砕けた光が足元を駆け抜けた。――やがて波が静まると、何事もなかったかのように再び空が映し出される。</p>
+      <p>何度踏みしめても、そこにある景色は変わらない。そのことを確かめるように、彼女はもう一歩、空の上を歩いていく。</p>
+    </section>
+
+  </body>
+</html>

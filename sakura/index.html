@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/sakura/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <title>終わりを知らない、あの夏の境界線</title>
+    <script type="module" crossorigin src="/sakura/assets/index-BU1x-_Qj.js"></script>
+    <link rel="stylesheet" crossorigin href="/sakura/assets/index-Bwlfzile.css">
+  </head>
+  <body>
+
+    <!-- Nothing is shown until the first real frame exists.
+         The class is set here rather than from the module script so it applies
+         before the first paint: main.ts is a module and therefore deferred, so
+         by the time it could add a class the browser has already shown the page
+         once, which is the flash this exists to prevent. main.ts takes it off
+         again when the plate has loaded and the scene has actually been drawn
+         (see the boot gate there). -->
+    <script>document.documentElement.classList.add('is-booting');</script>
+    <div class="boot" aria-hidden="true"></div>
+
+    <!-- The canvas covers the whole page and sits behind everything, so the
+         picture and the silhouette under it are drawn in one frame by the GPU
+         with nothing read back (core/compose.ts). `.stage` below is now only a
+         spacer: it reserves the band and tells the compose pass where to put
+         the picture. -->
+    <div id="app" aria-hidden="true"></div>
+
+    <header class="title">
+      <h1 class="title__main">終わりを知らない、あの夏の境界線</h1>
+      <div class="title__rule" aria-hidden="true"></div>
+      <p class="title__sub">The Boundary of That Endless Summer</p>
+    </header>
+
+    <div class="stage"></div>
+
+    <footer class="console"></footer>
+
+    <!-- Below the console, in the darkness the canvas paints at the foot of the
+         page. Static copy, so it lives here rather than being built in JS like
+         the console is. -->
+    <section class="story">
+      <p>彼女は旧教室の窓辺で、空間に浮かぶインターフェースに静かに触れた。</p>
+      <p>時間座標を「正午」で固定すると、窓の外に展開された仮想の夏が、鮮烈な光を放ち始めた。失われた現実の代わりに、高度な演算が描き出すのは、透き通るような青空と圧倒的な入道雲だった。</p>
+      <p>ここは時を止めた記憶の保管庫。永遠に続く風景を見つめながら、彼女はその眩い光の中で、ただ静かに息をしていた。</p>
+    </section>
+
+  </body>
+</html>
