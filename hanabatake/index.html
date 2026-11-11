@@ -2008,7 +2008,7 @@ function drawScene(sim, frac, dt) {
   drawSmoke(ctx, e);
   T('bg'); drawBrook(ctx, e); T('brook');
   if (V.queue.length > 80) V.queue.sort((a, b) => (a.body ? 1 : 0) - (b.body ? 1 : 0) || (a.pos.ds < LOD_DS ? 0 : 1) - (b.pos.ds < LOD_DS ? 0 : 1) || b.pos.ds - a.pos.ds); // 使い回せる奥の株を先に（画面の大半を一気に埋める）、そのあと手前から
-  serviceQueue(V.queue.length > 60 ? (V.fast > 0.5 ? 14 : 9) : 4); T('queue');
+  serviceQueue(V.time < 2.5 ? 45 : V.queue.length > 60 ? (V.fast > 0.5 ? 14 : 9) : 4); T('queue'); // 開いた直後は、絵を埋めるのを最優先に
   drawPlants(ctx, sim, dt, e); T('plants');
   drawLight(ctx, e);
   drawBugs(ctx, sim, dt, e); T('bugs');
