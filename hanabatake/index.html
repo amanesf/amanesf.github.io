@@ -243,7 +243,7 @@ const G = {
   // 花の形：鈴／杯／蝶形花／すみれ形／ラッパ形／ふつうの放射状
   form(g) { return g.tf > 0.75 ? 'thistle' : g.cup > 0.84 ? 'bell' : g.cup > 0.66 ? 'tulip' : g.sym > 0.85 ? 'pea' : g.sym > 0.67 ? 'pansy' : g.tube > 0.68 ? 'funnel' : 'open'; }, // 薊：針のような筒花が、刷毛のように集まる
   // キク科らしさ：細い花びらが多く、まんなかに小花の集まった大きな花芯がある（0..1）
-  comp(g) { return G.form(g) === 'open' ? smooth(0.4, 0.8, g.pn) * Math.max(smooth(0.25, 0.7, g.dc) * (1 - 0.6 * g.dbl), smooth(0.5, 0.8, g.dbl)) : 0; }, // 花芯のある頭花（野菊）も、舌状花だけの頭花（蒲公英）も
+  comp(g) { return G.form(g) === 'open' ? smooth(0.22, 0.38, g.pn) * Math.max(smooth(0.45, 0.6, g.dc) * (1 - 0.6 * g.dbl), smooth(0.5, 0.8, g.dbl)) : 0; }, // 花びら 8 枚以上で、大きな花芯（または舌状花だけ）の頭花 // 花芯のある頭花（野菊）も、舌状花だけの頭花（蒲公英）も
   // 色素のコスト：青はつくるのに手間がかかる。白と黄は安い
   pig(g) { return G.white(g) ? 0.8 : 1 + 0.24 * gaussHue(g.h, 228, 36) * g.s + 0.08 * gaussHue(g.h, 280, 28) * g.s - 0.1 * gaussHue(g.h, 52, 30); },
   flat(g) { const f = G.form(g); return f === 'open' || f === 'pansy' || f === 'funnel'; },
@@ -351,25 +351,24 @@ function colorName(g) {
 const BIN_NAME = ['赤', '橙', '黄', '黄緑', '緑', '青緑', '水色', '青', '青紫', '紫', '赤紫', '桃', '白'];
 const binColor = (b) => rgb(binRgb(b));
 
+// 花の形の名前。図鑑に書くつもりで、身近な花のたとえで呼ぶ
 function formName(g) {
-  const f = G.form(g), a = G.arr(g), r = G.rings(g);
+  const f = G.form(g), a = G.arr(g), r = G.rings(g), hd = G.head(g);
   const tail = { spray: '', umbel: '手まり', lace: 'レース咲き', globe: '玉咲き', spike: '穂咲き', plume: '房咲き' }[a];
-  if (f === 'bell') return a === 'spike' || a === 'plume' ? '鈴なりの穂' : '鈴' + (tail || '咲き');
-  if (f === 'tulip') return a === 'spike' || a === 'plume' ? '杯の穂' : '杯' + (tail || '咲き');
-  if (f === 'thistle') return '薊形' + (tail ? 'の' + tail : '');
-  if (f === 'pea') return '蝶形花' + (tail ? 'の' + tail : '');
-  if (f === 'pansy') return 'すみれ形' + (tail ? 'の' + tail : '');
-  if (f === 'funnel') return 'ラッパ' + (tail || '咲き');
+  if (f === 'thistle') return 'あざみ形';
+  if (f === 'bell') return a === 'spike' || a === 'plume' ? '鈴なりの釣鐘' : '釣鐘形';
+  if (f === 'tulip') return a === 'spike' || a === 'plume' ? '杯の穂' : '杯形';
+  if (f === 'pea') return a === 'globe' || a === 'umbel' ? 'つめくさ形' : a === 'spike' || a === 'plume' ? '藤の房' : '豆の花';
+  if (f === 'pansy') return 'すみれ形';
+  if (f === 'funnel') return 'ひるがお形';
+  if (hd === 'tongue') return 'たんぽぽ形';
   let s = '';
-  if (r === 3) s = '万重'; else if (r === 2) s = '八重';
+  if (hd === 'ray') s = g.nt > 0.55 ? 'コスモス' : '野菊';
+  if (r === 3 && !hd) s = '万重'; else if (r === 2 && !hd) s = '八重';
   if (g.spot > 0.62) s += '斑入り';
   else if (g.blot > 0.7) s += '蛇の目';
-  if (g.fr > 0.6) s += 'フリル';
-  else if (g.pt > 0.66 && g.pw < 0.45) s += '星';
-  else if (g.nt > 0.62) s += 'ハート弁';
-  else if (g.pw > 0.7 && r === 1) s += '丸弁';
-  else if (G.petals(g) >= 12 && r === 1) s += '菊';
-  if (tail) s += tail; else if (g.sz > 0.72) s += '大輪'; else if (g.sz < 0.2) s += '小花';
+  if (!hd) { if (g.fr > 0.6) s += 'フリル'; else if (g.pt > 0.66 && g.pw < 0.45) s += '星'; else if (g.nt > 0.62) s += 'ハート弁'; else if (g.pw > 0.7 && r === 1) s += '丸弁'; }
+  if (tail) s += (s ? 'の' : '') + tail; else if (hd) s += '形'; else if (g.sz > 0.72) s += '大輪'; else if (g.sz < 0.2) s += '小花';
   return s || '一重';
 }
 const varietyName = (g) => `${colorName(g)}の${formName(g)}`;
@@ -385,7 +384,7 @@ const FOUNDERS = [
   { key: 'nogiku', name: '野菊', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.55, lw: 0.4, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.62, sd: 0.3, ne: 0.35, cs: 0.2, ls: 0.3, lc: 0.85, lh: 0.45, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.75, ar2: 0.3, pt: 0.2, h: 48, s: 0.1, l: 0.95, pn: 0.6, pw: 0.22, sz: 0.3, fn: 0.3, arr: 0.2, ht: 0.42, bt: 0.72, tf: 0.1} },
   { key: 'shirotsume', name: '白詰草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.6, lw: 0.6, bd: 0.85, dr: 0.3, cd: 0.55, pe: 0.72, sd: 0.2, ne: 0.6, cs: 0.2, ls: 0.9, lc: 0.1, lh: 0.4, lr: 0.1, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.92, pt: 0.15, h: 80, s: 0.08, l: 0.96, pn: 0.2, pw: 0.6, sz: 0.08, fn: 0.95, arr: 0.55, ht: 0.12, bt: 0.3, tf: 0.1} },
   { key: 'ninjin', name: '野良人参', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.4, bd: 0.55, dr: 0.45, cd: 0.4, pe: 0.25, sd: 0.2, ne: 0.3, cs: 0.2, ls: 0.1, lc: 0.92, lh: 0.4, lr: 0.55, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.72, pt: 0.15, h: 70, s: 0.08, l: 0.96, pn: 0.1, pw: 0.6, sz: 0.3, fn: 0.6, arr: 0.55, ht: 0.58, bt: 0.6, tf: 0.1} },
-  { key: 'kosumosu', name: '秋桜', g: { h2: 0.5, pic: 0.1, vein: 0.45, fr: 0.25, nt: 0.62, dbl: 0.12, cup: 0.2, br: 0.85, lw: 0.2, bd: 0.7, dr: 0.5, cd: 0.3, pe: 0.2, sd: 0.3, ne: 0.4, cs: 0.2, ls: 0.1, lc: 0.9, lh: 0.4, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.36, ar2: 0.3, pt: 0.05, h: 330, s: 0.5, l: 0.76, pn: 0.4, pw: 0.3, sz: 0.62, fn: 0.45, arr: 0.25, ht: 0.7, bt: 0.72, tf: 0.1} },
+  { key: 'kosumosu', name: '秋桜', g: { h2: 0.5, pic: 0.1, vein: 0.45, fr: 0.25, nt: 0.62, dbl: 0.12, cup: 0.2, br: 0.85, lw: 0.2, bd: 0.7, dr: 0.5, cd: 0.3, pe: 0.2, sd: 0.3, ne: 0.4, cs: 0.2, ls: 0.1, lc: 0.9, lh: 0.4, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.56, ar2: 0.3, pt: 0.05, h: 330, s: 0.5, l: 0.76, pn: 0.4, pw: 0.3, sz: 0.62, fn: 0.45, arr: 0.25, ht: 0.7, bt: 0.72, tf: 0.1} },
   { key: 'sakurasou', name: '桜草', g: { h2: 0.5, pic: 0.5, vein: 0.2, fr: 0.05, nt: 0.75, dbl: 0.12, cup: 0.2, br: 0.3, lw: 0.75, bd: 0.5, dr: 0.2, cd: 0.62, pe: 0.7, sd: 0.4, ne: 0.4, cs: 0.1, ls: 0.55, lc: 0.5, lh: 0.25, lr: 0.08, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.2, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.1, h: 338, s: 0.55, l: 0.8, pn: 0.14, pw: 0.62, sz: 0.3, fn: 0.45, arr: 0.55, ht: 0.25, bt: 0.1, tf: 0.1} },
   { key: 'renge', name: '蓮華草', g: { h2: 0.5, pic: 0.55, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.5, bd: 0.5, dr: 0.25, cd: 0.5, pe: 0.3, sd: 0.35, ne: 0.6, cs: 0.2, ls: 0.1, lc: 0.86, lh: 0.35, lr: 0.3, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.92, pt: 0.15, h: 318, s: 0.6, l: 0.68, pn: 0.2, pw: 0.7, sz: 0.14, fn: 0.62, arr: 0.55, ht: 0.2, bt: 0.2, tf: 0.1} },
   { key: 'hirugao', name: '昼顔', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.5, bd: 0.6, dr: 0.5, cd: 0.3, pe: 0.55, sd: 0.5, ne: 0.55, cs: 0.05, ls: 0.7, lc: 0.2, lh: 0.4, lr: 0.8, sym: 0.2, tube: 0.86, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.1, h: 332, s: 0.4, l: 0.86, pn: 0.34, pw: 0.7, sz: 0.46, fn: 0.3, arr: 0.2, ht: 0.5, bt: 0.56, tf: 0.1} },
@@ -1415,7 +1414,8 @@ function plantGeom(p, gr = 1) {
   if (gr < 0.2) for (const sg of [-1, 1]) leaves.push({ x: 0, y: -H * 0.9, ang: sg * 1.15, len: 5.5 * (1 - gr * 2.5) + 2, coty: 1 }); // 双葉
   for (let i = 0; i < nb; i++) {
     const u = nb === 1 ? 0.5 : i / (nb - 1), sc = clamp((gr * 1.75 - rnd(160 + i) * 0.6 - 0.1) * 2.4); // 1 枚ずつ増える
-    if (sc > 0.06) leaves.push({ x: (rnd(100 + i) - 0.5) * 3, y: 0, ang: (lerp(-fan, fan, u) + (rnd(110 + i) - 0.5) * 0.3) * (0.55 + 0.45 * sc), len: leafLen * (0.7 + 0.5 * rnd(120 + i)) * sc, k: 1, basal: 1 });
+    const side = u < 0.5 ? -1 : 1, spread = Math.pow(Math.abs(u - 0.5) * 2, 0.7); // 根もとの葉は、まっすぐ立たずに横へ寝て、先が地面へ垂れる
+    if (sc > 0.06) leaves.push({ x: (rnd(100 + i) - 0.5) * 4, y: 0, ang: side * (0.25 + spread * (fan + 0.25) + (rnd(110 + i) - 0.5) * 0.35) * (0.55 + 0.45 * sc), len: leafLen * (0.6 + 0.6 * rnd(120 + i)) * sc, k: 1, basal: 1, arch: side * (0.4 + 0.5 * rnd(125 + i)) });
   }
   const ns = Math.round((0.6 + g.ht * 3.5 + g.br * 1.5) * lerp(0.25, 1.9, g.lr)), topT = arr === 'spike' || arr === 'plume' ? 0.4 : arr === 'spray' && F > 1 ? 0.6 : 0.8;
   const opp = g.lr > 0.72; // 対生（向かい合わせ）
@@ -1443,7 +1443,7 @@ function leafTone(g, look, j) {
   return [h, s, l];
 }
 // 葉 1 枚ぶんの輪郭（複葉なら小葉ごと）。根もと (0,0) から先 (bend,-len) へ
-function leafShapes(g, len, seed) {
+function leafShapes(g, len, seed, arch = 0) {
   const lt = G.leaf(g), cut = G.cut(g), out = [];
   const blade = (bx, by, ang, L, W, e, q, bend, notch) => {
     const n = 14, left = [], right = [], ca = Math.cos(ang), sa = Math.sin(ang);
@@ -1462,7 +1462,7 @@ function leafShapes(g, len, seed) {
     out.push({ pts: left.concat(right), rib: [[bx, by], tip], L, W });
   };
   const wid = len * lerp(0.08, 0.34, g.lw);
-  const bend = (hash1(seed * 13 + 5) - 0.5) * len * 0.45;
+  const bend = (hash1(seed * 13 + 5) - 0.5) * len * 0.45 + arch * len * 0.55; // 葉先が外へ垂れる
   let petiole = 0;
   if (lt === 'linear') {
     if (cut === 'lobe') { // 羽のように裂けた葉
@@ -1491,7 +1491,7 @@ function paintBody(p, geo, k, look, extra = 0) {
     const j = hash2(p.id, 200 + i); let [h, s, li] = leafTone(g, look, j * 0.6); h += (hash2(p.id, 240 + i) - 0.5) * 20;
     x.save(); x.translate(l.x, l.y); x.rotate(l.ang);
     if (l.coty) { x.fillStyle = hsl(96, 0.5, 0.56, 0.88); x.beginPath(); x.ellipse(0, -l.len * 0.5, l.len * 0.34, l.len * 0.52, 0, 0, TAU); x.fill(); x.strokeStyle = hsl(110, 0.45, 0.38, 0.4); x.lineWidth = 0.6; x.stroke(); x.restore(); return; }
-    const shp = leafShapes(g, l.len, p.id * 31 + i);
+    const shp = leafShapes(g, l.len, p.id * 31 + i, l.arch || 0);
     if (shp.petiole || shp.rachis) { const e = shp.rachis ? shp.rachis[1] : [0, -shp.petiole]; x.strokeStyle = hsl(h + 4, s, li - 0.08, 0.75); x.lineWidth = 0.9; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(e[0] * 0.3, e[1] * 0.6, e[0], e[1]); x.stroke(); }
     shp.forEach((b, bi) => {
       const hh = h + (bi % 2 ? 5 : -3), [a0, a1] = b.rib, sd = p.id * 31 + i * 7 + bi, fine = b.L * k > 13;
@@ -2306,66 +2306,55 @@ function brookAt(z, dry = 0) {
   const zc = clamp(z, 0, 1), p = proj(SITE.brookX(zc), zc), fy = depthY(z);
   return { x: p.sx + (z > 1 ? (z - 1) * V.W * 0.6 : 0), y: V.yH + (V.H * 1.05 - V.yH) * fy, hw: V.W * 1.06 * SITE.brookW(zc) * (1 - 0.4 * dry), ds: p.ds };
 }
-function brookPoly(wmul, dry, off = 0) { const Lp = [], Rp = []; for (let i = 0; i <= 56; i++) { const c = brookAt(0.004 + (i / 56) * 1.05, dry); Lp.push([c.x - c.hw * wmul + c.hw * off, c.y]); Rp.push([c.x + c.hw * wmul + c.hw * off, c.y]); } Rp.reverse(); return Lp.concat(Rp); }
+// 岸は定規の線にしない：左右べつべつに、ゆるい出入りをつける（えぐれた岸、張り出した草）
+function bankJit(z, side) { return 1 + 0.22 * (vnoise(z * 34 + side * 7, 611 + side) - 0.5) * 2 + 0.1 * (vnoise(z * 90 + side * 3, 613 + side) - 0.5) * 2; }
+function brookPoly(wmul, dry, off = 0, jit = 1) { const Lp = [], Rp = []; for (let i = 0; i <= 80; i++) { const z = 0.004 + (i / 80) * 1.05, c = brookAt(z, dry), jl = 1 + (bankJit(z, -1) - 1) * jit, jr = 1 + (bankJit(z, 1) - 1) * jit; Lp.push([c.x - c.hw * wmul * jl + c.hw * off, c.y]); Rp.push([c.x + c.hw * wmul * jr + c.hw * off, c.y]); } Rp.reverse(); return Lp.concat(Rp); }
 function drawBrook(ctx, e) {
-  const [top] = skyCols(e), time = V.time, frozen = smooth(0.55, 0.9, e.snow), dry = e.dry, W = V.W, H = V.H;
-  const sky = mix(top, [255, 255, 255], 0.45), shal = mix(mix(sky, [206, 232, 226], 0.5), [244, 248, 252], frozen), mid = mix(mix(sky, [120, 190, 216], 0.5), [226, 236, 246], frozen), deep = mix(mix(sky, [70, 142, 184], 0.6), [196, 214, 234], frozen);
+  const [top, bot] = skyCols(e), time = V.time, frozen = smooth(0.55, 0.9, e.snow), dry = e.dry, H = V.H;
   const landN = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), e.snow);
-  const fadeG = (c1, c2, a) => { const g = ctx.createLinearGradient(0, V.yH, 0, H); g.addColorStop(0, rgb(c1, 0)); g.addColorStop(0.05, rgb(c1, a * 0.75)); g.addColorStop(0.3, rgb(mix(c1, c2, 0.45), a)); g.addColorStop(1, rgb(c2, a)); return g; };
+  // 水の色は空の映りこみ：遠くは空の地平の色、手前は空の高いところの色（水面に空が斜めに映る）
+  const skyFar = mix(bot, [255, 255, 255], 0.25), skyNear = mix(mix(top, [70, 140, 200], 0.3), [235, 242, 250], frozen);
+  const greenRef = mix(landN, [40, 90, 70], 0.35); // 岸の草の緑が映る
+  const vg = (cFar, cNear, a) => { const g = ctx.createLinearGradient(0, V.yH, 0, H); g.addColorStop(0, rgb(cFar, 0)); g.addColorStop(0.04, rgb(cFar, a * 0.8)); g.addColorStop(0.25, rgb(mix(cFar, cNear, 0.4), a)); g.addColorStop(1, rgb(cNear, a)); return g; };
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  // 岸：ぬれた土と、草の影
-  const bank = mix(mix([150, 124, 92], landN, 0.45), [236, 240, 246], e.snow * 0.8);
-  tracePts(ctx, brookPoly(1.42, dry)); ctx.fillStyle = fadeG(mix(landN, [40, 84, 60], 0.3), mix(landN, [40, 84, 60], 0.36), 0.35); ctx.fill();
-  tracePts(ctx, brookPoly(1.2, dry)); ctx.fillStyle = fadeG(bank, mix(bank, [80, 64, 50], 0.25), 0.6); ctx.fill();
-  
-  // 水：岸は浅く明るく、まんなかは深い色
-  tracePts(ctx, brookPoly(1, dry)); ctx.fillStyle = fadeG(mix(shal, [255, 255, 255], 0.3), mix(shal, mid, 0.35), 0.94); ctx.fill();
-  ctx.save(); ctx.clip();
-  for (let i = 0; i < 30; i++) { // 浅瀬に透ける小石
-    const z = 0.55 + hash2(i, 970) * 0.47, c = brookAt(z, dry), sd = i % 2 ? 1 : -1; ctx.fillStyle = rgb(i % 3 ? [176, 150, 120] : [150, 150, 150], 0.3 * (1 - frozen)); ctx.beginPath(); ctx.ellipse(c.x + sd * c.hw * (0.7 + 0.25 * hash2(i, 971)), c.y, (3 + 4 * hash2(i, 972)) * c.ds * 0.6, (1.4 + 1.6 * hash2(i, 973)) * c.ds * 0.6, 0, 0, TAU); ctx.fill();
-  }
-  // 岸の影が水に落ちる（日の反対側の岸ぞい）、まんなかは少し深く
-  for (let i = 0; i < 40; i++) { const z = 0.02 + (i / 40) * 1.02, c = brookAt(z, dry); blob(ctx, c.x - c.hw * 0.7, c.y, c.hw * 0.55 + 1, 2 + c.hw * 0.35, mix(deep, [40, 70, 80], 0.3), 0.32, i + 400, 0.3); blob(ctx, c.x - c.hw * 0.1, c.y, c.hw * 0.4 + 1, 2 + c.hw * 0.3, mid, 0.3, i + 440, 0.3); }
-  // 空の明るさが、流れを横切る帯になって映る
-  for (let i = 0; i < 16; i++) { const z = ((hash2(i, 975) + time * 0.006 * (1 - frozen)) % 1) * 1.02, c = brookAt(z, dry), w = c.hw * (0.6 + 0.8 * hash2(i, 976)); ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.3 * hash2(i, 977)})`; ctx.beginPath(); ctx.ellipse(c.x + c.hw * (hash2(i, 978) - 0.3) * 0.8, c.y, w, Math.max(0.6, c.ds * (1 + 1.6 * hash2(i, 979))), 0, 0, TAU); ctx.fill(); }
-  // 映りこみ：空の白と、岸に咲く花の色
-  for (let i = 0; i < 7; i++) { const z = 0.2 + ((hash2(i, 974) + time * 0.004) % 1) * 0.8, c = brookAt(z, dry); blob(ctx, c.x + c.hw * 0.3, c.y, c.hw * 0.7, 3 + c.hw * 0.4, [255, 255, 255], 0.5 * (1 - e.night * 0.5), i + 80, 0.25); }
+  // 岸：ぬれて濃くなった土のふち（草にかくれて、ところどころだけ見える）
+  const mud = mix(mix([128, 104, 80], landN, 0.35), [236, 240, 246], e.snow * 0.8);
+  tracePts(ctx, brookPoly(1.16, dry, 0, 1.3)); ctx.fillStyle = vg(mix(landN, [60, 90, 70], 0.3), mix(mud, [60, 50, 40], 0.2), 0.5); ctx.fill();
+  // 水
+  const water = brookPoly(1, dry);
+  tracePts(ctx, water); ctx.fillStyle = vg(skyFar, skyNear, 0.95); ctx.fill();
+  ctx.save(); tracePts(ctx, water); ctx.clip();
+  // 岸ぞいは、草の影と緑の映りこみで暗い（両岸とも。日の反対側がとくに）
+  for (let i = 0; i < 70; i++) { const z = 0.02 + (i / 70) * 1.02, c = brookAt(z, dry), jl = bankJit(z, -1), jr = bankJit(z, 1); blob(ctx, c.x - c.hw * jl * 0.92, c.y, c.hw * 0.42 + 1, 2 + c.hw * 0.4, greenRef, 0.42 * (1 - frozen), i + 400, 0.35); blob(ctx, c.x + c.hw * jr * 0.95, c.y, c.hw * 0.25 + 1, 1.5 + c.hw * 0.3, greenRef, 0.26 * (1 - frozen), i + 470, 0.35); }
+  // まんなか、流れの深いところ
+  for (let i = 0; i < 40; i++) { const z = 0.02 + (i / 40) * 1.02, c = brookAt(z, dry); blob(ctx, c.x - c.hw * 0.12, c.y, c.hw * 0.4 + 1, 2 + c.hw * 0.3, mix(skyNear, [36, 92, 140], 0.35), 0.3 * (1 - frozen), i + 440, 0.3); }
+  // 浅瀬に透ける小石
+  for (let i = 0; i < 36; i++) { const z = 0.5 + hash2(i, 970) * 0.52, c = brookAt(z, dry), sd = i % 2 ? 1 : -1; ctx.fillStyle = rgb(i % 3 ? [170, 146, 116] : [146, 146, 140], 0.28 * (1 - frozen)); ctx.beginPath(); ctx.ellipse(c.x + sd * c.hw * (0.55 + 0.35 * hash2(i, 971)), c.y, (3 + 4 * hash2(i, 972)) * c.ds * 0.6, (1.4 + 1.6 * hash2(i, 973)) * c.ds * 0.6, 0, 0, TAU); ctx.fill(); }
+  // 岸に咲く花が、ゆらいで映る
   let nr = 0;
   for (const v of V.order) {
-    if (nr > 46) break; const p = v.p; if (p.state !== 1 || v.alpha < 0.5 || p.z < 0.25) continue;
-    const dxw = (p.x - SITE.brookX(p.z)) * persA(p.z); if (Math.abs(dxw) > 0.34) continue; nr++;
+    if (nr > 50) break; const p = v.p; if (p.state !== 1 || v.alpha < 0.5 || p.z < 0.2) continue;
+    const dxw = (p.x - SITE.brookX(p.z)) * persA(p.z); if (Math.abs(dxw) > 0.32) continue; nr++;
     const c = brookAt(p.z, dry), wob = Math.sin(time * 1.6 + p.id) * c.hw * 0.06;
-    blob(ctx, c.x + Math.sign(dxw) * c.hw * (0.7 - Math.abs(dxw) * 0.6) + wob, c.y + 4 * c.ds, c.hw * 0.2 + 1.5, (4 + 8 * p.g.ht) * c.ds, toneRgb(p.g), 0.2 * (1 - frozen), p.id, 0.3);
+    blob(ctx, c.x + Math.sign(dxw) * c.hw * (0.72 - Math.abs(dxw) * 0.6) + wob, c.y + 5 * c.ds, c.hw * 0.18 + 1.5, (4 + 8 * p.g.ht) * c.ds, toneRgb(p.g), 0.28 * (1 - frozen), p.id, 0.3);
   }
-  // 流れ：光のすじが手前へ流れてくる
+  // 空の明るさが、流れを横切る帯になってゆれる（水面のさざ波）
   const flow = (1 - frozen) * (1 - 0.5 * dry);
-  for (let i = 0; i < 70; i++) {
-    const sp = 0.03 + 0.03 * hash2(i, 951), z0 = ((hash2(i, 950) + time * sp * flow) % 1) * 1.04, off = (hash2(i, 952) - 0.5) * 1.6, len = 0.012 + 0.03 * hash2(i, 953);
-    const a = brookAt(z0, dry), m = brookAt(z0 + len * 0.5, dry), b = brookAt(z0 + len, dry), wob = Math.sin(time * 1.7 + i) * 0.1;
-    const fade = Math.min(1, z0 * 10) * (1 - smooth(0.96, 1.04, z0)) * (0.5 + 0.5 * Math.sin(time * 2.2 + i * 1.7));
-    ctx.strokeStyle = i % 4 === 0 ? rgb(deep, 0.4 * fade) : `rgba(255,255,255,${(0.34 + 0.4 * (1 - frozen)) * fade})`;
-    ctx.lineWidth = Math.max(0.5, (0.5 + 1.1 * hash2(i, 954)) * a.ds);
-    ctx.beginPath(); ctx.moveTo(a.x + a.hw * (off + wob), a.y); ctx.quadraticCurveTo(m.x + m.hw * (off - wob), m.y, b.x + b.hw * (off + wob * 0.5), b.y); ctx.stroke();
-  }
-  // 瀬：段になって白く泡だつところ
-  if (flow > 0.2) for (let r = 0; r < 4; r++) {
-    const z = [0.52, 0.74, 0.88, 0.97][r], c = brookAt(z, dry);
-    for (let i = 0; i < 9; i++) { const u = (i + 0.5) / 9 - 0.5 + (hash2(i, 980 + r) - 0.5) * 0.08, ph = (time * (0.8 + 0.5 * hash2(i, 981 + r)) + i * 0.3) % 1, px = c.x + c.hw * u * 1.7, py = c.y + (ph * 9 - 2) * c.ds + Math.sin(u * 9 + r) * 3 * c.ds; ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph) * flow})`; ctx.lineWidth = (0.8 + 0.6 * ph) * c.ds; ctx.beginPath(); ctx.moveTo(px - c.hw * 0.12, py); ctx.quadraticCurveTo(px, py - 0.8 * c.ds, px + c.hw * 0.12, py + 0.4 * c.ds); ctx.stroke(); }
-  }
+  for (let i = 0; i < 46; i++) { const z = ((hash2(i, 975) + time * 0.012 * flow * (0.6 + 0.8 * hash2(i, 974))) % 1) * 1.03, c = brookAt(z, dry), w = c.hw * (0.25 + 0.6 * hash2(i, 976)), cx = c.x + c.hw * (hash2(i, 978) - 0.45) * 1.2, a = (0.35 + 0.4 * hash2(i, 977)) * Math.min(1, z * 8) * (0.6 + 0.4 * Math.sin(time * 2 + i));
+    ctx.strokeStyle = `rgba(255,255,255,${a * (0.5 + 0.5 * (1 - frozen))})`; ctx.lineWidth = Math.max(0.6, c.ds * (0.8 + 1.4 * hash2(i, 979))); ctx.beginPath(); ctx.moveTo(cx - w, c.y); ctx.quadraticCurveTo(cx, c.y - c.ds * 1.5, cx + w, c.y + c.ds * 0.6); ctx.stroke(); }
+  // 瀬：石のまわりで白くほどける
+  if (flow > 0.2) for (let r = 0; r < 3; r++) { const z = [0.62, 0.82, 0.95][r], c = brookAt(z, dry); for (let i = 0; i < 7; i++) { const u = (i + 0.5) / 7 - 0.5, ph = (time * (0.7 + 0.5 * hash2(i, 981 + r)) + i * 0.3) % 1, px = c.x + c.hw * u * 1.6, py = c.y + (ph * 8 - 2) * c.ds; ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - ph) * flow})`; ctx.lineWidth = (0.8 + 0.6 * ph) * c.ds; ctx.beginPath(); ctx.moveTo(px - c.hw * 0.1, py); ctx.quadraticCurveTo(px, py - 0.8 * c.ds, px + c.hw * 0.1, py + 0.4 * c.ds); ctx.stroke(); } }
   ctx.restore();
-  // 岸に落ちる水ぎわの線
-  tracePts(ctx, brookPoly(1, dry)); ctx.strokeStyle = fadeG(mix(deep, [30, 60, 80], 0.2), mix(deep, [30, 60, 80], 0.2), 0.16); ctx.lineWidth = 0.7; ctx.stroke();
-  // 石と、そのまわりの波紋
-  for (let i = 0; i < 11; i++) {
-    const z = 0.34 + hash2(i, 955) * 0.66, sd = i % 2 ? 1 : -1, c = brookAt(z, dry), sx = c.x + sd * c.hw * (0.5 + 0.45 * hash2(i, 956)), r = (4 + 5 * hash2(i, 957)) * c.ds;
-    if (flow > 0.2) { const ph = (time * 0.7 + i * 0.37) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.5, r * (1.2 + ph * 1.6), r * (0.4 + ph * 0.5), 0, 0, Math.PI); ctx.stroke(); }
-    const sc = mix([176, 166, 156], [248, 249, 252], e.snow * 0.8);
-    wash(ctx, noisyBlob(sx, c.y, r, r * 0.58, i + 660, 0.2, 14), sc, 0.98, { edge: 0.6, ew: 0.6, light: [250, 246, 236], lightA: 0.6, shade: [70, 70, 90], shadeA: 0.4 });
+  // 石と波紋
+  for (let i = 0; i < 9; i++) {
+    const z = 0.4 + hash2(i, 955) * 0.6, sd = i % 2 ? 1 : -1, c = brookAt(z, dry), sx = c.x + sd * c.hw * (0.55 + 0.4 * hash2(i, 956)), r = (4 + 5 * hash2(i, 957)) * c.ds;
+    if (flow > 0.2) { const ph = (time * 0.7 + i * 0.37) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.45, r * (1.2 + ph * 1.6), r * (0.35 + ph * 0.45), 0, 0, Math.PI); ctx.stroke(); }
+    wash(ctx, noisyBlob(sx, c.y, r, r * 0.55, i + 660, 0.22, 14), mix([168, 160, 150], [248, 249, 252], e.snow * 0.8), 0.95, { edge: 0.5, ew: 0.5, light: [250, 246, 236], lightA: 0.6, shade: [70, 72, 90], shadeA: 0.42 });
   }
   if (e.night < 0.7 && frozen < 0.6) for (let i = 0; i < 18; i++) { // きらめき
     const tw = Math.sin(time * (2.4 + hash2(i, 961) * 3) + i * 2.1); if (tw < 0.55) continue;
-    const z = 0.12 + hash2(i + ((time * 0.5 + hash2(i, 962)) | 0) * 17, 960) * 0.88, c = brookAt(z, dry), sx = c.x + (hash2(i, 963) - 0.5) * c.hw * 1.3, s = (1.4 + 2.2 * (tw - 0.55) * 2.2) * c.ds;
-    ctx.strokeStyle = `rgba(255,255,255,${0.95 * (tw - 0.55) * 2.2})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - s, c.y); ctx.lineTo(sx + s, c.y); ctx.moveTo(sx, c.y - s * 0.8); ctx.lineTo(sx, c.y + s * 0.8); ctx.stroke();
+    const z = 0.12 + hash2(i + ((time * 0.5 + hash2(i, 962)) | 0) * 17, 960) * 0.88, c = brookAt(z, dry), sx = c.x + (hash2(i, 963) - 0.5) * c.hw * 1.2, s2 = (1.4 + 2.2 * (tw - 0.55) * 2.2) * c.ds;
+    ctx.strokeStyle = `rgba(255,255,255,${0.95 * (tw - 0.55) * 2.2})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - s2, c.y); ctx.lineTo(sx + s2, c.y); ctx.moveTo(sx, c.y - s2 * 0.8); ctx.lineTo(sx, c.y + s2 * 0.8); ctx.stroke();
   }
 }
 function hslRgb(h, s, l) { const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + hueWrap(h) / 30) % 12; return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))); }; return [f(0), f(8), f(4)]; }
