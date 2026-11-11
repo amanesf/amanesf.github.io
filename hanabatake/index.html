@@ -332,7 +332,7 @@ function pigment(g, dl = 0) {
   const H = hueLerp(a[1], b[1], u), smax = lerp(a[2], b[2], u), lb = lerp(a[3], b[3], u);
   if (G.white(g)) return { H, S: clamp(g.s * 0.5, 0.03, 0.16), L: 0.955, white: true };
   const v = clamp((g.l - 0.4) / 0.55); // 0=いちばん濃く、1=いちばん淡く
-  return { H, S: smax * lerp(0.42, 1.08, clamp(g.s * 1.15)) * lerp(1, 0.7, v * v), L: clamp(lerp(lb - 0.2, 0.93, Math.pow(v, 0.8)) + dl, 0.44, 0.95), white: false };
+  return { H, S: smax * lerp(0.5, 1.12, clamp(g.s * 1.15)) * lerp(1, 0.78, v * v), L: clamp(lerp(lb - 0.2, 0.9, Math.pow(v, 1.15)) + dl, 0.44, 0.94), white: false }; // 淡い色に寄りすぎないよう、明るさは中ほどに集める
 }
 const toneCss = (g, a = 1) => { const t = pigment(g); return hsl(t.H, t.S, t.L, a); };
 const toneRgb = (g) => { const t = pigment(g), a = t.S * Math.min(t.L, 1 - t.L), f = (n) => { const k = (n + hueWrap(t.H) / 30) % 12; return 255 * (t.L - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))); }; return [f(0), f(8), f(4)]; };
@@ -633,7 +633,6 @@ class Sim {
       let ok = this.plants.length < MAX_PLANTS && !SITE.inBrook(s.x, s.z) && !r.chance(Math.min(0.6, (share[s.line] || 0) * 1.2));
       const swx = toWX(s.x, s.z), swz = toWZ(s.z);
       if (ok) this.near(swx, swz, spacingAt(s.z), () => (ok = false));
-      if (ok) { let kin = 0; this.near(swx, swz, spacingAt(s.z) * 2.2, (q) => { if (q.line === s.line) kin++; }); if (kin && r.chance(Math.min(0.85, 0.3 * kin))) ok = false; } // 同じ種類の株のそばでは、その種類だけにつく虫や病気で育ちにくい
       if (ok) {
         const p = this.mkPlant(s); this.plants.push(p); this.gridAdd(p);
       } else if (s.age < 2 && r.chance(0.45) && keep.length < 1500) { s.age++; keep.push(s); }
@@ -825,7 +824,7 @@ class Sim {
       const tickets = 1 + (r.chance(clamp((0.5 - g.sd) * 2)) ? 1 : 0);
       for (let k = 0; k < tickets; k++) {
         const cg = mutate(cross(g, dad.g, r), r);
-        const far = r.chance(0.1 + 0.3 * G.comp(g)), /* キク科は綿毛や冠毛で、遠くまで飛ぶ */ d = far ? r.range(0.3, 1.6) : Math.abs(r.gauss()) * sig * 1.5 + r.range(0, 0.12), a = r.range(0, TAU), drift = sig * r.range(0.3, 1.6); // たまに遠くまで運ばれる種がある
+        const far = r.chance(0.04 + 0.22 * G.comp(g)), /* キク科は綿毛や冠毛で、遠くまで飛ぶ */ d = far ? r.range(0.3, 1.6) : Math.abs(r.gauss()) * sig * 1.2 + r.range(0, 0.08), a = r.range(0, TAU), drift = sig * r.range(0.3, 1.6); // たまに遠くまで運ばれる種がある
         const [x0, z0] = fromW(p.wx + Math.cos(a) * d + w.wx * drift, p.wz + Math.sin(a) * d + w.wz * drift);
         let [x, z] = [x0, z0]; if (z > 0.995) z = 1.99 - z; if (x < 0.01) x = 0.02 - x; if (x > 0.99) x = 1.98 - x; // 手前と左右の端では、こぼれた種がはね返る（端がやせないように）
         if (x < 0.01 || x > 0.99 || z < 0.02 || z > 0.995) continue;
@@ -2158,16 +2157,18 @@ function paintBG(x, e) {
   { const pts = []; for (let i = 0; i <= 50; i++) pts.push([(i / 50) * W, hillY(i / 50)]); pts.push([W + 4, yH + 40], [-4, yH + 40]);
     wash(x, pts, hillC, 1, { smooth: false, edge: 0.4, ew: 0.8, light: mix(hillC, [255, 252, 214], 0.5), lightA: 0.4, edgeCol: mix(hillC, [40, 80, 70], 0.5) }); }
   const tc = mix(ramp(TREE_C, t), hex('#eef2f5'), snowy * 0.55);
-  for (let i = 0; i < 46; i++) {
-    const u = hash2(i, 930); if (u > 0.72 && u < 0.99) continue;
-    const bx = u * W, by = hillY(u) + 3, r = W * (0.012 + 0.02 * hash2(i, 931)), kind = hash2(i, 933);
-    const c = mix(tc, [44, 76, 70], 0.15 + 0.3 * hash2(i, 932)), tall = kind < 0.22, broad = kind > 0.72, rx = r * (tall ? 0.5 : broad ? 1.5 : 1), ry = r * (tall ? 1.7 : broad ? 0.72 : 0.95), cy = by - ry * (broad ? 1.25 : 0.95);
-    x.strokeStyle = rgb([104, 84, 74], 0.75); x.lineWidth = 1; x.beginPath(); x.moveTo(bx, by + 1); x.lineTo(bx + (hash2(i, 934) - 0.5) * 1.5, by - ry * 0.7); x.stroke();
-    if (broad) wash(x, noisyBlob(bx + rx * 0.5, cy + ry * 0.3, rx * 0.6, ry * 0.8, i + 340, 0.3, 20, 6, 0.3), mix(c, [30, 56, 60], 0.25), 0.85, { edge: 0.3, ew: 0.5 });
-    wash(x, noisyBlob(bx, cy, rx, ry, i + 300, tall ? 0.16 : 0.3, 24, tall ? 0 : broad ? 9 : 6, tall ? 0 : 0.34), c, 0.9, { edge: 0.45, ew: 0.6, light: [255, 252, 206], lightA: 0.45, shade: [26, 48, 70], shadeA: 0.36, blooms: 1, bloomA: 0.12, seed: i });
-    for (let k = 0; k < 7; k++) dab(x, bx + (hash2(i * 7 + k, 934) - 0.3) * rx * 1.4, cy + (hash2(i * 7 + k, 935) - 0.3) * ry * 1.3, 1.4, 0.7, hash2(i * 7 + k, 936) * 3, mix(c, [24, 46, 56], 0.55), 0.5);
-    blob(x, bx + rx * 0.3, by + 1.5, rx * 1.3, 1.6, [50, 80, 80], 0.3, i, 0.2);
+  // 遠くの林：小さな樹冠をたくさん重ねて、でこぼこした木立の線をつくる（奥の列はかすむ）
+  for (let row = 0; row < 2; row++) for (let i = 0; i < 90; i++) {
+    const u = hash2(i, 931 + row * 7); if (u > 0.72 && u < 0.97) continue; // 大きな木のうしろは空ける
+    if (vnoise(u * 3 + 2, 935) < 0.16) continue; // 林の切れ目
+    const bx = u * W, by = hillY(u) + 4 - row * 4, r = W * (0.014 + 0.014 * hash2(i, 932 + row)) * (row ? 0.8 : 1), cy = by - r * (1.4 + 1.1 * hash2(i, 933 + row));
+    const c = mix(mix(tc, row ? hazeC : [30, 60, 62], row ? 0.45 : 0.18 + 0.2 * hash2(i, 934)), [255, 252, 214], 0.05);
+    blob(x, bx, (cy + by) / 2, r * 1.05, (by - cy) / 2 + r * 0.6, c, 0.9, i * 3 + row, 0.22);
+    blob(x, bx - r * 0.3, cy - r * 0.15, r * 0.55, r * 0.4, mix(c, [255, 252, 214], 0.35), 0.6, i * 3 + row + 1, 0.3); // 日のあたる頭
+    if (!row) blob(x, bx + r * 0.35, cy + r * 0.5, r * 0.5, r * 0.45, mix(c, [20, 40, 56], 0.4), 0.45, i * 3 + 2, 0.3);
   }
+  for (let i = 0; i < 4; i++) { const u = [0.12, 0.31, 0.55, 0.66][i], bx = u * W, by = hillY(u) + 3, r = W * 0.009, hh = W * (0.045 + 0.02 * hash2(i, 942)); // ポプラ
+    blob(x, bx, by - hh * 0.5, r, hh * 0.52, mix(tc, [30, 58, 60], 0.25), 0.92, i + 950, 0.18); blob(x, bx - r * 0.3, by - hh * 0.62, r * 0.5, hh * 0.3, mix(tc, [255, 252, 214], 0.3), 0.55, i + 960, 0.2); }
   // 赤い屋根の小さな家
   { const hx = W * 0.2, hy = hillY(0.2) + 3, s = W * 0.034, wall = mix([252, 246, 230], [150, 150, 190], e.night * 0.5), roof = mix([208, 104, 84], [246, 246, 250], snowy * 0.8);
     V.house = [hx + s * 0.6, hy - s * 2.1];
@@ -2209,7 +2210,7 @@ function treeSkeleton() {
   if (V.treeSk) return V.treeSk;
   const W = V.W, H = V.H, base = proj(1.0, 0.03), th = H * 0.21, segs = [], tips = [];
   const grow = (x0, y0, ang, len, w, d, id) => {
-    const bend = (hash2(id, 71) - 0.5) * 0.35, x1 = x0 + Math.sin(ang) * len, y1 = y0 - Math.cos(ang) * len, w1 = w * (d === 0 ? 0.6 : 0.62);
+    const bend = (hash2(id, 71) - 0.5) * 0.7, x1 = x0 + Math.sin(ang) * len, y1 = y0 - Math.cos(ang) * len, w1 = w * (d === 0 ? 0.6 : 0.62);
     segs.push({ x0, y0, x1, y1, cx: (x0 + x1) / 2 + Math.cos(ang) * len * bend, cy: (y0 + y1) / 2 + Math.sin(ang) * len * bend, w, w1, d });
     if (d >= 5 || len < 6) { tips.push({ x: x1, y: y1, d }); return; }
     if (d >= 2) tips.push({ x: x1, y: y1, d });
@@ -2237,9 +2238,12 @@ function paintTree(e) {
   };
   // 葉のかたまり：縁取りはせず、にじみの濃淡とバックランで量感を出す
   const clump = (tp, i, tone, sc) => {
-    const r = W * (0.05 + 0.035 * hash2(i, 83)) * sc * (tp.d >= 4 ? 0.9 : 1.15), cx = tp.x + (hash2(i, 84) - 0.5) * r * 0.8 - (tone > 0 ? r * 0.3 : 0), cy = tp.y - r * 0.2 + (tone < 0 ? r * 0.35 : tone > 0 ? -r * 0.3 : 0), col = clumpCol(i, tone);
-    if (tone >= 0) blob(x, cx, cy, r * 1.2, r * 0.9, col, 0.16 * leafA, i * 7 + 2, 0.3); // まわりへにじみ出た色
-    wash(x, noisyBlob(cx, cy, r, r * 0.76, i * 7 + tone * 3 + 9, 0.26, 44, 9, 0.2), col, (tone > 0 ? 0.46 : 0.72) * leafA, { edge: tone > 0 ? 0.08 : 0.16, ew: 0.5, blooms: tone > 0 ? 0 : 3, bloomA: 0.13, seed: i, light: tone === 0 ? [255, 252, 210] : null, lightA: 0.34, shade: tone <= 0 ? [24, 52, 84] : null, shadeA: 0.34, edgeCol: mix(col, [20, 50, 70], 0.5) });
+    const r = W * (0.036 + 0.026 * hash2(i, 83)) * sc * (tp.d >= 4 ? 0.95 : 1.15), cx = tp.x + (hash2(i, 84) - 0.5) * r * 0.8 - (tone > 0 ? r * 0.3 : 0), cy = tp.y - r * 0.2 + (tone < 0 ? r * 0.35 : tone > 0 ? -r * 0.3 : 0), col = clumpCol(i, tone);
+    // 輪郭は描かない。ぬれた紙にのせた色が、縁でやわらかく消える
+    blob(x, cx, cy, r, r * 0.78, col, (tone > 0 ? 0.42 : tone < 0 ? 0.4 : 0.62) * leafA, i * 7 + tone * 3 + 9, 0.32);
+    if (tone < 0) for (let j = 0; j < 40; j++) { const a = hash2(i * 40 + j, 140) * TAU, rr = r * (0.3 + 0.8 * hash2(i * 40 + j, 141)); dab(x, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.76, 1.6 + 2 * hash2(i * 40 + j, 142), 0.9, a * 0.4 + 1.2, mix(col, [20, 46, 70], 0.2), 0.55 * leafA); } // 奥の葉にも葉の形を
+    blob(x, cx - r * 0.1, cy - r * 0.08, r * 0.7, r * 0.52, col, (tone > 0 ? 0.3 : 0.4) * leafA, i * 7 + tone * 3 + 19, 0.35);
+    if (tone >= 0) blob(x, cx + r * 0.3, cy + r * 0.3, r * 0.55, r * 0.35, mix(col, [24, 50, 76], 0.45), 0.3 * leafA, i * 7 + 29, 0.3); // 下がわの影
     return [cx, cy, r];
   };
   // 枝は根もとから先へ細くなる面で描く
@@ -2262,10 +2266,12 @@ function paintTree(e) {
   if (leafA > 0.02) {
     const cl = []; tips.forEach((tp, i) => { if (i % 2 === 1 || tp.d >= 4) cl.push(clump(tp, i + 100, 0, 1)); });
     tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); });
-    cl.forEach(([cx, cy, r], i) => { // 葉の一筆
-      for (let j = 0; j < 46; j++) {
-        const a = hash2(i * 40 + j, 96) * TAU, rr = r * (0.5 + 0.72 * hash2(i * 40 + j, 97)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.74, lit = Math.sin(a) < -0.2 && Math.cos(a) < 0.3;
-        dab(x, dx, dy, 1.8 + 2.2 * hash2(i * 40 + j, 98), 0.9 + 0.8 * hash2(i * 40 + j, 99), a + 1.2, clumpCol(i + j, lit ? 1 : -1), (lit ? 0.75 : 0.55) * leafA);
+    // 葉の一筆：かたまりの縁から外へこぼれる葉で、輪郭をくずす。光の側は明るく小さく、影の側は濃く
+    cl.forEach(([cx, cy, r], i) => {
+      for (let j = 0; j < 110; j++) {
+        const q = i * 70 + j, a = hash2(q, 96) * TAU, out = hash2(q, 97), rr = r * (0.55 + 0.62 * Math.pow(out, 0.7)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.76, lit = Math.sin(a) < -0.1 && Math.cos(a) < 0.5;
+        const len = (1.6 + 2.6 * hash2(q, 98)) * (out > 0.8 ? 0.85 : 1), tilt = a * 0.4 + 1.2 + (hash2(q, 99) - 0.5) * 1.6;
+        dab(x, dx, dy, len, len * 0.45, tilt, clumpCol(i + j, lit ? 1 : out < 0.5 ? -1 : 0), (lit ? 0.8 : 0.62) * leafA);
       }
     });
     if (blossom > 0.3) for (let i = 0; i < 120; i++) { const tp = tips[(hash2(i, 85) * tips.length) | 0]; x.fillStyle = `rgba(255,${232 + ((hash2(i, 86) * 20) | 0)},240,${0.85 * blossom})`; x.beginPath(); x.arc(tp.x + (hash2(i, 87) - 0.5) * W * 0.13, tp.y + (hash2(i, 88) - 0.5) * W * 0.1, 0.9 + hash2(i, 89) * 1.4, 0, TAU); x.fill(); }
