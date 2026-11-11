@@ -1463,6 +1463,7 @@ function drawPlants(ctx, sim, dt, e) {
     ctx.drawImage(v.body.c, -v.body.ox, -v.body.oy);
     if (!lod && V.tuftSpr && v.gr > 0.2) { const c = V.tuftSpr[v.p.id % 2 ? 3 : 0], ks = (pos.ds * V.unit * 0.3) / V.tuftPx; ctx.setTransform(dpr * ks, 0, 0, dpr * ks, dpr * pos.sx, dpr * (pos.sy + 2)); ctx.globalAlpha = v.alpha * 0.9; ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); ctx.globalAlpha = v.alpha; } // 根もとを草でなじませる
     // 花
+    if (v.bumpT > 0) v.bumpT -= dt * 1.4;
     const heads = v.geo.heads, n = heads.length, fl = v.fl;
     const blooming = p.state === 1, nO = p.nOpen || 0;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1472,7 +1473,8 @@ function drawPlants(ctx, sim, dt, e) {
       const tgt = blooming && r < nO ? clamp(p.open * (nO + 1.5) - r * 0.9) : 0;
       const o = (v.open[i] += (tgt - v.open[i]) * Math.min(1, dt * (tgt > v.open[i] ? 2.4 : 1.4)));
       const bob = sway * 9 * s * (1 + 0.5 * Math.sin(time * 2.3 + h.ph));
-      const X = pos.sx + s * (h.x + shear * h.y * ys) + bob, Y = pos.sy + s * h.y * ys;
+      const dipv = v.bumpT > 0 && v.bumpI === i ? Math.sin(v.bumpT * Math.PI) * Math.exp(-(1 - v.bumpT) * 2) * 5 * pos.ds : 0;
+      const X = pos.sx + s * (h.x + shear * h.y * ys) + bob, Y = pos.sy + s * h.y * ys + dipv;
       v.hp[i] = X; v.hp[i + n] = Y;
       if (lod) continue;
       if (o > 0.02 && fl) {
@@ -1499,7 +1501,7 @@ function headPos(v, onlyOpen) {
   const n = v.geo.heads.length; if (!n || v.hp.length < 2 * n) return null;
   let i = (Math.random() * n) | 0;
   if (onlyOpen) for (let k = 0; k < n; k++) { const j = (i + k) % n; if (v.open[j] > 0.4) { i = j; break; } }
-  return [v.hp[i], v.hp[i + n]];
+  return [v.hp[i], v.hp[i + n], i];
 }
 function pickPlant(px, py) {
   let best = null, bd = 1e9;
@@ -1538,13 +1540,13 @@ function drawBugs(ctx, sim, dt, e) {
     if (b.sit <= 0 && (b.tv !== tv || (tv && Math.random() < dt * 0.5) || (!tv && Math.random() < dt * 0.4))) {
       b.tv = tv;
       const hp = tv && tv.alpha > 0.3 ? headPos(tv, true) : null;
-      if (hp) { b.tx = hp[0]; b.ty = hp[1] - 2; b.tds = tv.pos.ds; b.arrive = 0; }
+      if (hp) { b.tx = hp[0]; b.ty = hp[1] - 2; b.tds = tv.pos.ds; b.arrive = 0; b.hi = hp[2]; }
       else { b.tx = !a ? (b.x < V.W / 2 ? -60 : V.W + 60) : Math.random() * V.W; b.ty = V.yH + V.H * (0.05 + 0.5 * Math.random()); b.tds = 0.5 + 0.4 * Math.random(); b.arrive = 1; b.tv = tv; }
     }
     const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
     const spd = (sp === 'butterfly' ? 70 : sp === 'fly' ? 150 : sp === 'moth' ? 120 : 110) * V.unit;
     if (b.sit <= 0) {
-      if (dist < 5 && !b.arrive && b.tv) { b.sit = sp === 'fly' ? 0.5 + Math.random() : 0.9 + Math.random() * 1.3; b.arrive = 1; if (Math.random() < 0.5) spawn('pollen', b.x, b.y, { n: 2 }); }
+      if (dist < 5 && !b.arrive && b.tv) { b.sit = sp === 'fly' ? 0.5 + Math.random() : 0.9 + Math.random() * 1.3; b.arrive = 1; b.tv.bumpI = b.hi; b.tv.bumpT = 1; if (Math.random() < 0.5) spawn('pollen', b.x, b.y, { n: 2 }); } // とまると花がたわむ
       const ax = (dx / (dist + 1)) * spd, ay = (dy / (dist + 1)) * spd, k = sp === 'butterfly' ? 1.6 : 3.2;
       b.vx += (ax - b.vx) * Math.min(1, dt * k); b.vy += (ay - b.vy) * Math.min(1, dt * k);
       const wob = sp === 'butterfly' ? 46 : sp === 'fly' ? 8 : 18;
