@@ -238,10 +238,14 @@ const ZONE_NAME = { hill: '丘の上', shade: '木かげ', brook: '小川のそ�
 const GENES = ['s', 'l', 'h2', 'pic', 'vein', 'pn', 'pw', 'pt', 'fr', 'nt', 'dbl', 'cup', 'sz', 'fn', 'arr', 'ht', 'br', 'lw', 'bt', 'bd', 'dr', 'cd', 'pe', 'sd', 'ne', 'cs', 'ls', 'lc', 'lh', 'lr', 'sym', 'tube', 'blot', 'spot', 'ring', 'h3', 'dc', 'ar2'];
 
 const G = {
-  petals(g) { const f = G.form(g); const n = Math.round(3 + Math.pow(g.pn, 1.25) * 13); return f === 'open' ? n : f === 'pansy' ? 5 : f === 'funnel' ? clamp(Math.round(4 + g.pn * 3), 4, 6) : clamp(Math.round(3 + g.pn * 4), 3, 6); },
+  petals(g) { const f = G.form(g); const n = Math.round(3 + Math.pow(g.pn, 1.25) * 21); return f === 'open' ? n : f === 'pansy' ? 5 : f === 'funnel' ? clamp(Math.round(4 + g.pn * 3), 4, 6) : clamp(Math.round(3 + g.pn * 4), 3, 6); },
   rings(g) { return G.form(g) !== 'open' ? 1 : g.dbl < 0.52 ? 1 : g.dbl < 0.8 ? 2 : 3; },
   // 花の形：鈴／杯／蝶形花／すみれ形／ラッパ形／ふつうの放射状
   form(g) { return g.cup > 0.84 ? 'bell' : g.cup > 0.66 ? 'tulip' : g.sym > 0.85 ? 'pea' : g.sym > 0.67 ? 'pansy' : g.tube > 0.68 ? 'funnel' : 'open'; },
+  // キク科らしさ：細い花びらが多く、まんなかに小花の集まった大きな花芯がある（0..1）
+  comp(g) { return G.form(g) === 'open' ? smooth(0.4, 0.8, g.pn) * smooth(0.25, 0.7, g.dc) * (1 - 0.6 * g.dbl) : 0; },
+  // 色素のコスト：青はつくるのに手間がかかる。白と黄は安い
+  pig(g) { return G.white(g) ? 0.84 : 1 + 0.24 * gaussHue(g.h, 228, 36) * g.s + 0.08 * gaussHue(g.h, 280, 28) * g.s - 0.1 * gaussHue(g.h, 52, 30); },
   flat(g) { const f = G.form(g); return f === 'open' || f === 'pansy' || f === 'funnel'; },
   // 咲き方：散らし咲き／手まり／レース（小花が平たく）／玉／穂／房（細かい花の円錐）
   arr(g) { return g.arr < 0.4 ? 'spray' : g.arr < 0.7 ? (g.ar2 > 0.82 ? 'globe' : g.ar2 > 0.62 ? 'lace' : 'umbel') : g.ar2 > 0.64 ? 'plume' : 'spike'; },
@@ -257,11 +261,11 @@ const G = {
   hueBin(g) { return G.white(g) ? 12 : Math.floor(hueWrap(g.h + 15) / 30) % 12; },
   // 目立ちやすさ（虫から見た大きさ）と、咲かせるのにかかる栄養
   showy(g) { return (0.25 + (1.1 * G.radius(g)) / 18) * Math.pow(G.count(g), 0.4) * (1 + 0.55 * g.dbl) * (1 + 0.12 * g.fr) * (1 + 0.12 * Math.max(g.blot, g.spot, g.ring)) * (1 - 0.55 * gaussHue(g.h, 125, 40) * clamp(g.s * 1.6)); }, // 花の大きさ × 花数。葉と同じ緑の花は目立たない。小花をいくら集めても、大輪 1 つぶんにしかならない
-  cost(g) { const r = (G.radius(g) - 2.6) / 15.4; return G.count(g) * (0.045 + r * r) * (1 + 0.55 * g.dbl) * (1 + 0.8 * g.ne) * (1 + 0.1 * (g.blot + g.spot + g.ring)); },
+  cost(g) { const r = (G.radius(g) - 2.6) / 15.4; return G.count(g) * (0.045 + r * r) * (1 + 0.55 * g.dbl) * (1 + 0.8 * g.ne) * (1 + 0.1 * (g.blot + g.spot + g.ring)) * G.pig(g); },
 };
 
 // 形や咲き方は遺伝子から決まるので、株ごとに 1 回だけ計算して覚えておく
-for (const k of ['petals', 'rings', 'form', 'flat', 'arr', 'count', 'radius', 'height', 'showy', 'cost']) { const f = G[k], key = '_' + k; G[k] = (g) => (g[key] !== undefined ? g[key] : (g[key] = f(g))); }
+for (const k of ['petals', 'rings', 'form', 'flat', 'arr', 'count', 'radius', 'height', 'showy', 'cost', 'comp', 'pig']) { const f = G[k], key = '_' + k; G[k] = (g) => (g[key] !== undefined ? g[key] : (g[key] = f(g))); }
 // 遺伝子だけを写して、一部を書きかえた別の花をつくる（覚えた値は持ちこさない）
 function gWith(g, o) { const c = { h: g.h }; for (const k of GENES) c[k] = g[k]; return Object.assign(c, o); }
 
@@ -307,9 +311,9 @@ function cross(a, b, rng) {
 // [色相, 塗る色相, 鮮やかさの上限, 基準の明るさ]
 const PIGMENT = [
   [0, 356, 0.66, 0.68],   // ローズ〜コーラル（真っ赤にはしない）
-  [30, 24, 0.74, 0.7],    // オレンジ
-  [60, 50, 0.78, 0.76],   // 山吹〜レモン
-  [90, 70, 0.4, 0.84],    // 黄緑は、クリームがかった淡い色に
+  [30, 26, 0.78, 0.7],    // オレンジ
+  [60, 53, 0.86, 0.72],   // 山吹〜レモン
+  [90, 66, 0.46, 0.84],   // 黄緑は、クリームがかった淡い色に
   [120, 96, 0.26, 0.86],  // 緑の花は、白緑
   [150, 150, 0.26, 0.84],
   [180, 186, 0.4, 0.78],  // 水色
@@ -368,21 +372,31 @@ function formName(g) {
 const varietyName = (g) => `${colorName(g)}の${formName(g)}`;
 
 // 最初の花畑に生える 6 つの野の花
-// 最初の花畑に生える 13 の野の花
+// 最初の花畑に生える 23 の野の花（黄 5・白 3・桃 5・赤橙 2・紫青 8。現実の野原に近い色の配分）
 const FOUNDERS = [
-  { key: 'nogiku', name: '野菊', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.55, lw: 0.4, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.62, sd: 0.3, ne: 0.35, cs: 0.2, ls: 0.3, lc: 0.85, lh: 0.45, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.7, ar2: 0.3, pt: 0.2, h: 48, s: 0.1, l: 0.95, pn: 0.72, pw: 0.22, sz: 0.3, fn: 0.3, arr: 0.2, ht: 0.42, bt: 0.72 } },
-  { key: 'sakurasou', name: '桜草', g: { h2: 0.5, pic: 0.5, vein: 0.2, fr: 0.05, nt: 0.75, dbl: 0.12, cup: 0.2, br: 0.3, lw: 0.75, bd: 0.5, dr: 0.2, cd: 0.62, pe: 0.7, sd: 0.4, ne: 0.4, cs: 0.1, ls: 0.55, lc: 0.5, lh: 0.25, lr: 0.08, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.2, h3: 0.1, dc: 0.4, ar2: 0.3, pt: 0.1, h: 338, s: 0.55, l: 0.8, pn: 0.26, pw: 0.62, sz: 0.3, fn: 0.45, arr: 0.55, ht: 0.25, bt: 0.1 } },
-  { key: 'wasure', name: '忘れな草', g: { h2: 0.5, pic: 0.6, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.55, bd: 0.6, dr: 0.15, cd: 0.45, pe: 0.3, sd: 0.15, ne: 0.3, cs: 0.05, ls: 0.3, lc: 0.1, lh: 0.6, lr: 0.75, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.3, pt: 0.05, h: 212, s: 0.6, l: 0.72, pn: 0.22, pw: 0.7, sz: 0.14, fn: 0.6, arr: 0.3, ht: 0.22, bt: 0.22 } },
-  { key: 'kinpouge', name: '金鳳花', g: { h2: 0.5, pic: 0.1, vein: 0.3, fr: 0.05, nt: 0.2, dbl: 0.12, cup: 0.5, br: 0.6, lw: 0.5, bd: 0.5, dr: 0.45, cd: 0.4, pe: 0.4, sd: 0.3, ne: 0.3, cs: 0.3, ls: 0.92, lc: 0.7, lh: 0.4, lr: 0.4, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.3, pt: 0.05, h: 52, s: 0.82, l: 0.62, pn: 0.24, pw: 0.74, sz: 0.28, fn: 0.35, arr: 0.15, ht: 0.48, bt: 0.36 } },
-  { key: 'sumire', name: '菫', g: { h2: 0.5, pic: 0.1, vein: 0.5, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.6, bd: 0.5, dr: 0.3, cd: 0.6, pe: 0.66, sd: 0.4, ne: 0.5, cs: 0.2, ls: 0.74, lc: 0.6, lh: 0.5, lr: 0.12, sym: 0.76, tube: 0.2, blot: 0.7, spot: 0.1, ring: 0.1, h3: 0.74, dc: 0.4, ar2: 0.3, pt: 0.2, h: 268, s: 0.55, l: 0.58, pn: 0.2, pw: 0.6, sz: 0.26, fn: 0.3, arr: 0.15, ht: 0.14, bt: 0.16 } },
-  { key: 'hinageshi', name: '雛罌粟', g: { h2: 0.5, pic: 0.1, vein: 0.4, fr: 0.45, nt: 0.1, dbl: 0.12, cup: 0.4, br: 0.4, lw: 0.3, bd: 0.4, dr: 0.6, cd: 0.25, pe: 0.2, sd: 0.1, ne: 0.25, cs: 0.85, ls: 0.1, lc: 0.9, lh: 0.72, lr: 0.5, sym: 0.2, tube: 0.2, blot: 0.78, spot: 0.1, ring: 0.1, h3: 0.72, dc: 0.4, ar2: 0.3, pt: 0, h: 6, s: 0.72, l: 0.6, pn: 0.14, pw: 0.85, sz: 0.5, fn: 0.15, arr: 0.1, ht: 0.6, bt: 0.52 } },
-  { key: 'renge', name: '蓮華草', g: { h2: 0.5, pic: 0.55, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.5, bd: 0.5, dr: 0.25, cd: 0.5, pe: 0.3, sd: 0.35, ne: 0.6, cs: 0.2, ls: 0.1, lc: 0.86, lh: 0.35, lr: 0.3, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.4, pt: 0.15, h: 318, s: 0.6, l: 0.68, pn: 0.2, pw: 0.7, sz: 0.22, fn: 0.45, arr: 0.55, ht: 0.2, bt: 0.2 } },
-  { key: 'tsurigane', name: '釣鐘草', g: { h2: 0.5, pic: 0.1, vein: 0.5, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.92, br: 0.3, lw: 0.4, bd: 0.5, dr: 0.3, cd: 0.55, pe: 0.6, sd: 0.35, ne: 0.5, cs: 0.2, ls: 0.32, lc: 0.6, lh: 0.5, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.3, pt: 0.4, h: 238, s: 0.56, l: 0.64, pn: 0.5, pw: 0.5, sz: 0.34, fn: 0.55, arr: 0.84, ht: 0.62, bt: 0.5 } },
-  { key: 'hirugao', name: '昼顔', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.5, bd: 0.6, dr: 0.5, cd: 0.3, pe: 0.55, sd: 0.5, ne: 0.55, cs: 0.05, ls: 0.7, lc: 0.2, lh: 0.4, lr: 0.8, sym: 0.2, tube: 0.86, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.3, pt: 0.1, h: 332, s: 0.4, l: 0.86, pn: 0.34, pw: 0.7, sz: 0.46, fn: 0.3, arr: 0.2, ht: 0.5, bt: 0.56 } },
-  { key: 'hananegi', name: '花葱', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.1, lw: 0.2, bd: 0.4, dr: 0.55, cd: 0.5, pe: 0.7, sd: 0.3, ne: 0.45, cs: 0.2, ls: 0.05, lc: 0.1, lh: 0.62, lr: 0.05, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.92, pt: 0.6, h: 284, s: 0.5, l: 0.66, pn: 0.26, pw: 0.36, sz: 0.4, fn: 0.6, arr: 0.55, ht: 0.66, bt: 0.4 } },
-  { key: 'ninjin', name: '野良人参', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.4, bd: 0.55, dr: 0.45, cd: 0.4, pe: 0.25, sd: 0.2, ne: 0.3, cs: 0.2, ls: 0.1, lc: 0.92, lh: 0.4, lr: 0.55, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.72, pt: 0.15, h: 70, s: 0.08, l: 0.96, pn: 0.22, pw: 0.6, sz: 0.3, fn: 0.6, arr: 0.55, ht: 0.58, bt: 0.6 } },
-  { key: 'shimotsuke', name: '下野草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.4, lw: 0.6, bd: 0.5, dr: 0.2, cd: 0.5, pe: 0.66, sd: 0.25, ne: 0.35, cs: 0.2, ls: 0.9, lc: 0.8, lh: 0.35, lr: 0.5, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.1, dc: 0.4, ar2: 0.84, pt: 0.15, h: 342, s: 0.5, l: 0.78, pn: 0.24, pw: 0.6, sz: 0.3, fn: 0.6, arr: 0.84, ht: 0.56, bt: 0.46 } },
-  { key: 'oniyuri', name: '小鬼百合', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.2, lw: 0.3, bd: 0.4, dr: 0.4, cd: 0.45, pe: 0.72, sd: 0.6, ne: 0.5, cs: 0.7, ls: 0.3, lc: 0.1, lh: 0.5, lr: 0.9, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.86, ring: 0.1, h3: 0.05, dc: 0.2, ar2: 0.3, pt: 0.78, h: 24, s: 0.8, l: 0.6, pn: 0.3, pw: 0.3, sz: 0.62, fn: 0.3, arr: 0.25, ht: 0.74, bt: 0.6 } },
+  { key: 'tanpopo', name: '蒲公英', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.5, dbl: 0.7, cup: 0.2, br: 0.2, lw: 0.5, bd: 0.7, dr: 0.5, cd: 0.6, pe: 0.72, sd: 0.1, ne: 0.5, cs: 0.1, ls: 0.3, lc: 0.92, lh: 0.35, lr: 0.04, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.15, ar2: 0.3, pt: 0.05, h: 52, s: 0.85, l: 0.62, pn: 0.95, pw: 0.16, sz: 0.36, fn: 0.2, arr: 0.15, ht: 0.14, bt: 0.1 } },
+  { key: 'kinpouge', name: '金鳳花', g: { h2: 0.5, pic: 0.1, vein: 0.3, fr: 0.05, nt: 0.2, dbl: 0.12, cup: 0.5, br: 0.6, lw: 0.5, bd: 0.5, dr: 0.45, cd: 0.4, pe: 0.4, sd: 0.3, ne: 0.3, cs: 0.3, ls: 0.92, lc: 0.7, lh: 0.4, lr: 0.4, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.05, h: 54, s: 0.82, l: 0.62, pn: 0.14, pw: 0.74, sz: 0.28, fn: 0.35, arr: 0.15, ht: 0.48, bt: 0.36 } },
+  { key: 'nanohana', name: '菜の花', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.5, bd: 0.6, dr: 0.3, cd: 0.55, pe: 0.2, sd: 0.2, ne: 0.5, cs: 0.2, ls: 0.45, lc: 0.75, lh: 0.55, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.15, h: 58, s: 0.85, l: 0.66, pn: 0.07, pw: 0.6, sz: 0.2, fn: 0.7, arr: 0.84, ht: 0.62, bt: 0.13 } },
+  { key: 'akinokirin', name: '秋の麒麟草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.3, lw: 0.35, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.72, sd: 0.15, ne: 0.45, cs: 0.2, ls: 0.3, lc: 0.6, lh: 0.45, lr: 0.85, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.6, ar2: 0.82, pt: 0.15, h: 50, s: 0.8, l: 0.64, pn: 0.45, pw: 0.25, sz: 0.2, fn: 0.7, arr: 0.86, ht: 0.64, bt: 0.8 } },
+  { key: 'matsuyoi', name: '待宵草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.45, dbl: 0.12, cup: 0.2, br: 0.3, lw: 0.5, bd: 0.75, dr: 0.55, cd: 0.4, pe: 0.3, sd: 0.2, ne: 0.75, cs: 0.2, ls: 0.3, lc: 0.5, lh: 0.5, lr: 0.8, sym: 0.2, tube: 0.5, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.2, pt: 0.15, h: 57, s: 0.55, l: 0.8, pn: 0.07, pw: 0.82, sz: 0.52, fn: 0.3, arr: 0.82, ht: 0.62, bt: 0.58 } },
+  { key: 'nogiku', name: '野菊', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.55, lw: 0.4, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.62, sd: 0.3, ne: 0.35, cs: 0.2, ls: 0.3, lc: 0.85, lh: 0.45, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.75, ar2: 0.3, pt: 0.2, h: 48, s: 0.1, l: 0.95, pn: 0.6, pw: 0.22, sz: 0.3, fn: 0.3, arr: 0.2, ht: 0.42, bt: 0.72 } },
+  { key: 'shirotsume', name: '白詰草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.6, lw: 0.6, bd: 0.85, dr: 0.3, cd: 0.55, pe: 0.72, sd: 0.2, ne: 0.6, cs: 0.2, ls: 0.9, lc: 0.1, lh: 0.4, lr: 0.1, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.92, pt: 0.15, h: 80, s: 0.08, l: 0.96, pn: 0.2, pw: 0.6, sz: 0.2, fn: 0.7, arr: 0.55, ht: 0.12, bt: 0.3 } },
+  { key: 'ninjin', name: '野良人参', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.4, bd: 0.55, dr: 0.45, cd: 0.4, pe: 0.25, sd: 0.2, ne: 0.3, cs: 0.2, ls: 0.1, lc: 0.92, lh: 0.4, lr: 0.55, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.72, pt: 0.15, h: 70, s: 0.08, l: 0.96, pn: 0.1, pw: 0.6, sz: 0.3, fn: 0.6, arr: 0.55, ht: 0.58, bt: 0.6 } },
+  { key: 'kosumosu', name: '秋桜', g: { h2: 0.5, pic: 0.1, vein: 0.45, fr: 0.25, nt: 0.45, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.2, bd: 0.7, dr: 0.5, cd: 0.3, pe: 0.2, sd: 0.3, ne: 0.4, cs: 0.2, ls: 0.1, lc: 0.9, lh: 0.4, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.5, ar2: 0.3, pt: 0.05, h: 330, s: 0.5, l: 0.76, pn: 0.34, pw: 0.5, sz: 0.58, fn: 0.35, arr: 0.2, ht: 0.74, bt: 0.72 } },
+  { key: 'sakurasou', name: '桜草', g: { h2: 0.5, pic: 0.5, vein: 0.2, fr: 0.05, nt: 0.75, dbl: 0.12, cup: 0.2, br: 0.3, lw: 0.75, bd: 0.5, dr: 0.2, cd: 0.62, pe: 0.7, sd: 0.4, ne: 0.4, cs: 0.1, ls: 0.55, lc: 0.5, lh: 0.25, lr: 0.08, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.2, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.1, h: 338, s: 0.55, l: 0.8, pn: 0.14, pw: 0.62, sz: 0.3, fn: 0.45, arr: 0.55, ht: 0.25, bt: 0.1 } },
+  { key: 'renge', name: '蓮華草', g: { h2: 0.5, pic: 0.55, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.5, bd: 0.5, dr: 0.25, cd: 0.5, pe: 0.3, sd: 0.35, ne: 0.6, cs: 0.2, ls: 0.1, lc: 0.86, lh: 0.35, lr: 0.3, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.4, pt: 0.15, h: 318, s: 0.6, l: 0.68, pn: 0.2, pw: 0.7, sz: 0.22, fn: 0.45, arr: 0.55, ht: 0.2, bt: 0.2 } },
+  { key: 'hirugao', name: '昼顔', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.5, bd: 0.6, dr: 0.5, cd: 0.3, pe: 0.55, sd: 0.5, ne: 0.55, cs: 0.05, ls: 0.7, lc: 0.2, lh: 0.4, lr: 0.8, sym: 0.2, tube: 0.86, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.1, h: 332, s: 0.4, l: 0.86, pn: 0.34, pw: 0.7, sz: 0.46, fn: 0.3, arr: 0.2, ht: 0.5, bt: 0.56 } },
+  { key: 'shimotsuke', name: '下野草', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.4, lw: 0.6, bd: 0.5, dr: 0.2, cd: 0.5, pe: 0.66, sd: 0.25, ne: 0.35, cs: 0.2, ls: 0.9, lc: 0.8, lh: 0.35, lr: 0.5, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.84, pt: 0.15, h: 342, s: 0.5, l: 0.78, pn: 0.12, pw: 0.6, sz: 0.3, fn: 0.6, arr: 0.84, ht: 0.56, bt: 0.46 } },
+  { key: 'hinageshi', name: '雛罌粟', g: { h2: 0.5, pic: 0.1, vein: 0.4, fr: 0.45, nt: 0.1, dbl: 0.12, cup: 0.4, br: 0.4, lw: 0.3, bd: 0.4, dr: 0.6, cd: 0.25, pe: 0.2, sd: 0.1, ne: 0.25, cs: 0.85, ls: 0.1, lc: 0.9, lh: 0.72, lr: 0.5, sym: 0.2, tube: 0.2, blot: 0.8, spot: 0.1, ring: 0.1, h3: 0.3, dc: 0.4, ar2: 0.3, pt: 0, h: 6, s: 0.72, l: 0.6, pn: 0.07, pw: 0.85, sz: 0.5, fn: 0.15, arr: 0.1, ht: 0.6, bt: 0.52 } },
+  { key: 'oniyuri', name: '小鬼百合', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.2, lw: 0.3, bd: 0.4, dr: 0.4, cd: 0.45, pe: 0.72, sd: 0.6, ne: 0.5, cs: 0.7, ls: 0.3, lc: 0.1, lh: 0.5, lr: 0.9, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.86, ring: 0.1, h3: 0.3, dc: 0.2, ar2: 0.3, pt: 0.78, h: 24, s: 0.8, l: 0.6, pn: 0.18, pw: 0.3, sz: 0.62, fn: 0.3, arr: 0.25, ht: 0.74, bt: 0.6 } },
+  { key: 'yomena', name: '嫁菜', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.35, bd: 0.6, dr: 0.4, cd: 0.5, pe: 0.72, sd: 0.15, ne: 0.4, cs: 0.2, ls: 0.32, lc: 0.7, lh: 0.45, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.62, ar2: 0.3, pt: 0.1, h: 276, s: 0.4, l: 0.78, pn: 0.9, pw: 0.12, sz: 0.3, fn: 0.45, arr: 0.25, ht: 0.5, bt: 0.76 } },
+  { key: 'azami', name: '薊', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.4, lw: 0.5, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.62, sd: 0.2, ne: 0.7, cs: 0.2, ls: 0.32, lc: 0.96, lh: 0.6, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.92, pt: 0.9, h: 304, s: 0.55, l: 0.62, pn: 0.2, pw: 0.12, sz: 0.3, fn: 0.9, arr: 0.55, ht: 0.66, bt: 0.5 } },
+  { key: 'sumire', name: '菫', g: { h2: 0.5, pic: 0.1, vein: 0.5, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.6, bd: 0.5, dr: 0.3, cd: 0.6, pe: 0.66, sd: 0.4, ne: 0.5, cs: 0.2, ls: 0.74, lc: 0.6, lh: 0.5, lr: 0.12, sym: 0.76, tube: 0.2, blot: 0.74, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.2, h: 268, s: 0.55, l: 0.58, pn: 0.2, pw: 0.6, sz: 0.26, fn: 0.3, arr: 0.15, ht: 0.14, bt: 0.16 } },
+  { key: 'tsurigane', name: '釣鐘草', g: { h2: 0.5, pic: 0.1, vein: 0.5, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.92, br: 0.3, lw: 0.4, bd: 0.5, dr: 0.3, cd: 0.55, pe: 0.6, sd: 0.35, ne: 0.5, cs: 0.2, ls: 0.32, lc: 0.6, lh: 0.5, lr: 0.6, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.4, h: 262, s: 0.5, l: 0.66, pn: 0.5, pw: 0.5, sz: 0.34, fn: 0.55, arr: 0.84, ht: 0.62, bt: 0.5 } },
+  { key: 'wasure', name: '忘れな草', g: { h2: 0.5, pic: 0.6, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.7, lw: 0.55, bd: 0.6, dr: 0.15, cd: 0.45, pe: 0.3, sd: 0.15, ne: 0.3, cs: 0.05, ls: 0.3, lc: 0.1, lh: 0.6, lr: 0.75, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.3, pt: 0.05, h: 212, s: 0.6, l: 0.72, pn: 0.1, pw: 0.7, sz: 0.14, fn: 0.6, arr: 0.3, ht: 0.22, bt: 0.22 } },
+  { key: 'yaguruma', name: '矢車菊', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.9, nt: 0.7, dbl: 0.12, cup: 0.2, br: 0.5, lw: 0.2, bd: 0.5, dr: 0.5, cd: 0.45, pe: 0.2, sd: 0.3, ne: 0.5, cs: 0.85, ls: 0.1, lc: 0.3, lh: 0.82, lr: 0.7, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.35, ar2: 0.3, pt: 0.3, h: 224, s: 0.62, l: 0.62, pn: 0.36, pw: 0.3, sz: 0.4, fn: 0.3, arr: 0.2, ht: 0.58, bt: 0.4 } },
+  { key: 'karasuno', name: '烏野豌豆', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.6, lw: 0.3, bd: 0.5, dr: 0.3, cd: 0.5, pe: 0.2, sd: 0.45, ne: 0.5, cs: 0.2, ls: 0.1, lc: 0.9, lh: 0.4, lr: 0.8, sym: 0.93, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.2, pt: 0.15, h: 292, s: 0.5, l: 0.64, pn: 0.2, pw: 0.6, sz: 0.2, fn: 0.5, arr: 0.84, ht: 0.4, bt: 0.26 } },
+  { key: 'hananegi', name: '花葱', g: { h2: 0.5, pic: 0.1, vein: 0.2, fr: 0.05, nt: 0.1, dbl: 0.12, cup: 0.2, br: 0.1, lw: 0.2, bd: 0.4, dr: 0.55, cd: 0.5, pe: 0.7, sd: 0.3, ne: 0.45, cs: 0.2, ls: 0.05, lc: 0.1, lh: 0.62, lr: 0.05, sym: 0.2, tube: 0.2, blot: 0.15, spot: 0.1, ring: 0.1, h3: 0.4, dc: 0.4, ar2: 0.92, pt: 0.6, h: 284, s: 0.5, l: 0.66, pn: 0.14, pw: 0.36, sz: 0.4, fn: 0.6, arr: 0.55, ht: 0.66, bt: 0.4 } },
 ];
 const LINE_NAME = Object.fromEntries(FOUNDERS.map((f) => [f.key, f.name]));
 LINE_NAME.tabi = '旅の種';
@@ -393,12 +407,12 @@ LINE_NAME.tabi = '旅の種';
 const TICKS = 120; // 1年
 const MAX_PLANTS = 1200;
 const SPACING = 0.092; // 地面の座標で。手前の画面幅に 9〜10 株ならぶ
-const VISITS = 3; // 虫 1 匹が 1 tick に回る花の数
+const VISITS = 2; // 虫 1 匹が 1 tick に回る花の数
 const SPECIES = {
-  bee: { name: 'ミツバチ', pref: 245, sig: 40, pop: 5 },
+  bee: { name: 'ミツバチ', pref: 250, sig: 44, pop: 5 },
   fly: { name: 'ハナアブ', pref: 62, sig: 26, pop: 4 },
-  butterfly: { name: 'チョウ', pref: 352, sig: 34, pop: 3.5 },
-  moth: { name: 'スズメガ', pref: 300, sig: 80, pop: 2.5 },
+  butterfly: { name: 'チョウ', pref: 346, sig: 38, pop: 3.5 },
+  moth: { name: 'スズメガ', pref: 300, sig: 80, pop: 3.4 },
 };
 const FOOD0 = 520;
 const SP_KEYS = Object.keys(SPECIES);
@@ -417,23 +431,24 @@ function spActivity(sp, t) {
 
 // 虫が花をどれだけ好むか（色 × 形）。pref は年々ゆっくり動く
 function spAttraction(sp, st, g) {
-  const white = G.white(g), form = G.form(g), arr = G.arr(g);
+  const white = G.white(g), form = G.form(g), arr = G.arr(g), comp = G.comp(g), sat = 0.45 + 0.55 * g.s;
+  const yel = gaussHue(g.h, 54, 26);
   let col, shp;
-  if (sp === 'bee') {
-    col = white ? 0.42 : Math.max(gaussHue(g.h, st.pref, st.sig), 0.45 * gaussHue(g.h, 56, 20)) * (0.45 + 0.55 * g.s);
-    if (!white && hueDist(g.h, 2) < 24 && g.s > 0.4) col *= 0.3; // 赤は見えにくい
+  if (sp === 'bee') { // 青紫と黄色。白い花にも来る。赤は見えにくい
+    col = white ? 0.6 : Math.max(1.1 * gaussHue(g.h, st.pref, st.sig), 0.9 * yel) * sat;
+    if (!white && hueDist(g.h, 2) < 24 && g.s > 0.4) col *= 0.3;
     shp = (1.15 - Math.abs(g.sz - 0.38)) * (arr === 'spike' ? 1.35 : arr === 'spray' ? 1 : 1.1) * (form === 'bell' ? 1.4 : form === 'pea' || form === 'pansy' ? 1.7 : form === 'open' ? 0.85 : 0.7) * (1 + 0.3 * Math.max(g.blot, g.spot)); // 左右対称の花と蜜標はハチ向き
-  } else if (sp === 'butterfly') {
-    col = white ? 0.3 : gaussHue(g.h, st.pref, st.sig) * (0.5 + 0.5 * g.s);
+  } else if (sp === 'butterfly') { // 桃・赤・橙。紫（薊）にもよく来る
+    col = white ? 0.42 : Math.max(0.9 * gaussHue(g.h, st.pref, st.sig), 0.7 * gaussHue(g.h, 292, 26), 0.5 * gaussHue(g.h, 30, 22)) * sat;
     shp = (0.45 + 1.1 * g.sz) * (form === 'open' ? 1.3 : form === 'funnel' || form === 'pansy' ? 0.9 : 0.45) * (0.7 + 0.6 * g.ht) * (arr === 'globe' ? 1.6 : arr === 'umbel' ? 1.35 : arr === 'spray' ? 1.1 : 0.8); // とまりやすい平らな花
-  } else if (sp === 'fly') {
-    col = Math.max(0.3 + 0.75 * smooth(0.6, 0.9, g.l), 1.05 * gaussHue(g.h, st.pref, st.sig) * (0.4 + 0.6 * g.s)) * (white ? 0.8 : 1); // 明るい色ならなんでも。とくに黄色
+  } else if (sp === 'fly') { // 黄色と白。明るければなんでも
+    col = white ? 0.6 : Math.max(0.3 + 0.5 * smooth(0.6, 0.9, g.l), 1.35 * yel * sat); // アブは黄色がいちばん
     shp = (1.35 - g.sz) * (form === 'open' ? 1 : form === 'funnel' ? 0.6 : 0.3) * (0.7 + 0.5 * g.fn) * (arr === 'lace' ? 1.6 : arr === 'plume' ? 1.4 : arr === 'umbel' ? 1 : 0.75); // 口の短いアブは、浅い小花の集まりへ
-  } else {
-    col = (0.2 + 0.9 * smooth(0.62, 0.92, g.l) + 0.45 * gaussHue(g.h, st.pref, st.sig)) * (white ? 0.85 : 1); // 夕闇に浮かぶ淡い色。うす紅や藤色も
+  } else { // 夕闇に浮かぶ白と淡い色
+    col = white ? 1.25 : 0.2 + 0.8 * smooth(0.62, 0.92, g.l) + 0.15 * yel; // 白はスズメガの受け持ち
     shp = (form === 'funnel' ? 2 : form === 'tulip' ? 1.6 : form === 'bell' ? 1.1 : 0.45) * (0.5 + 1.2 * g.ne) * (arr === 'spray' ? 1.2 : 1); // 筒の深い花
   }
-  return col * shp * (0.6 + 0.8 * g.ne) * G.showy(g);
+  return col * shp * (0.6 + 0.8 * g.ne) * G.showy(g) * (1 + 0.3 * comp); // キク科型の花は、どの虫でもとまれる
 }
 
 class Sim {
@@ -457,13 +472,12 @@ class Sim {
     const s = new Sim(seed);
     const r = s.rng;
     // 6 つの野の花を、それぞれ好きそうな場所に群れで置く
-    const homes = { nogiku: [0.5, 0.45], sakurasou: [0.74, 0.3], wasure: [0.62, 0.62], kinpouge: [0.42, 0.78], sumire: [0.86, 0.72], hinageshi: [0.2, 0.55], renge: [0.3, 0.86], tsurigane: [0.82, 0.18], hirugao: [0.1, 0.8], hananegi: [0.22, 0.3], ninjin: [0.6, 0.9], shimotsuke: [0.56, 0.2], oniyuri: [0.34, 0.5] };
     for (const f of FOUNDERS) {
       s.lines[f.key] = { name: f.name, since: 1, alive: true };
       const g0 = mkGenome(f.g);
       s.noteSeen(g0, true);
-      const [hx, hz] = homes[f.key];
-      for (let i = 0; i < 230; i++) {
+      const fi = FOUNDERS.indexOf(f), hx = 0.1 + 0.8 * ((fi * 0.618 + 0.13) % 1), hz = 0.1 + 0.84 * ((fi * 0.379 + 0.41) % 1); // 種類ごとに、ちがう場所から
+      for (let i = 0; i < 140; i++) {
         const g = mutate(g0, r, 1.6); delete g._macro;
         let x, z;
         if (r.chance(0.35)) { do { z = r.next(); } while (r.next() > persA(z) / persA(0)); x = r.next(); } // どこにでも少し
@@ -651,7 +665,7 @@ class Sim {
         if (tk >= p.bs && tk < p.be && p.bio > 0.24 && !p.lodged && !p.frost && !winter) {
           p.state = 1; p.bloomed = 1;
           p.nOpen = Math.max(1, Math.round(G.count(g) * clamp(p.bio * 1.25 - 0.1) * (p.age === 0 && g.pe > 0.5 ? 0.5 : 1)));
-          p.ovules = Math.round(4 + 3.2 * Math.sqrt(p.nOpen) * (G.radius(g) / 6)); // 種のもとの数は、花の数ではなく花の総面積できまる
+          p.ovules = Math.round((4 + 3.2 * Math.sqrt(p.nOpen) * (G.radius(g) / 6)) * (1 + 0.7 * G.comp(g))); // 種のもとの数は、花の数ではなく花の総面積できまる
           p.nec = 1; p.attr = {}; for (const k of SP_KEYS) p.attr[k] = spAttraction(k, this.sp[k], g) * Math.sqrt(p.nOpen / G.count(g));
           this.noteSeen(g, false, p);
           const rc = this.seen.rec;
@@ -664,7 +678,7 @@ class Sim {
         } else if (tk >= p.be || winter) p.state = 3;
       } else if (p.state === 1) {
         p.open = Math.min(1, p.open + 0.1); p.nec = Math.min(1, p.nec + 0.1);
-        p.R -= G.cost(g) * (p.nOpen / G.count(g)) * 0.11;
+        p.R -= G.cost(g) * (p.nOpen / G.count(g)) * 0.11 * (1 + 0.9 * dryS); // 真夏は、花を咲かせておくだけで水を使う
         if (this.flags.rainNow > tk && r.chance(0.035 * g.sz * G.rings(g) * (G.form(g) === 'bell' ? 0.3 : 1))) { p.rot = 1; p.fert.length = Math.floor(p.fert.length * 0.4); this.yr.rot++; p.state = 2; p.ripen = 8; }
         else if (tk >= p.be || p.R < -4 || winter) { p.state = 2; p.ripen = clamp(Math.round((w.onset - 14 - tk) * 0.6), 8, 30); } // 早く咲き終えた株は、実をゆっくり太らせられる
         else if (p.open > 0.25) bloomers.push(p);
@@ -702,7 +716,7 @@ class Sim {
         const g = best.g;
         best.visits++; st.visits++; st.bins[G.hueBin(g)]++;
         st.food += best.nec * (0.25 + g.ne) * (0.3 + g.sz) * Math.sqrt(best.nOpen); best.nec *= 0.2;
-        if (a.pollen && a.pollen !== best && !a.pollen.dead) { for (let i = 0; i < 3 && best.fert.length < best.ovules; i++) best.fert.push(a.pollen); }
+        if (a.pollen && a.pollen !== best && !a.pollen.dead) { for (let i = 0; i < 2 && best.fert.length < best.ovules; i++) best.fert.push(a.pollen); /* 虫の数には限りがある：みんなが咲く盛夏は取り合い、春と秋はひとりじめ */ }
         if (r.chance(0.85 * (1 - 0.6 * g.dbl))) a.pollen = best; // 八重は花粉が少ない
         at = best;
         }
@@ -1797,59 +1811,28 @@ function drawBugs(ctx, sim, dt, e) {
     } else { b.x += (b.tx - b.x) * Math.min(1, dt * 6); b.y += (b.ty - b.y) * Math.min(1, dt * 6); }
     b.ds += ((b.tds || 0.6) - b.ds) * Math.min(1, dt * 2);
     if (b.alpha < 0.02) continue;
-    const s = b.ds * V.unit * 1.05;
+    const sitting = b.sit > 0, kind = b.kind === undefined ? (b.kind = (hash1((b.ph * 1e4) | 0) * 5) | 0) : b.kind;
+    const s = b.ds * V.unit * (sp === 'bee' ? 0.86 : sp === 'butterfly' ? [0.92, 0.9, 0.66, 1.3, 0.62][kind] : sp === 'fly' ? 0.8 : 0.95);
     ctx.save(); ctx.translate(b.x, b.y); ctx.scale(s * b.face, s); ctx.globalAlpha = b.alpha;
-    const sitting = b.sit > 0, fl = sitting && sp !== 'butterfly' ? 0.25 : 1;
-    if (sp === 'bee') drawBee(ctx, time * 60 + b.ph, fl, sitting ? Math.sin(time * 9 + b.ph) * 0.15 : 0.1);
-    else if (sp === 'butterfly') drawButterfly(ctx, time * (sitting ? 2.2 : 11) + b.ph, sim.sp.butterfly.pref + (hash1(b.ph * 1000 | 0) - 0.5) * 50);
-    else if (sp === 'fly') drawFly(ctx, time * 80 + b.ph, fl);
-    else drawMoth(ctx, time * 50 + b.ph, fl);
+    if (sp === 'bee') drawBee(ctx, time, b.ph, sitting, b.a && b.a.pollen);
+    else if (sp === 'butterfly') drawButterfly(ctx, time, b.ph, sitting, kind);
+    else if (sp === 'fly') drawHoverfly(ctx, time, b.ph, sitting);
+    else drawHawkmoth(ctx, time, b.ph, sitting);
     ctx.restore();
   }
   ctx.globalAlpha = 1;
-}
-function wing(ctx, x, y, rx, ry, rot, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, TAU); ctx.fill(); }
-function drawBee(ctx, ph, fl, tilt) {
-  ctx.rotate(tilt);
-  const w = 0.55 + 0.45 * Math.abs(Math.sin(ph)) * fl;
-  wing(ctx, -1, -6, 4.5, 7 * w, -0.5, 'rgba(255,255,255,0.75)'); wing(ctx, 2.5, -6, 4, 6.5 * w, 0.4, 'rgba(235,245,255,0.7)');
-  ctx.fillStyle = '#f6c544'; ctx.beginPath(); ctx.ellipse(0, 0, 7.5, 6, 0, 0, TAU); ctx.fill();
-  ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 7.5, 6, 0, 0, TAU); ctx.clip(); ctx.fillStyle = '#5b4636'; ctx.fillRect(-3.4, -7, 2.4, 14); ctx.fillRect(1, -7, 2.4, 14); ctx.fillRect(-8, -7, 1.6, 14); ctx.restore();
-  ctx.fillStyle = '#5b4636'; ctx.beginPath(); ctx.arc(6.5, -0.5, 3.6, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7.6, -1.3, 1.1, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(255,170,170,0.8)'; ctx.beginPath(); ctx.arc(5.6, 1.3, 1, 0, TAU); ctx.fill();
-}
-function drawButterfly(ctx, ph, hue) {
-  const f = Math.cos(ph), w = 0.25 + 0.75 * Math.abs(f);
-  const c1 = hsl(hue, 0.7, 0.72, 0.9), c2 = hsl(hue + 25, 0.75, 0.82, 0.9), ce = hsl(hue - 20, 0.5, 0.4, 0.5);
-  ctx.rotate(-0.25);
-  for (const sgn of [-1, 1]) {
-    ctx.save(); ctx.scale(sgn * w, 1);
-    ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(4, -13, 15, -14, 13, -3); ctx.bezierCurveTo(12, 1, 4, 2, 0, 0); ctx.fill();
-    ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(0, 1); ctx.bezierCurveTo(5, 2, 12, 5, 9, 10); ctx.bezierCurveTo(5, 12, 1, 6, 0, 1); ctx.fill();
-    ctx.strokeStyle = ce; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(4, -13, 15, -14, 13, -3); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(9.5, -7, 1.8, 0, TAU); ctx.fill();
-    ctx.restore();
+  // 小川のトンボ（受粉には関わらない、ただの住人）
+  const season = hump(0.36, 0.84, e.t) * (1 - e.night) * (e.rain > 0.5 ? 0 : 1);
+  if (!V.dragons) V.dragons = [0, 1].map((i) => ({ z: 0.5 + 0.3 * i, x: 0, y: 0, tx: 0, ty: 0, t: 0, face: 1, a: 0, ph: i * 2.3 }));
+  for (const d of V.dragons) {
+    d.a += ((season > 0.3 ? 1 : 0) - d.a) * Math.min(1, dt); d.t -= dt;
+    if (d.t <= 0) { d.z = clamp(d.z + (Math.random() - 0.5) * 0.3, 0.3, 0.97); const c = brookAt(d.z, e.dry); d.tx = c.x + (Math.random() - 0.5) * c.hw * 5; d.ty = c.y - (14 + Math.random() * 30) * c.ds; d.ds = c.ds; d.t = 0.8 + Math.random() * 2.6; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
+    const dx = d.tx - d.x, dy = d.ty - d.y; d.x += dx * Math.min(1, dt * 4.5); d.y += dy * Math.min(1, dt * 4.5); if (Math.abs(dx) > 3) d.face = dx > 0 ? 1 : -1;
+    if (d.a < 0.03) continue;
+    ctx.save(); ctx.translate(d.x, d.y + Math.sin(time * 3 + d.ph) * 1.5); ctx.scale((d.ds || 1) * V.unit * 0.9 * d.face, (d.ds || 1) * V.unit * 0.9); ctx.globalAlpha = d.a; drawDragonfly(ctx, time, d.ph, e.t > 0.6); ctx.restore();
   }
-  ctx.fillStyle = '#6a5548'; ctx.beginPath(); ctx.ellipse(0, 1, 1.5, 6, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0, -5.5, 1.9, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#6a5548'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -6); ctx.quadraticCurveTo(-2, -10, -3.5, -10.5); ctx.moveTo(0, -6); ctx.quadraticCurveTo(2, -10, 3.5, -10.5); ctx.stroke();
+  ctx.globalAlpha = 1;
 }
-function drawFly(ctx, ph, fl) {
-  const w = 0.5 + 0.5 * Math.abs(Math.sin(ph)) * fl;
-  wing(ctx, -1, -3.5, 2.6, 5 * w, -0.7, 'rgba(255,255,255,0.7)'); wing(ctx, 1, -3.5, 2.6, 5 * w, 0.7, 'rgba(255,255,255,0.7)');
-  ctx.fillStyle = '#f0a03c'; ctx.beginPath(); ctx.ellipse(-1, 0, 5, 2.6, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#6a4b32'; ctx.fillRect(-3, -2.5, 1.2, 5); ctx.fillRect(-0.4, -2.6, 1.2, 5.2);
-  ctx.fillStyle = '#7a4a38'; ctx.beginPath(); ctx.arc(4, 0, 2.3, 0, TAU); ctx.fill();
-}
-function drawMoth(ctx, ph, fl) {
-  const w = 0.4 + 0.6 * Math.abs(Math.sin(ph)) * fl;
-  ctx.fillStyle = 'rgba(244,226,214,0.9)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-11, -9 * w); ctx.lineTo(-7, 3); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, -10 * w); ctx.lineTo(8, 2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(236,170,186,0.9)'; ctx.beginPath(); ctx.ellipse(-4, -2 * w, 3, 2, 0.5, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#d9b9a0'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 4.2, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#8a6a5a'; ctx.beginPath(); ctx.arc(6, -0.6, 2.8, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7, -1.2, 0.9, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#8a6a5a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(8.5, 0); ctx.quadraticCurveTo(13, 2, 13, 7); ctx.stroke();
-}
-
 // ── 粒（種・花びら・雨・雪・ほたる） ──
 function spawn(kind, x, y, o = {}) {
   const n = o.n || 1;
@@ -2121,7 +2104,7 @@ function paintBG(x, e) {
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
   const airy = 1 - e.night * 0.6 - snowy * 0.5; // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
-  const farL = mix(far, [252, 250, 230], 0.5 * airy), nearL = mix(near, [240, 244, 206], 0.3 * airy);
+  const farL = mix(far, [252, 250, 230], 0.5 * airy), nearL = mix(near, [240, 244, 206], 0.18 * airy);
   const hillC = mix(mix(near, far, 0.45), hazeC, 0.3), hillY = (u) => yH + H * 0.012 - H * 0.04 * (fbm(u * 2.2 + 23, 23) - 0.25);
   { const pts = []; for (let i = 0; i <= 50; i++) pts.push([(i / 50) * W, hillY(i / 50)]); pts.push([W + 4, yH + 40], [-4, yH + 40]);
     wash(x, pts, hillC, 1, { smooth: false, edge: 0.4, ew: 0.8, light: mix(hillC, [255, 252, 214], 0.5), lightA: 0.4, edgeCol: mix(hillC, [40, 80, 70], 0.5) }); }
@@ -2206,7 +2189,7 @@ function paintTree(e) {
   const clump = (tp, i, tone, sc) => {
     const r = W * (0.05 + 0.035 * hash2(i, 83)) * sc * (tp.d >= 4 ? 0.9 : 1.15), cx = tp.x + (hash2(i, 84) - 0.5) * r * 0.8 - (tone > 0 ? r * 0.3 : 0), cy = tp.y - r * 0.2 + (tone < 0 ? r * 0.35 : tone > 0 ? -r * 0.3 : 0), col = clumpCol(i, tone);
     blob(x, cx, cy, r * 1.25, r * 0.95, col, 0.3 * leafA, i * 7 + 2, 0.3); // まわりへにじみ出た色
-    wash(x, noisyBlob(cx, cy, r, r * 0.76, i * 7 + tone * 3 + 9, 0.22, 44, 13, 0.34), col, (tone > 0 ? 0.5 : 0.78) * leafA, { edge: tone > 0 ? 0.2 : 0.42, ew: 0.6, blooms: tone > 0 ? 0 : 3, bloomA: 0.13, seed: i, light: tone === 0 ? [255, 252, 210] : null, lightA: 0.34, shade: tone <= 0 ? [24, 52, 84] : null, shadeA: 0.34, edgeCol: mix(col, [20, 50, 70], 0.5) });
+    wash(x, noisyBlob(cx, cy, r, r * 0.76, i * 7 + tone * 3 + 9, 0.26, 44, 9, 0.2), col, (tone > 0 ? 0.46 : 0.72) * leafA, { edge: tone > 0 ? 0.08 : 0.16, ew: 0.5, blooms: tone > 0 ? 0 : 3, bloomA: 0.13, seed: i, light: tone === 0 ? [255, 252, 210] : null, lightA: 0.34, shade: tone <= 0 ? [24, 52, 84] : null, shadeA: 0.34, edgeCol: mix(col, [20, 50, 70], 0.5) });
     return [cx, cy, r];
   };
   // 枝は根もとから先へ細くなる面で描く
@@ -2230,8 +2213,8 @@ function paintTree(e) {
     const cl = []; tips.forEach((tp, i) => { if (i % 2 === 1 || tp.d >= 4) cl.push(clump(tp, i + 100, 0, 1)); });
     tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); });
     cl.forEach(([cx, cy, r], i) => { // 葉の一筆
-      for (let j = 0; j < 34; j++) {
-        const a = hash2(i * 40 + j, 96) * TAU, rr = r * (0.45 + 0.7 * hash2(i * 40 + j, 97)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.74, lit = Math.sin(a) < -0.2 && Math.cos(a) < 0.3;
+      for (let j = 0; j < 46; j++) {
+        const a = hash2(i * 40 + j, 96) * TAU, rr = r * (0.5 + 0.72 * hash2(i * 40 + j, 97)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.74, lit = Math.sin(a) < -0.2 && Math.cos(a) < 0.3;
         dab(x, dx, dy, 1.8 + 2.2 * hash2(i * 40 + j, 98), 0.9 + 0.8 * hash2(i * 40 + j, 99), a + 1.2, clumpCol(i + j, lit ? 1 : -1), (lit ? 0.75 : 0.55) * leafA);
       }
     });
@@ -2318,7 +2301,7 @@ function drawLight(ctx, e) {
     ctx.globalCompositeOperation = 'source-over';
   }
   if (V.sun && day > 0.2) { const ox = V.sun[0] < W / 2 ? W * 1.05 : -W * 0.05, g = ctx.createRadialGradient(ox, H * 1.02, 0, ox, H * 1.02, H * 0.75); g.addColorStop(0, rgb([150, 172, 214], 0.34 * day)); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; } // お日さまの反対側は、青みのある陰
-  if (V.sun && day > 0.2 && e.cloud < 0.7) { const [sx, sy] = V.sun, g = ctx.createRadialGradient(sx, sy, 0, sx, sy, H * 0.9); const c = mix([255, 244, 200], [255, 190, 130], e.dusk); g.addColorStop(0, rgb(c, 0.3 * day)); g.addColorStop(0.5, rgb(c, 0.12 * day)); g.addColorStop(1, rgb(c, 0)); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+  if (V.sun && day > 0.2 && e.cloud < 0.7) { const [sx, sy] = V.sun, g = ctx.createRadialGradient(sx, sy, 0, sx, sy, H * 0.9); const c = mix([255, 244, 200], [255, 190, 130], e.dusk); g.addColorStop(0, rgb(c, 0.22 * day)); g.addColorStop(0.5, rgb(c, 0.08 * day)); g.addColorStop(1, rgb(c, 0)); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
 }
 
 // ── 最前景：ピントの外れた草と花（絵本の額ぶち） ──
@@ -2435,6 +2418,135 @@ function drawTuft(ctx, tf, e) {
   const c = V.tuftSpr[tf.kind], d = V.dpr;
   ctx.setTransform(d * sc * tf.flip, 0, d * sc * sway * hs, d * sc * hs, d * p.sx, d * p.sy);
   ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx);
+}
+
+// ===== 42-bugs.js =====
+// ───────────────────────── 虫たち ─────────────────────────
+// 体長 14 ほどの大きさで、右向きに描く。水彩らしく、色は面でのせて輪郭は細く。
+const INK = 'rgba(84,64,58,';
+function fuzz(ctx, cx, cy, rx, ry, col, n, seed) { // 毛並み：短い線をたくさん
+  ctx.strokeStyle = col; ctx.lineWidth = 0.5; ctx.lineCap = 'round';
+  for (let i = 0; i < n; i++) { const a = hash2(i, seed) * TAU, r = Math.sqrt(hash2(i, seed + 1)), px = cx + Math.cos(a) * rx * r, py = cy + Math.sin(a) * ry * r; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a) * 1.3 - 0.4, py + Math.sin(a) * 1.3 - 0.5); ctx.stroke(); }
+}
+function clearWing(ctx, x, y, len, wid, rot, a) { // 透ける羽：うすい水色のにじみに、細い脈
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(len * 0.2, -wid, len * 0.85, -wid * 1.1, len, -wid * 0.1); ctx.bezierCurveTo(len * 0.8, wid * 0.7, len * 0.25, wid * 0.5, 0, 0); ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, len, 0); g.addColorStop(0, `rgba(236,244,252,${0.75 * a})`); g.addColorStop(1, `rgba(214,232,248,${0.4 * a})`); ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = `rgba(120,140,170,${0.55 * a})`; ctx.lineWidth = 0.35; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(len * 0.5, -wid * 0.4, len * 0.92, -wid * 0.2); ctx.moveTo(len * 0.2, -wid * 0.1); ctx.quadraticCurveTo(len * 0.5, wid * 0.2, len * 0.8, wid * 0.3); ctx.stroke();
+  ctx.restore();
+}
+// はばたきの残像つきで羽を描く
+function beatWings(ctx, x, y, len, wid, base, amp, ph, time, hz, sitting, restRot) {
+  if (sitting) { clearWing(ctx, x, y, len, wid * 0.8, restRot, 1); clearWing(ctx, x - 0.6, y + 0.4, len * 0.82, wid * 0.7, restRot + 0.16, 0.8); return; }
+  for (let k = 0; k < 3; k++) { const a = base + amp * Math.sin(time * hz + ph + k * 0.9); clearWing(ctx, x, y, len, wid, a, k === 0 ? 0.9 : 0.34); }
+}
+function drawBee(ctx, time, ph, sitting, pollen) {
+  ctx.rotate(sitting ? Math.sin(time * 7 + ph) * 0.1 : 0.12 + Math.sin(time * 5 + ph) * 0.06);
+  ctx.lineCap = 'round';
+  // 脚（花粉だんごをつけて帰る）
+  ctx.strokeStyle = INK + '0.8)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < 3; i++) { const lx = 4 - i * 3.2, sw = sitting ? 0 : Math.sin(time * 9 + i) * 0.5; ctx.beginPath(); ctx.moveTo(lx, 3); ctx.quadraticCurveTo(lx - 0.6 + sw, 5.6, lx - 1.8 + sw, 7 + (sitting ? 0.6 : 0)); ctx.stroke(); }
+  if (pollen) { ctx.fillStyle = 'rgba(246,206,84,0.95)'; ctx.beginPath(); ctx.ellipse(-3.6, 6.4, 1.5, 1.2, 0, 0, TAU); ctx.fill(); }
+  beatWings(ctx, 2.2, -3.4, 10.5, 3.8, -2.2, 0.75, ph, time, 58, sitting, -2.95);
+  // 腹：琥珀色に、こげ茶のしま
+  ctx.beginPath(); ctx.ellipse(-3.4, 0.5, 6.6, 5, 0.08, 0, TAU);
+  const g = ctx.createRadialGradient(-4.5, -1.5, 0.5, -3.4, 0.5, 7); g.addColorStop(0, '#fbd774'); g.addColorStop(0.7, '#eeb244'); g.addColorStop(1, '#cf8a2e'); ctx.fillStyle = g; ctx.fill();
+  ctx.save(); ctx.clip();
+  for (const [bx, bw, al] of [[-1.2, 2.1, 0.86], [-4.9, 2, 0.82], [-8.6, 2.4, 0.86]]) { ctx.strokeStyle = `rgba(96,66,50,${al})`; ctx.lineWidth = bw; ctx.beginPath(); ctx.moveTo(bx + 0.9, -6); ctx.quadraticCurveTo(bx - 0.7, 0.5, bx + 0.9, 7); ctx.stroke(); ctx.strokeStyle = `rgba(96,66,50,${al * 0.3})`; ctx.lineWidth = bw + 1.2; ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = INK + '0.45)'; ctx.lineWidth = 0.45; ctx.beginPath(); ctx.ellipse(-3.4, 0.5, 6.6, 5, 0.08, 0.4, TAU - 1.2); ctx.stroke();
+  // 胸：ふかふかの毛
+  ctx.fillStyle = '#d99c3e'; ctx.beginPath(); ctx.arc(3.8, -0.6, 4.4, 0, TAU); ctx.fill();
+  fuzz(ctx, 3.8, -0.8, 4.6, 4.4, 'rgba(250,224,150,0.85)', 26, 3); fuzz(ctx, 3.8, 0.4, 4.4, 4, 'rgba(150,100,50,0.5)', 14, 5);
+  // 頭
+  ctx.fillStyle = '#6b4a3c'; ctx.beginPath(); ctx.ellipse(8.4, 0.2, 3, 3.2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2f2422'; ctx.beginPath(); ctx.ellipse(9.4, -0.4, 1.5, 2, 0.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(9.8, -1.1, 0.55, 0, TAU); ctx.fill();
+  ctx.strokeStyle = INK + '0.85)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(9.4, -2.6); ctx.quadraticCurveTo(11.4, -4.6, 12.6, -3.8); ctx.moveTo(8.6, -2.9); ctx.quadraticCurveTo(10, -5.6, 11.4, -5.4); ctx.stroke();
+}
+// チョウ 5 種：モンシロ／モンキ／ベニシジミ／アゲハ／ルリシジミ
+const BFLY = [
+  { fore: [252, 251, 244], hind: [250, 248, 238], tip: [118, 122, 130], vein: 0.25, spots: [[9.6, -6.4, 1.2, [118, 122, 130]], [8.4, -2.6, 0.9, [118, 122, 130]]] },
+  { fore: [248, 222, 104], hind: [250, 230, 130], tip: [130, 96, 70], vein: 0.2, spots: [[8.4, -5, 0.9, [130, 96, 70]], [6.2, 5.4, 1.1, [240, 160, 120]]] },
+  { fore: [242, 148, 62], hind: [150, 110, 88], tip: [110, 80, 66], vein: 0.25, band: [240, 150, 70], spots: [[7, -6.4, 0.9, [90, 64, 54]], [9.6, -4.4, 0.8, [90, 64, 54]], [6.4, -3, 0.8, [90, 64, 54]]] },
+  { fore: [246, 234, 170], hind: [246, 236, 180], tip: [60, 52, 56], vein: 0.75, tail: 1, spots: [[7.4, 8, 1.2, [112, 150, 220]], [4.6, 9.6, 1.1, [226, 110, 90]]] },
+  { fore: [176, 200, 240], hind: [186, 208, 244], tip: [96, 104, 140], vein: 0.18, spots: [] },
+];
+function bflyWing(ctx, sp, hind, a) {
+  ctx.beginPath();
+  if (!hind) { ctx.moveTo(0, 0); ctx.bezierCurveTo(3.4, -11.6, 13.6, -14.2, 14.4, -5.4); ctx.bezierCurveTo(14.2, -1.8, 6, 0.6, 0, 0.6); }
+  else if (sp.tail) { ctx.moveTo(0, 0.4); ctx.bezierCurveTo(5.6, 0.6, 12, 3, 10.6, 8.6); ctx.bezierCurveTo(10, 10.6, 8.6, 12.6, 9, 15.4); ctx.bezierCurveTo(7.4, 13.6, 6.6, 12, 5.4, 11.4); ctx.bezierCurveTo(2.6, 10, 0.6, 5.6, 0, 0.4); }
+  else { ctx.moveTo(0, 0.4); ctx.bezierCurveTo(5.6, 0.6, 12.4, 3.6, 10, 9.4); ctx.bezierCurveTo(6.4, 12.6, 1, 7.6, 0, 0.4); }
+  ctx.closePath();
+  const base = hind ? sp.hind : sp.fore, g = ctx.createRadialGradient(1, hind ? 2 : -2, 0.5, 5, hind ? 5 : -5, 14);
+  g.addColorStop(0, rgb(mix(base, [255, 255, 255], 0.45), 0.96 * a)); g.addColorStop(0.55, rgb(base, 0.94 * a)); g.addColorStop(1, rgb(mix(base, sp.tip, 0.3), 0.94 * a)); ctx.fillStyle = g; ctx.fill();
+  ctx.save(); ctx.clip();
+  ctx.strokeStyle = rgb(sp.tip, 0.55 * a); ctx.lineWidth = sp.vein > 0.5 ? 2 : hind ? 0.9 : 1.3; ctx.stroke(); // 縁の色
+  if (sp.band && hind) { ctx.strokeStyle = rgb(sp.band, 0.9 * a); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(4, 9.6); ctx.quadraticCurveTo(9, 8.6, 10.6, 5); ctx.stroke(); }
+  if (!hind && !sp.band) { const tg = ctx.createRadialGradient(13.6, -10, 0, 13.6, -10, 4.6); tg.addColorStop(0, rgb(sp.tip, 0.6 * a)); tg.addColorStop(1, rgb(sp.tip, 0)); ctx.fillStyle = tg; ctx.fillRect(8, -15, 8, 9); } // 羽の先の色
+  ctx.strokeStyle = rgb(sp.tip, sp.vein * a); ctx.lineWidth = sp.vein > 0.5 ? 0.7 : 0.4; ctx.beginPath();
+  for (let i = 0; i < 5; i++) { const t = i / 4; ctx.moveTo(0.6, hind ? 0.8 : -0.2); if (hind) ctx.quadraticCurveTo(4 + t * 3, 3 + t * 3, 10.6 - t * 8, 5 + t * 6.5); else ctx.quadraticCurveTo(5 + t * 2, -6 + t * 5, 13.6 - t * 1.6, -11 + t * 9.6); }
+  ctx.stroke();
+  ctx.restore();
+  for (const [sx, sy, sr, sc] of sp.spots) if ((sy > 0.5) === !!hind) { ctx.fillStyle = rgb(sc, 0.85 * a); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill(); }
+}
+function bflyBody(ctx, len) {
+  ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.ellipse(0, 1.2, 1.3, len, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0, -len + 0.4, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(214,196,176,0.7)'; ctx.beginPath(); ctx.ellipse(0, -1.4, 1.5, 2.4, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#5e4a44'; ctx.lineWidth = 0.45; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-0.4, -len); ctx.quadraticCurveTo(-2, -len - 4, -3.2, -len - 4.6); ctx.moveTo(0.4, -len); ctx.quadraticCurveTo(2, -len - 4, 3.2, -len - 4.6); ctx.stroke();
+  ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.arc(-3.2, -len - 4.6, 0.5, 0, TAU); ctx.arc(3.2, -len - 4.6, 0.5, 0, TAU); ctx.fill();
+}
+function drawButterfly(ctx, time, ph, sitting, kind) {
+  const sp = BFLY[kind];
+  if (sitting) { // とまると羽を立てて、ゆっくり開いたり閉じたり。横顔で描く
+    const op = 0.5 + 0.5 * Math.sin(time * 1.6 + ph);
+    ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.ellipse(0, 0, 5.2, 1.15, 0.06, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(5.2, -0.5, 1.5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#5e4a44'; ctx.lineWidth = 0.45; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(5.8, -1.6); ctx.quadraticCurveTo(8.6, -4.6, 10.2, -4.2); ctx.moveTo(5.9, 0.4); ctx.quadraticCurveTo(7.4, 2.4, 6.8, 4.2); ctx.moveTo(1, 1); ctx.lineTo(0.2, 3.4); ctx.moveTo(-1.6, 1); ctx.lineTo(-2.6, 3.4); ctx.stroke();
+    for (const [rot, al] of [[-1.36 - 0.42 * op, 0.7], [-1.5 + 0.06 * op, 1]]) { ctx.save(); ctx.translate(1.4, -0.9); ctx.rotate(rot); ctx.scale(0.96, 0.9); bflyWing(ctx, sp, true, al); bflyWing(ctx, sp, false, al); ctx.restore(); } // 向こうの羽、手前の羽
+    return;
+  }
+  const f = Math.sin(time * 9.5 + ph), w = 0.16 + 0.84 * Math.abs(f), lift = f * 0.22;
+  ctx.rotate(-0.3 + Math.sin(time * 2.3 + ph) * 0.16);
+  for (const sgn of [-1, 1]) { ctx.save(); ctx.scale(sgn * w, 1); ctx.rotate(-lift * 0.5); bflyWing(ctx, sp, true, 1); bflyWing(ctx, sp, false, 1); ctx.restore(); }
+  bflyBody(ctx, 5.6);
+}
+function drawHoverfly(ctx, time, ph, sitting) {
+  ctx.rotate(0.05); ctx.lineCap = 'round';
+  beatWings(ctx, 1.4, -1.6, 9.5, 2.6, -2.5, 0.5, ph, time, 80, sitting, -2.75);
+  // 腹：黄と黒のしま
+  ctx.beginPath(); ctx.ellipse(-3.6, 0.3, 5.4, 2.4, 0.05, 0, TAU); ctx.fillStyle = '#f2c14c'; ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(70,56,50,0.9)'; for (const bx of [-1.8, -4.2, -6.6, -8.8]) ctx.fillRect(bx, -3, 1.1, 6); ctx.restore();
+  ctx.strokeStyle = INK + '0.45)'; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.ellipse(-3.6, 0.3, 5.4, 2.4, 0.05, 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#7a6650'; ctx.beginPath(); ctx.ellipse(2.4, -0.2, 2.8, 2.5, 0, 0, TAU); ctx.fill(); fuzz(ctx, 2.4, -0.4, 2.8, 2.4, 'rgba(220,200,150,0.6)', 10, 2);
+  ctx.fillStyle = '#9a4a3a'; ctx.beginPath(); ctx.ellipse(5.6, -0.2, 2.2, 2.3, 0, 0, TAU); ctx.fill(); // 大きな赤茶の複眼
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(6.2, -1, 0.5, 0, TAU); ctx.fill();
+  ctx.strokeStyle = INK + '0.7)'; ctx.lineWidth = 0.45; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(2.6 - i * 2.2, 2); ctx.lineTo(2 - i * 2.4, 4.2); ctx.stroke(); }
+}
+function drawHawkmoth(ctx, time, ph, sitting) {
+  // ホウジャク：とまらず、花の前で止まって長い口をのばす
+  ctx.rotate(-0.12); ctx.lineCap = 'round';
+  for (let k = 0; k < 4; k++) { const a = -2.3 + 0.95 * Math.sin(time * 52 + ph + k * 0.8), al = k === 0 ? 0.85 : 0.28; ctx.save(); ctx.translate(1.6, -1.8); ctx.rotate(a);
+    ctx.fillStyle = `rgba(236,150,80,${al})`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(3, -2.4, 7, -2.6, 8, -0.4); ctx.bezierCurveTo(6, 1.6, 2.4, 1.4, 0, 0); ctx.fill(); // 橙の後ろ羽
+    ctx.fillStyle = `rgba(132,112,92,${al})`; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(4, -4.4, 11, -4.6, 13, -1.4); ctx.bezierCurveTo(10, 0.6, 4, 0.8, 0, 0); ctx.fill();
+    ctx.restore(); }
+  ctx.beginPath(); ctx.ellipse(-2.6, 0.4, 7.4, 3.6, 0.04, 0, TAU);
+  const g = ctx.createLinearGradient(0, -3.6, 0, 4); g.addColorStop(0, '#a8987c'); g.addColorStop(1, '#d9cdb4'); ctx.fillStyle = g; ctx.fill();
+  ctx.save(); ctx.clip(); for (const bx of [-5.6, -7.6]) { ctx.fillStyle = 'rgba(60,52,50,0.8)'; ctx.fillRect(bx, 0.6, 1.2, 4); ctx.fillStyle = 'rgba(250,248,240,0.9)'; ctx.fillRect(bx + 1.2, 0.6, 0.9, 4); } ctx.restore();
+  fuzz(ctx, -1.6, -0.4, 6.4, 3, 'rgba(240,230,206,0.7)', 26, 4);
+  ctx.fillStyle = '#4c423e'; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(-9.4, 0.4 + i * 0.5); ctx.lineTo(-12.6, 0.4 + i * 1.5); ctx.lineTo(-9.4, 0.4 + i * 0.9); ctx.fill(); } // 尾の毛の扇
+  ctx.fillStyle = '#8e7e66'; ctx.beginPath(); ctx.ellipse(5.4, -0.2, 3, 2.9, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#2f2826'; ctx.beginPath(); ctx.ellipse(6.6, -0.6, 1.5, 1.7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(7, -1.2, 0.5, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#5a4c44'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(6.4, -2.6); ctx.quadraticCurveTo(8.4, -5.4, 10.4, -5); ctx.stroke();
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(8.2, 0.6); if (sitting) ctx.quadraticCurveTo(13, 2, 13.6, 8.6); else ctx.bezierCurveTo(10.4, 1, 11.4, 3, 10, 3.4); ctx.stroke(); // 口吻
+}
+function drawDragonfly(ctx, time, ph, red) {
+  ctx.lineCap = 'round';
+  for (const [wx, rot] of [[1.5, -1.9], [0, -1.25], [1.5, 1.9], [0, 1.25]]) for (let k = 0; k < 2; k++) clearWing(ctx, wx, 0, 11.5, 1.9, rot + 0.14 * Math.sin(time * 46 + ph + k), k ? 0.35 : 0.85);
+  ctx.strokeStyle = red ? '#d05a44' : '#5a8ec0'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-7, 0.6, -14, -0.4); ctx.stroke();
+  ctx.strokeStyle = 'rgba(60,50,60,0.4)'; ctx.lineWidth = 0.4; for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-i * 2.3, -0.8); ctx.lineTo(-i * 2.3, 0.9); ctx.stroke(); }
+  ctx.fillStyle = red ? '#b84a3c' : '#4a7cae'; ctx.beginPath(); ctx.ellipse(1.6, 0, 2.8, 1.7, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = red ? '#7a3a34' : '#3c5e86'; ctx.beginPath(); ctx.arc(4.6, 0, 1.9, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(5.2, -0.6, 0.5, 0, TAU); ctx.fill();
 }
 
 // ===== 50-erika.js =====
