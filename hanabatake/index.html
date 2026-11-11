@@ -41,8 +41,9 @@ body{font-family:'Klee One','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;c
 /* エリカと吹き出し */
 #erika{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);width:27%;max-width:118px;aspect-ratio:1;z-index:20;cursor:pointer;display:none;animation:bob 4.6s ease-in-out infinite;border-radius:50% 48% 51% 49%/49% 51% 48% 52%;background:radial-gradient(circle at 40% 32%,#fffdf8,#fbf3e4);box-shadow:0 0 0 1.4px var(--line),0 0 0 5px rgba(255,253,246,.9),0 0 0 6.3px rgba(110,84,76,.25),3px 6px 16px rgba(80,60,40,.25);overflow:hidden}
 #erika.ready{display:block}
-#erika::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 14px rgba(190,150,120,.35),inset 0 0 3px rgba(120,90,70,.4);pointer-events:none}
-#erika img{position:absolute;inset:-2%;width:104%;height:104%;object-fit:cover;opacity:0;transition:opacity .28s;mix-blend-mode:multiply}
+#erika::after{content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;box-shadow:inset 0 0 18px 4px rgba(250,244,230,.85),inset 0 0 3px rgba(120,90,70,.4);pointer-events:none} /* 絵の縁は紙に溶ける */
+#erika img{position:absolute;inset:-2%;width:104%;height:104%;object-fit:cover;opacity:0;transition:opacity .28s;mix-blend-mode:multiply;filter:saturate(.86) contrast(.95) sepia(.08) brightness(1.03)}
+#erika::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;background:var(--paperimg) 0 0/180px 180px;mix-blend-mode:multiply;opacity:.9}
 #erika img.on{opacity:1}
 @keyframes bob{50%{transform:translateY(-3px) rotate(-1.2deg)}}
 #bubble{position:absolute;left:min(22%,96px);right:64px;bottom:calc(env(safe-area-inset-bottom) + min(27vw,118px) + 22px);z-index:21;opacity:0;transform:translateY(8px) scale(.94);transform-origin:8% 100%;transition:opacity .45s,transform .55s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
@@ -262,7 +263,7 @@ const G = {
   white(g) { return g.s < 0.16 || (g.l > 0.9 && g.s < 0.5); },
   hueBin(g) { return G.white(g) ? 12 : Math.floor(hueWrap(g.h + 15) / 30) % 12; },
   // 目立ちやすさ（虫から見た大きさ）と、咲かせるのにかかる栄養
-  showy(g) { return (0.25 + (1.1 * G.radius(g)) / 18) * Math.pow(G.count(g), 0.4) * (1 + 0.55 * g.dbl) * (1 + 0.12 * g.fr) * (1 + 0.12 * Math.max(g.blot, g.spot, g.ring)) * (1 - 0.55 * gaussHue(g.h, 125, 40) * clamp(g.s * 1.6)); }, // 花の大きさ × 花数。葉と同じ緑の花は目立たない。小花をいくら集めても、大輪 1 つぶんにしかならない
+  showy(g) { return (0.25 + (1.1 * G.radius(g)) / 18) * Math.pow(G.count(g), 0.4) * (1 + 0.55 * g.dbl) * (1 + 0.12 * g.fr) * (1 + 0.12 * Math.max(g.blot, g.spot, g.ring)) * (1 - 0.85 * gaussHue(g.h, 120, 46) * clamp(g.s * 2.2)); }, // 花の大きさ × 花数。葉と同じ緑の花は目立たない。小花をいくら集めても、大輪 1 つぶんにしかならない
   cost(g) { const r = (G.radius(g) - 2.6) / 15.4; return G.count(g) * (0.045 + r * r) * (1 + 0.55 * g.dbl) * (1 + 0.8 * g.ne) * (1 + 0.1 * (g.blot + g.spot + g.ring)) * G.pig(g); },
 };
 
@@ -3028,12 +3029,13 @@ function showHistory(sim) {
       for (const bn of order) {
         const top = acc.map((a, i) => a + H[i].bins[bn]);
         x1.beginPath(); for (let i = 0; i < n; i++) x1.lineTo(X(i), 8 + 130 * acc[i]); for (let i = n - 1; i >= 0; i--) x1.lineTo(X(i), 8 + 130 * top[i]); x1.closePath();
-        x1.fillStyle = binColor(bn); x1.fill(); x1.strokeStyle = 'rgba(255,255,255,0.5)'; x1.lineWidth = 0.6; x1.stroke();
+        x1.fillStyle = bn === 12 ? 'rgb(236,231,218)' : binColor(bn); x1.fill(); x1.strokeStyle = 'rgba(255,255,255,0.5)'; x1.lineWidth = 0.6; x1.stroke(); // 白い花は、紙と見分けがつくよう生成り色で
         acc = top;
       }
-      grainOver(x1, w * dp, 150 * dp, 0.5);
+      grainOver(x1, w * dp, 150 * dp, 0.25);
       b.appendChild(el('h3', null, '花の色のうつりかわり')); b.appendChild(c1);
       const ax = el('div', 'axis', `<span>${H[0].y}年</span><span>${H[n - 1].y}年</span>`); b.appendChild(ax);
+      { const last = H[n - 1].bins, used = order.filter((bn) => H.some((r) => r.bins[bn] > 0.05)); b.appendChild(el('div', 'legend', used.map((bn) => `<span><i style="background:${bn === 12 ? 'rgb(236,231,218)' : binColor(bn)}"></i>${BIN_NAME[bn]} ${Math.round(last[bn] * 100)}%</span>`).join(''))); } // いまの割合も添える
       // 出来事
       const [c2, x2] = mk(54), kinds = Object.keys(EV_MARK).filter((k) => EV_MARK[k]);
       kinds.forEach((k, r) => { x2.fillStyle = EV_MARK[k][1]; H.forEach((rec, i) => { if (rec.ev.includes(k)) { x2.globalAlpha = 0.85; x2.beginPath(); x2.arc(X(i), 5 + r * 6.4, 2.4, 0, TAU); x2.fill(); } }); });
@@ -3195,7 +3197,7 @@ function frame(ts) {
 function boot() {
   initGrain();
   V.cv = $('cv'); V.ctx = V.cv.getContext('2d'); Talk.el = $('bubble');
-  $('paper').style.backgroundImage = `url(${paperTexture()})`;
+  { const pt = `url(${paperTexture()})`; $('paper').style.backgroundImage = pt; document.documentElement.style.setProperty('--paperimg', pt); }
   resizeView(); addEventListener('resize', () => { clearTimeout(boot.rt); boot.rt = setTimeout(resizeView, 120); });
   // 続きから／はじめから
   let saved = null; try { saved = HASH.fresh || HASH.nosave ? null : JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
