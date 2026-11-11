@@ -1,0 +1,2686 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f7f1e3">
+<title>うつろいの花畑</title>
+<meta name="description" content="誰も手を入れない花畑が、虫と風と天気にまかせて、年ごとに色と形を変えていきます。エリカの観察日記。">
+<meta property="og:title" content="うつろいの花畑">
+<meta property="og:description" content="誰も手を入れない花畑が、虫と風と天気にまかせて進化していきます。">
+<meta property="og:image" content="https://amanesf.github.io/hanabatake/title.jpg">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@500;700&family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f7f1e3;--ink:#5c4a44;--ink2:#9c8a80;--pink:#eaa3b8;--aqua:#86cfdc;--leaf:#8fb27e;--line:rgba(110,84,76,.42);
+  --hand:255px 18px 225px 16px/16px 225px 18px 255px;--hand2:18px 240px 20px 225px/225px 20px 240px 18px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#e9e0cc;overflow:hidden;overscroll-behavior:none}
+body{font-family:'Klee One','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;color:var(--ink);display:flex;justify-content:center;align-items:center;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#stage{position:relative;width:100vw;height:100vh;height:100dvh;max-width:calc(100dvh*.62);background:var(--paper);overflow:hidden;box-shadow:0 0 60px rgba(90,70,50,.25)}
+@media (max-aspect-ratio:62/100){#stage{max-width:none}}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#paper{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;background-size:256px 256px;z-index:60;box-shadow:inset 0 0 70px rgba(150,120,80,.22),inset 0 0 8px rgba(120,90,60,.25)}
+
+/* 日付 */
+#hud{position:absolute;left:0;top:0;padding:calc(env(safe-area-inset-top) + 14px) 18px 0;z-index:10;pointer-events:none}
+#date{display:flex;align-items:baseline;gap:3px;font-family:'Kaisei Decol',serif;color:#5a4a52;text-shadow:0 0 10px rgba(255,252,240,.95),0 0 3px rgba(255,252,240,.9)}
+#date b{font-size:40px;font-weight:700;line-height:1;letter-spacing:-.01em}
+#date span{font-size:14px;margin-right:8px}
+#date i{font-style:normal;font-size:17px;width:34px;height:34px;display:grid;place-items:center;align-self:center;color:#fff;text-shadow:0 1px 2px rgba(80,50,60,.35);border-radius:47% 53% 44% 56%/55% 46% 54% 45%;background:radial-gradient(circle at 35% 30%,#f7c4d2,#e58fac 70%,#d87a9c);box-shadow:0 0 0 3px rgba(255,255,255,.35),0 2px 8px rgba(120,60,80,.2);transition:background 1.5s}
+#date i[data-s="1"]{background:radial-gradient(circle at 35% 30%,#a8e0c0,#5fb890 70%,#4aa480)}
+#date i[data-s="2"]{background:radial-gradient(circle at 35% 30%,#f6cf8c,#e3a04e 70%,#d48a3c)}
+#date i[data-s="3"]{background:radial-gradient(circle at 35% 30%,#d6e2f2,#9db4d6 70%,#8aa2c8)}
+#tags{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin-top:9px}
+#tags span{font-size:12.5px;font-weight:600;padding:2px 11px 3px 9px;color:#5a4a52;background:rgba(255,252,243,.82);border-radius:var(--hand);border:1.2px solid var(--line);animation:tagIn .9s both;position:relative}
+#tags span::before{content:'';display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50% 46% 52% 48%;background:var(--c);vertical-align:1px}
+@keyframes tagIn{from{opacity:0;transform:translateX(-10px) rotate(-3deg)}}
+
+/* エリカと吹き出し */
+#erika{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);width:27%;max-width:118px;aspect-ratio:1;z-index:20;cursor:pointer;display:none;animation:bob 4.6s ease-in-out infinite;border-radius:50% 48% 51% 49%/49% 51% 48% 52%;background:radial-gradient(circle at 40% 32%,#fffdf8,#fbf3e4);box-shadow:0 0 0 1.4px var(--line),0 0 0 5px rgba(255,253,246,.9),0 0 0 6.3px rgba(110,84,76,.25),3px 6px 16px rgba(80,60,40,.25);overflow:hidden}
+#erika.ready{display:block}
+#erika img{position:absolute;inset:-2%;width:104%;height:104%;object-fit:cover;opacity:0;transition:opacity .28s;mix-blend-mode:multiply}
+#erika img.on{opacity:1}
+@keyframes bob{50%{transform:translateY(-3px) rotate(-1.2deg)}}
+#bubble{position:absolute;left:min(22%,96px);right:64px;bottom:calc(env(safe-area-inset-bottom) + min(27vw,118px) + 22px);z-index:21;opacity:0;transform:translateY(8px) scale(.94);transform-origin:8% 100%;transition:opacity .45s,transform .55s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
+#bubble.show{opacity:1;transform:none;pointer-events:auto}
+#bubble p{font-size:14.5px;line-height:1.72;font-weight:600;letter-spacing:.02em;padding:11px 15px 12px;background:#fffdf5;border:1.5px solid var(--line);border-radius:var(--hand2);box-shadow:2px 3px 0 rgba(120,90,70,.1),0 6px 18px rgba(90,70,50,.14);position:relative}
+#bubble p::after{content:'';position:absolute;left:22px;bottom:-9px;width:15px;height:15px;background:#fffdf5;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);transform:skewX(28deg) rotate(-38deg);border-radius:0 0 0 5px}
+
+/* ボタン */
+#btns{position:absolute;right:9px;bottom:calc(env(safe-area-inset-bottom) + 12px);display:flex;flex-direction:column;gap:9px;z-index:22}
+#btns button{width:46px;height:50px;border:0;background:none;font:inherit;color:var(--ink);cursor:pointer;display:grid;justify-items:center;align-content:start;position:relative;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+#btns button::before{content:'';position:absolute;left:4px;top:0;width:38px;height:38px;border-radius:46% 54% 48% 52%/54% 47% 53% 46%;background:radial-gradient(circle at 36% 30%,rgba(255,254,248,.97),rgba(255,250,236,.86));border:1.3px solid var(--line);box-shadow:1px 2px 0 rgba(120,90,70,.1),0 3px 10px rgba(90,70,50,.14)}
+#btns button:nth-child(2n)::before{border-radius:54% 46% 53% 47%/46% 54% 45% 55%}
+#btns button:active{transform:scale(.88) rotate(-4deg)}
+#btns svg{position:relative;width:26px;height:26px;margin-top:6px;fill:none;stroke:#6a5650;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#btns small{position:relative;font-size:9.5px;font-weight:600;line-height:1;margin-top:8px;color:#5a4a52;text-shadow:0 0 4px #fffaf0,0 0 2px #fffaf0,0 0 6px #fffaf0;white-space:nowrap}
+#btns button.off svg{opacity:.34}
+#btns button.off::after{content:'';position:absolute;left:9px;top:18px;width:28px;height:1.6px;background:#8a6e66;transform:rotate(-38deg);border-radius:2px}
+#bSpeed[data-i="0"]::before{background:radial-gradient(circle at 36% 30%,#fff,#e6f1e2)}
+#bSpeed[data-i="2"]::before{background:radial-gradient(circle at 36% 30%,#fff,#fbe6c9)}
+#bSpeed[data-i="3"]::before{background:radial-gradient(circle at 36% 30%,#fff,#f9cfd6)}
+#bSpeed[data-i="3"] svg path:first-of-type{animation:spin 1s linear infinite;transform-origin:16px 17px}
+#bSpeed[data-i="2"] svg path:first-of-type{animation:spin 2.4s linear infinite;transform-origin:16px 17px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#bZukan.ping::before{animation:ping 1.3s}
+@keyframes ping{30%{box-shadow:0 0 0 9px rgba(234,163,184,.5);background:#fde3ea}}
+
+/* めくる紙 */
+#sheet{position:absolute;left:0;right:0;bottom:0;height:80%;z-index:40;background:#fbf6ea;border-radius:26px 30px 0 0/22px 26px 0 0;border-top:1.5px solid var(--line);box-shadow:0 -10px 40px rgba(80,60,40,.25);transform:translateY(105%);transition:transform .55s cubic-bezier(.2,.9,.25,1);display:flex;flex-direction:column}
+#sheet.open{transform:none}
+#sheet.plant{height:74%}
+#sheet::before{content:'';position:absolute;left:50%;top:9px;width:44px;height:4px;margin-left:-22px;border-radius:4px;background:rgba(120,90,80,.25)}
+#close{position:absolute;right:14px;top:14px;z-index:2;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);background:#fffdf5;border:1.3px solid var(--line);border-radius:var(--hand);padding:4px 13px 5px;cursor:pointer}
+#sheetBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:26px 20px calc(env(safe-area-inset-bottom) + 30px);flex:1}
+#sheet h2{font-family:'Kaisei Decol',serif;font-size:21px;font-weight:700;letter-spacing:.04em;margin:2px 70px 8px 0;line-height:1.35;color:#5a4650}
+#sheet h3{font-family:'Kaisei Decol',serif;font-size:14.5px;font-weight:700;margin:20px 0 8px;display:flex;align-items:center;gap:8px;color:#6a5460}
+#sheet h3::after{content:'';flex:1;height:5px;border-radius:5px;background:linear-gradient(90deg,rgba(234,163,184,.5),rgba(134,207,220,.38),transparent)}
+#sheet canvas{display:block}
+.note{font-size:12.5px;line-height:1.85;color:#7a6860}
+.note s{opacity:.55}
+.phead{display:flex;gap:14px;align-items:flex-end}
+.phead>canvas{flex:none;background:radial-gradient(ellipse at 50% 60%,#fffdf6,#f6eeda);border-radius:var(--hand2);border:1.3px solid var(--line);box-shadow:2px 3px 0 rgba(120,90,70,.08)}
+.pinfo{flex:1;min-width:0}
+.meta{font-size:13px;line-height:1.85;margin-bottom:10px}
+.meta b{font-size:16px;font-family:'Kaisei Decol',serif;color:#d0708e;margin:0 1px}
+button.ink{font:inherit;font-size:13px;font-weight:600;color:#6a4650;background:linear-gradient(180deg,#fde9ee,#f9d5de);border:1.3px solid rgba(160,90,110,.45);border-radius:var(--hand);padding:7px 16px 8px;cursor:pointer;box-shadow:1px 2px 0 rgba(140,80,100,.14)}
+button.ink:disabled{opacity:.55}
+button.ink.quiet{display:block;margin:30px auto 0;background:none;border-color:var(--line);color:#8a7870;font-size:12px;box-shadow:none}
+.genes{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;margin-top:18px}
+.gene{display:grid;grid-template-columns:5.6em 1fr auto;align-items:center;gap:0 7px;font-size:11.5px;min-height:20px}
+.gene span{color:#7a6860;white-space:nowrap}
+.gene i{height:8px;border-radius:8px 5px 7px 4px;background:rgba(150,125,110,.16);overflow:hidden;min-width:30px}
+.gene em{display:block;height:100%;border-radius:8px 6px 9px 5px;opacity:.92}
+.gene b{font-size:11.5px;font-weight:600;min-width:2.6em;text-align:right;color:#5a4a52;white-space:nowrap}
+.gene b.wide{grid-column:2/4;text-align:left;font-size:12px}
+.fam{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kin{display:grid;justify-items:center;font-size:11px;line-height:1.45;text-align:center;min-width:64px}
+.kin canvas,.nothumb{width:52px;height:52px}
+.kin small{color:#9a8880;font-size:10.5px}
+.dots{color:#b0a096}
+.zgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px;margin-top:14px}
+.zcard{display:grid;justify-items:center;text-align:center;background:#fffdf6;border:1.2px solid var(--line);border-radius:var(--hand2);padding:6px 4px 9px;box-shadow:2px 3px 0 rgba(120,90,70,.07);transform:rotate(-.6deg)}
+.zcard:nth-child(3n+2){transform:rotate(.7deg)}.zcard:nth-child(4n){transform:rotate(-1.1deg)}
+.zcard.star{background:#fff6f3;border-color:rgba(190,110,130,.5)}
+.zcard canvas{max-width:100%}
+.zname{font-size:12px;font-weight:600;line-height:1.4;min-height:1.4em;outline:none;padding:1px 4px;border-radius:6px;-webkit-user-select:text;user-select:text}
+.zname:focus{background:#fdeef2}
+.zcard small{font-size:10px;color:#9a8880;line-height:1.4}
+.axis{display:flex;justify-content:space-between;font-size:10.5px;color:#9a8880;margin:2px 6px 6px}
+.legend,.prefs{display:flex;flex-wrap:wrap;gap:3px 12px;font-size:11px;color:#7a6860;margin-top:5px}
+.legend i,.prefs i{display:inline-block;width:9px;height:9px;border-radius:50% 44% 52% 46%;margin-right:4px;vertical-align:-1px}
+.prefs i{width:16px;height:16px;border:1px solid var(--line);vertical-align:-4px}
+.diary p{font-size:12.5px;line-height:1.8;padding:6px 0;border-bottom:1px dashed rgba(120,90,80,.2)}
+.diary b{font-family:'Kaisei Decol',serif;color:#d0708e;margin-right:8px;font-size:12px}
+
+/* 扉 */
+#title{position:absolute;inset:0;z-index:55;background:var(--paper) url(title.jpg) center/cover no-repeat;display:flex;justify-content:center;transition:opacity 1.7s ease,transform 2.4s ease;cursor:pointer}
+#title.gone{opacity:0;transform:scale(1.06);pointer-events:none}
+.tt{margin-top:calc(env(safe-area-inset-top) + 11vh);text-align:center;color:#5a4650;text-shadow:0 0 18px #fffdf4,0 0 8px #fffdf4,0 0 3px #fffdf4;animation:ttIn 1.6s .2s both}
+.tt p{font-size:13.5px;font-weight:600;letter-spacing:.34em;margin-bottom:10px;color:#c8688a}
+.tt h1{font-family:'Kaisei Decol',serif;font-weight:700;font-size:min(13.5vw,58px);line-height:1.22;letter-spacing:.1em}
+.tt span{display:block;margin-top:16px;font-size:12.5px;font-weight:600;line-height:1.9;letter-spacing:.06em}
+@keyframes ttIn{from{opacity:0;transform:translateY(14px)}}
+
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div id="date"><b id="yr">1</b><span>年目</span><i id="ss" data-s="0">春</i></div>
+    <div id="tags"></div>
+  </div>
+  <div id="erika"></div>
+  <div id="bubble"><p></p></div>
+  <nav id="btns">
+    <button id="bTalk" aria-label="実況"><svg viewBox="0 0 32 32"><path d="M6 9c0-2 1.6-3.4 3.6-3.4h12.8c2 0 3.6 1.4 3.6 3.4v8.4c0 2-1.6 3.4-3.6 3.4h-7.2l-5.4 4.6.6-4.6h-.8c-2 0-3.6-1.4-3.6-3.4z"/><path d="M11.5 11.8h9M11.5 15.4h6"/></svg><small>実況</small></button>
+    <button id="bSound" class="off" aria-label="音"><svg viewBox="0 0 32 32"><path d="M12.5 23.5V9.2l11-2.4v13.4"/><ellipse cx="9.6" cy="23.6" rx="3.2" ry="2.5"/><ellipse cx="20.6" cy="20.4" rx="3.2" ry="2.5"/></svg><small>音</small></button>
+    <button id="bHist" aria-label="年表"><svg viewBox="0 0 32 32"><path d="M5 24.5c4-1 5-9.5 9-9.5s3.6 5 7 5 3.6-10 6.4-12"/><path d="M5 27.5h22.5"/></svg><small>年表</small></button>
+    <button id="bZukan" aria-label="図鑑"><svg viewBox="0 0 32 32"><path d="M16 9.4c-2.6-2-6-2.6-10-2.2v17c4-.4 7.4.2 10 2.2 2.6-2 6-2.6 10-2.2v-17c-4-.4-7.4.2-10 2.2zM16 9.4v17"/><circle cx="21.2" cy="14.4" r="1.7"/><path d="M21.2 16.4v3.6"/></svg><small>図鑑</small></button>
+    <button id="bSpeed" data-i="1" aria-label="速さ"><svg viewBox="0 0 32 32"><circle cx="16" cy="17" r="9.6"/><path d="M16 17l4.6-5.4M16 5v2.6M13.4 4.6h5.2"/></svg><small>ふつう</small></button>
+  </nav>
+  <section id="sheet"><button id="close" aria-label="とじる">とじる</button><div id="sheetBody"></div></section>
+  <div id="title"><div class="tt"><p>エリカの観察日記</p><h1>うつろいの<br>花畑</h1><span>だれも手を入れない花畑が、<br>虫と風と天気にまかせて変わっていきます</span></div></div>
+  <div id="paper"></div>
+</div>
+<script>
+(()=>{
+'use strict';
+// ===== 00-util.js =====
+// ───────────────────────── util ─────────────────────────
+const TAU = Math.PI * 2;
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { x = clamp((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const hump = (a, b, x) => { const t = (x - a) / (b - a); return t <= 0 || t >= 1 ? 0 : Math.sin(Math.PI * t); };
+
+function RNG(seed) { this.s = seed >>> 0; }
+RNG.prototype.next = function () {
+  let t = (this.s = (this.s + 0x6d2b79f5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+RNG.prototype.range = function (a, b) { return a + (b - a) * this.next(); };
+RNG.prototype.int = function (n) { return Math.floor(this.next() * n); };
+RNG.prototype.chance = function (p) { return this.next() < p; };
+RNG.prototype.pick = function (arr) { return arr[Math.floor(this.next() * arr.length)]; };
+RNG.prototype.gauss = function () {
+  let u = 0, v = 0;
+  while (u === 0) u = this.next();
+  v = this.next();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+};
+
+const hueWrap = (h) => ((h % 360) + 360) % 360;
+const hueDist = (a, b) => { const d = Math.abs(hueWrap(a) - hueWrap(b)); return d > 180 ? 360 - d : d; };
+const hueLerp = (a, b, t) => { let d = hueWrap(b) - hueWrap(a); if (d > 180) d -= 360; if (d < -180) d += 360; return hueWrap(a + d * t); };
+const gaussHue = (h, c, sig) => { const d = hueDist(h, c); return Math.exp(-(d * d) / (2 * sig * sig)); };
+const hsl = (h, s, l, a = 1) => `hsla(${hueWrap(h).toFixed(1)},${(clamp(s) * 100).toFixed(1)}%,${(clamp(l) * 100).toFixed(1)}%,${a})`;
+
+// integer hash → 0..1 (visual jitter that must not consume sim rng)
+const hash1 = (n) => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n ^= n >>> 16; return (n >>> 0) / 4294967296; };
+const hash2 = (a, b) => hash1((a * 73856093) ^ (b * 19349663));
+function vnoise(x, seed = 0) { const i = Math.floor(x), f = x - i; const u = f * f * (3 - 2 * f); return lerp(hash2(i, seed), hash2(i + 1, seed), u); }
+function vnoise2(x, y, seed = 0) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const h = (a, b) => hash1(((a * 73856093) ^ (b * 19349663) ^ (seed * 83492791)) | 0);
+  return lerp(lerp(h(xi, yi), h(xi + 1, yi), u), lerp(h(xi, yi + 1), h(xi + 1, yi + 1), u), v);
+}
+const fbm = (x, seed = 0) => vnoise(x, seed) * 0.55 + vnoise(x * 2.1, seed + 7) * 0.3 + vnoise(x * 4.3, seed + 13) * 0.15;
+
+// ───────────────────────── 透視 ─────────────────────────
+// x は「画面の左右のどこか」(0..1)、z は奥行き (0=奥, 1=手前)。
+// 奥ほど同じ画面幅に広い地面が写るので、株は小さく、数は多く、間隔は詰まって見える。
+// 距離を測るときは必ず地面の座標 (wx, wz) に直す。単位は「手前の画面幅」。
+const PERS = { PK: 7, DN: 3.1 };
+const persA = (z) => 1 + PERS.PK * (1 - z);
+const toWX = (x, z) => (x - 0.5) * persA(z);
+const toWZ = (z) => z * PERS.DN;
+const fromW = (wx, wz) => { const z = wz / PERS.DN; return [0.5 + wx / persA(z), z]; };
+
+// ───────────────────────── 花畑の地形 ─────────────────────────
+// x: 0(左)..1(右)  z: 0(奥)..1(手前)
+const SITE = {
+  hill: { x: 0.2, z: 0.6, r: 0.25 },
+  shade: { x: 0.8, z: 0.2, r: 0.19 },
+  brookX(z) { const f = 1 / persA(z), zw = z * PERS.DN; return 0.4 + 0.16 * f + 0.19 * f * Math.sin(zw * 8.4 + 0.6) + 0.05 * f * Math.sin(zw * 19 + 2); }, // 蛇行の幅は地面では一定 → 奥ほど小さく見える
+  brookW(z) { return (0.085 / persA(z)) * (1 + 0.25 * Math.sin(z * PERS.DN * 4 + 2)); },
+  elev(x, z) { const dx = x - this.hill.x, dz = (z - this.hill.z) * 1.15; return Math.exp(-(dx * dx + dz * dz) / (this.hill.r * this.hill.r)); },
+  shadeAt(x, z) { const dx = x - this.shade.x, dz = (z - this.shade.z) * 1.1; return Math.exp(-(dx * dx + dz * dz) / (this.shade.r * this.shade.r)); },
+  moist(x, z) {
+    const d = Math.abs(x - this.brookX(z)) * persA(z);
+    return clamp(0.42 + 0.5 * Math.exp(-(d * d) / (0.45 * 0.45)) - 0.15 * this.elev(x, z), 0.2, 0.98);
+  },
+  sun(x, z) { return 1 - 0.4 * this.shadeAt(x, z); },
+  expo(x, z) { return 0.8 + 0.5 * this.elev(x, z) - 0.35 * this.shadeAt(x, z); },
+  inBrook(x, z) { return Math.abs(x - this.brookX(z)) < this.brookW(z) + 0.006; },
+  zone(x, z) { // 実況用の場所の名前
+    if (this.elev(x, z) > 0.45) return 'hill';
+    if (this.shadeAt(x, z) > 0.45) return 'shade';
+    if (Math.abs(x - this.brookX(z)) * persA(z) < 0.42) return 'brook';
+    return 'field';
+  },
+};
+const ZONE_NAME = { hill: '丘の上', shade: '木かげ', brook: '小川のそば', field: '野原のまんなか' };
+
+// ===== 10-genome.js =====
+// ───────────────────────── 遺伝子 ─────────────────────────
+// h だけ 0..360（色相）。ほかは全部 0..1。
+const GENES = ['s', 'l', 'h2', 'pic', 'vein', 'pn', 'pw', 'pt', 'fr', 'nt', 'dbl', 'cup', 'sz', 'fn', 'arr', 'ht', 'br', 'lw', 'bt', 'bd', 'dr', 'cd', 'pe', 'sd', 'ne', 'cs', 'ls', 'lc', 'lh', 'lr'];
+
+const G = {
+  petals(g) { const f = G.form(g); const n = Math.round(3 + Math.pow(g.pn, 1.25) * 13); return f === 'open' ? n : clamp(Math.round(3 + g.pn * 4), 3, 6); },
+  rings(g) { return g.dbl < 0.52 ? 1 : g.dbl < 0.8 ? 2 : 3; },
+  form(g) { return g.cup > 0.84 ? 'bell' : g.cup > 0.66 ? 'tulip' : 'open'; },
+  arr(g) { return g.arr < 0.4 ? 'spray' : g.arr < 0.7 ? 'umbel' : 'spike'; },
+  count(g) { const a = G.arr(g); const mx = a === 'spray' ? 6 : a === 'umbel' ? 13 : 11; const mn = a === 'spray' ? 1 : 3; return Math.round(mn + Math.pow(g.fn, 1.4) * (mx - mn)); },
+  radius(g) { const a = G.arr(g); return lerp(4.6, 15.5, Math.pow(g.sz, 1.1)) * (a === 'umbel' ? 0.6 : a === 'spike' ? 0.68 : 1); }, // 1 = 約5mm。花の径 3.5〜15cm },
+  height(g) { return lerp(28, 150, g.ht) * (G.arr(g) === 'spike' ? 1.08 : 1); },
+  bloomStart(g) { return 0.1 + g.bt * 0.55; },
+  bloomDur(g) { return 0.15 + g.bd * 0.22; },
+  leaf(g) { return g.ls < 0.2 ? 'linear' : g.ls < 0.42 ? 'lance' : g.ls < 0.64 ? 'ovate' : g.ls < 0.84 ? 'round' : 'palm'; },
+  cut(g) { return g.lc < 0.36 ? 'entire' : g.lc < 0.56 ? 'wave' : g.lc < 0.78 ? 'saw' : 'lobe'; },
+  perennial(g) { return g.pe > 0.5; },
+  white(g) { return g.s < 0.16 || (g.l > 0.9 && g.s < 0.5); },
+  hueBin(g) { return G.white(g) ? 12 : Math.floor(hueWrap(g.h + 15) / 30) % 12; },
+  // 目立ちやすさ（虫から見た大きさ）と、咲かせるのにかかる栄養
+  showy(g) { return (0.3 + g.sz) * Math.sqrt(G.count(g)) * (G.arr(g) === 'spray' ? 1 : 0.8) * (1 + 0.55 * g.dbl) * (1 + 0.12 * g.fr); },
+  cost(g) { const r = (G.radius(g) - 2) / 13.5; return G.count(g) * (0.05 + r * r) * (1 + 0.55 * g.dbl) * (1 + 0.8 * g.ne); },
+};
+
+function mkGenome(o) {
+  const g = { h: 0 };
+  for (const k of GENES) g[k] = 0.5;
+  Object.assign(g, o);
+  return g;
+}
+
+function mutate(g, rng, rate = 1) {
+  const c = { h: g.h };
+  for (const k of GENES) {
+    let v = g[k];
+    if (rng.chance(0.45)) v += rng.gauss() * 0.045 * rate;
+    c[k] = clamp(v);
+  }
+  c.h = hueWrap(g.h + (rng.chance(0.5) ? rng.gauss() * 8 * rate : 0));
+  if (rng.chance(0.03 * rate)) { // たまに大きく跳ぶ
+    if (rng.chance(0.3)) c.h = hueWrap(c.h + (rng.chance(0.5) ? 1 : -1) * rng.range(35, 110));
+    else { const k = rng.pick(GENES); c[k] = clamp(c[k] + (rng.chance(0.5) ? 1 : -1) * rng.range(0.15, 0.4)); }
+    c._macro = 1;
+  }
+  return c;
+}
+
+function cross(a, b, rng) {
+  const c = { h: 0 };
+  for (const k of GENES) {
+    const r = rng.next();
+    c[k] = r < 0.42 ? a[k] : r < 0.84 ? b[k] : lerp(a[k], b[k], rng.range(0.25, 0.75));
+  }
+  // 色は「どちらかの親ゆずり」が基本。たまにだけ中間の色が出る
+  const r = rng.next();
+  if (r < 0.9) { const p = r < 0.45 ? a : b; c.h = p.h; c.s = p.s; c.l = p.l; }
+  else c.h = hueLerp(a.h, b.h, rng.range(0.25, 0.75));
+  return c;
+}
+
+// ───────────────────────── 色と形の名前 ─────────────────────────
+function colorName(g) {
+  const h = hueWrap(g.h), s = g.s, l = g.l;
+  if (G.white(g)) return '白';
+  const band = (tbl) => { for (const [lim, nm] of tbl) if (h < lim) return nm; return tbl[0][1]; };
+  if (l > 0.8 || s < 0.3) return band([[12, '桜色'], [40, '杏色'], [72, 'クリーム色'], [165, '白緑'], [222, '水色'], [292, '藤色'], [345, '撫子色'], [361, '桜色']]);
+  if (l < 0.52 && s > 0.3) return band([[14, '茜色'], [40, '柿色'], [72, 'からし色'], [165, '苔色'], [200, '青緑'], [250, '藍色'], [292, '茄子紺'], [342, '葡萄色'], [361, '茜色']]);
+  return band([[10, '紅色'], [24, '朱色'], [42, '橙色'], [56, '山吹色'], [72, '黄色'], [150, '若草色'], [190, '青緑'], [216, '空色'], [246, '瑠璃色'], [276, '菫色'], [302, '紫'], [326, '牡丹色'], [346, '桃色'], [361, '紅色']]);
+}
+
+const BIN_NAME = ['赤', '橙', '黄', '黄緑', '緑', '青緑', '水色', '青', '青紫', '紫', '赤紫', '桃', '白'];
+const binColor = (b, s = 0.62, l = 0.66) => (b === 12 ? 'hsl(45,30%,93%)' : hsl(b * 30, s, l));
+
+function formName(g) {
+  const f = G.form(g), a = G.arr(g), r = G.rings(g);
+  if (f === 'bell') return a === 'spike' ? '鈴なりの穂' : '鈴咲き';
+  if (f === 'tulip') return a === 'spike' ? '杯の穂' : '杯咲き';
+  let s = '';
+  if (r === 3) s = '万重'; else if (r === 2) s = '八重';
+  if (g.fr > 0.6) s += 'フリル';
+  else if (g.pt > 0.66 && g.pw < 0.45) s += '星';
+  else if (g.nt > 0.62) s += 'ハート弁';
+  else if (g.pw > 0.7 && r === 1) s += '丸弁';
+  else if (G.petals(g) >= 12 && r === 1) s += '菊';
+  if (a === 'umbel') s += '手まり'; else if (a === 'spike') s += '穂咲き';
+  else if (g.sz > 0.72) s += '大輪'; else if (g.sz < 0.2) s += '小花';
+  return s || '一重';
+}
+const varietyName = (g) => `${colorName(g)}の${formName(g)}`;
+
+// 最初の花畑に生える 6 つの野の花
+const FOUNDERS = [
+  { key: 'nogiku', name: '野菊', g: { h: 48, s: 0.1, l: 0.95, pn: 0.72, pw: 0.22, pt: 0.2, fr: 0.05, nt: 0.1, dbl: 0.2, cup: 0.15, sz: 0.3, fn: 0.3, arr: 0.2, ht: 0.42, br: 0.55, lw: 0.4, bt: 0.72, bd: 0.6, dr: 0.5, cd: 0.5, pe: 0.62, sd: 0.3, ne: 0.35, cs: 0.2, h2: 0.5, pic: 0.1, vein: 0.2, ls: 0.3, lc: 0.85, lh: 0.45, lr: 0.6 } },
+  { key: 'sakurasou', name: '桜草', g: { h: 338, s: 0.55, l: 0.8, pn: 0.26, pw: 0.62, pt: 0.1, fr: 0.1, nt: 0.75, dbl: 0.15, cup: 0.25, sz: 0.3, fn: 0.45, arr: 0.55, ht: 0.25, br: 0.3, lw: 0.75, bt: 0.12, bd: 0.45, dr: 0.2, cd: 0.6, pe: 0.7, sd: 0.4, ne: 0.4, cs: 0.1, h2: 0.4, pic: 0.5, vein: 0.2, ls: 0.55, lc: 0.5, lh: 0.25, lr: 0.08 } },
+  { key: 'wasure', name: '忘れな草', g: { h: 212, s: 0.6, l: 0.72, pn: 0.22, pw: 0.7, pt: 0.05, fr: 0, nt: 0.15, dbl: 0.1, cup: 0.2, sz: 0.14, fn: 0.6, arr: 0.3, ht: 0.22, br: 0.7, lw: 0.55, bt: 0.25, bd: 0.6, dr: 0.15, cd: 0.45, pe: 0.3, sd: 0.15, ne: 0.3, cs: 0.05, h2: 0.5, pic: 0.6, vein: 0.1, ls: 0.3, lc: 0.1, lh: 0.6, lr: 0.75 } },
+  { key: 'kinpouge', name: '金鳳花', g: { h: 52, s: 0.82, l: 0.62, pn: 0.24, pw: 0.74, pt: 0.05, fr: 0, nt: 0.2, dbl: 0.1, cup: 0.5, sz: 0.28, fn: 0.35, arr: 0.15, ht: 0.48, br: 0.6, lw: 0.5, bt: 0.38, bd: 0.5, dr: 0.45, cd: 0.4, pe: 0.4, sd: 0.3, ne: 0.3, cs: 0.3, h2: 0.55, pic: 0.1, vein: 0.3, ls: 0.92, lc: 0.7, lh: 0.4, lr: 0.4 } },
+  { key: 'sumire', name: '菫', g: { h: 268, s: 0.52, l: 0.6, pn: 0.2, pw: 0.5, pt: 0.3, fr: 0.1, nt: 0.2, dbl: 0.1, cup: 0.72, sz: 0.24, fn: 0.5, arr: 0.82, ht: 0.55, br: 0.3, lw: 0.45, bt: 0.45, bd: 0.5, dr: 0.3, cd: 0.55, pe: 0.65, sd: 0.4, ne: 0.5, cs: 0.2, h2: 0.4, pic: 0.3, vein: 0.5, ls: 0.74, lc: 0.62, lh: 0.5, lr: 0.15 } },
+  { key: 'hinageshi', name: '雛罌粟', g: { h: 6, s: 0.72, l: 0.6, pn: 0.14, pw: 0.85, pt: 0, fr: 0.45, nt: 0.1, dbl: 0.1, cup: 0.4, sz: 0.48, fn: 0.15, arr: 0.1, ht: 0.6, br: 0.4, lw: 0.3, bt: 0.55, bd: 0.4, dr: 0.6, cd: 0.25, pe: 0.2, sd: 0.1, ne: 0.25, cs: 0.85, h2: 0.5, pic: 0, vein: 0.4, ls: 0.1, lc: 0.9, lh: 0.72, lr: 0.5 } },
+];
+const LINE_NAME = Object.fromEntries(FOUNDERS.map((f) => [f.key, f.name]));
+LINE_NAME.tabi = '旅の種';
+
+// ===== 20-sim.js =====
+// ───────────────────────── シミュレーション ─────────────────────────
+// 描画に一切さわらない。node でもそのまま回る（test/sim-test.mjs）。
+const TICKS = 120; // 1年
+const MAX_PLANTS = 1200;
+const SPACING = 0.092; // 地面の座標で。手前の画面幅に 9〜10 株ならぶ
+const VISITS = 3; // 虫 1 匹が 1 tick に回る花の数
+const SPECIES = {
+  bee: { name: 'ミツバチ', pref: 245, sig: 40, pop: 5 },
+  fly: { name: 'ハナアブ', pref: 62, sig: 26, pop: 4 },
+  butterfly: { name: 'チョウ', pref: 352, sig: 34, pop: 3.5 },
+  moth: { name: 'スズメガ', pref: 300, sig: 80, pop: 2.5 },
+};
+const FOOD0 = 520;
+const SP_KEYS = Object.keys(SPECIES);
+const SEASON_OF = (t) => (t < 0.08 ? 3 : t < 0.33 ? 0 : t < 0.58 ? 1 : t < 0.83 ? 2 : 3);
+const SEASON_NAME = ['春', '夏', '秋', '冬'];
+const seasonTemp = (t) => Math.sin(TAU * (t - 0.2)); // 夏 +1 / 冬 -1
+
+function spActivity(sp, t) {
+  switch (sp) {
+    case 'bee': return Math.pow(hump(0.1, 0.68, t), 0.7);
+    case 'fly': return 0.8 * hump(0.05, 0.42, t) + 0.85 * hump(0.5, 0.86, t);
+    case 'butterfly': return hump(0.27, 0.76, t);
+    default: return 0.85 * hump(0.34, 0.8, t);
+  }
+}
+
+// 虫が花をどれだけ好むか（色 × 形）。pref は年々ゆっくり動く
+function spAttraction(sp, st, g) {
+  const white = G.white(g), form = G.form(g), arr = G.arr(g);
+  let col, shp;
+  if (sp === 'bee') {
+    col = white ? 0.42 : Math.max(gaussHue(g.h, st.pref, st.sig), 0.45 * gaussHue(g.h, 56, 20)) * (0.45 + 0.55 * g.s);
+    if (!white && hueDist(g.h, 2) < 24 && g.s > 0.4) col *= 0.3; // 赤は見えにくい
+    shp = (1.15 - Math.abs(g.sz - 0.38)) * (arr === 'spray' ? 1 : 1.2) * (form === 'bell' ? 1.25 : 1);
+  } else if (sp === 'butterfly') {
+    col = white ? 0.3 : gaussHue(g.h, st.pref, st.sig) * (0.5 + 0.5 * g.s);
+    shp = (0.45 + 1.1 * g.sz) * (form === 'open' ? 1.2 : 0.6) * (0.7 + 0.6 * g.ht);
+  } else if (sp === 'fly') {
+    col = Math.max(0.25 + 0.95 * smooth(0.62, 0.92, g.l) * (1 - 0.4 * g.s), 0.9 * gaussHue(g.h, st.pref, st.sig) * g.s);
+    shp = (1.35 - g.sz) * (form === 'open' ? 1 : 0.3) * (0.7 + 0.5 * g.fn);
+  } else {
+    col = 0.15 + 1.1 * smooth(0.62, 0.93, g.l) * (1 - 0.5 * g.s) + 0.25 * gaussHue(g.h, st.pref, st.sig);
+    shp = (form === 'tulip' ? 1.5 : form === 'bell' ? 1.15 : 0.6) * (0.5 + 1.2 * g.ne);
+  }
+  return col * shp * (0.6 + 0.8 * g.ne) * G.showy(g);
+}
+
+class Sim {
+  constructor(seed) {
+    this.rng = new RNG(seed);
+    this.seed0 = seed;
+    this.year = 1; this.tick = 0;
+    this.plants = []; this.bank = []; this.agents = [];
+    this.nextId = 1;
+    this.sp = {}; for (const k of SP_KEYS) this.sp[k] = { pop: SPECIES[k].pop, pref: SPECIES[k].pref, sig: SPECIES[k].sig, food: 0, act: 0, visits: 0, bins: new Array(13).fill(0), mul: 1 };
+    this.cPeriod = this.rng.range(60, 95); this.cPhase = this.rng.range(0, TAU); this.cDrift = 0;
+    this.rPeriod = this.rng.range(17, 29); this.rPhase = this.rng.range(0, TAU);
+    this.w = null; this.sched = []; this.flags = {};
+    this.hist = []; this.out = []; this.quiet = false;
+    this.seen = { colors: {}, forms: {}, rec: { sz: 0, ht: 0, pn: 0, fn: 0 } };
+    this.lines = {}; // key -> {name, since, alive}
+    this.grid = null;
+  }
+
+  static fresh(seed) {
+    const s = new Sim(seed);
+    const r = s.rng;
+    // 6 つの野の花を、それぞれ好きそうな場所に群れで置く
+    const homes = { nogiku: [0.5, 0.45], sakurasou: [0.74, 0.3], wasure: [0.62, 0.62], kinpouge: [0.42, 0.78], sumire: [0.86, 0.72], hinageshi: [0.2, 0.55] };
+    for (const f of FOUNDERS) {
+      s.lines[f.key] = { name: f.name, since: 1, alive: true };
+      const g0 = mkGenome(f.g);
+      s.noteSeen(g0, true);
+      const [hx, hz] = homes[f.key];
+      for (let i = 0; i < 420; i++) {
+        const g = mutate(g0, r, 1.6); delete g._macro;
+        let x, z;
+        if (r.chance(0.35)) { do { z = r.next(); } while (r.next() > persA(z) / persA(0)); x = r.next(); } // どこにでも少し
+        else [x, z] = fromW(toWX(hx, hz) + r.gauss() * 0.6, toWZ(hz) + r.gauss() * 0.5);
+        x = clamp(x, 0.02, 0.98); z = clamp(z, 0.03, 0.99);
+        s.bank.push({ g, x, z, gen: 1, line: f.key, momG: null, dadG: null, anc: [], age: 0, w: 1 + r.next() });
+      }
+    }
+    s.newYear();
+    return s;
+  }
+
+  emit(type, data) { if (this.quiet && (type === 'bloom' || type === 'seed' || type === 'sprout' || type === 'die')) return; this.out.push(Object.assign({ type, year: this.year, tick: this.tick }, data)); }
+  get t() { return this.tick / TICKS; }
+  lineName(k) { return (this.lines[k] && this.lines[k].name) || '野の花'; }
+
+  noteSeen(g, silent, plant) {
+    const cn = colorName(g), sn = this.seen;
+    const tags = [];
+    if (!(cn in sn.colors)) { sn.colors[cn] = this.year; if (!silent) this.emit('novel', { kind: 'color', name: cn, plant }); }
+    const f = G.form(g), a = G.arr(g), rg = G.rings(g);
+    if (rg === 2) tags.push(['double', '八重咲き']); if (rg === 3) tags.push(['triple', '万重咲き']);
+    if (f === 'bell') tags.push(['bell', '鈴の形']); if (f === 'tulip') tags.push(['tulip', '杯の形']);
+    if (a === 'umbel') tags.push(['umbel', '手まり咲き']); if (a === 'spike') tags.push(['spike', '穂咲き']);
+    if (g.fr > 0.62) tags.push(['frill', 'フリルの花びら']);
+    if (g.pt > 0.68 && g.pw < 0.42) tags.push(['star', '星の形']);
+    if (g.nt > 0.64 && g.pw > 0.4) tags.push(['heart', 'ハートの花びら']);
+    if (g.sz > 0.76 && a === 'spray') tags.push(['big', '大輪']);
+    if (g.pic > 0.7 && !G.white(g)) tags.push(['picotee', '覆輪（ふちどり）']);
+    for (const [k, nm] of tags) if (!(k in sn.forms)) { sn.forms[k] = this.year; if (!silent) this.emit('novel', { kind: 'form', key: k, name: nm, plant }); }
+  }
+
+  // ── 年のはじめ：天気を決め、芽を出す ──
+  rollWeather() {
+    const r = this.rng, y = this.year;
+    this.cDrift = clamp(this.cDrift * 0.92 + r.gauss() * 0.05, -0.35, 0.35);
+    const climate = 0.5 * Math.sin((TAU * y) / this.cPeriod + this.cPhase) + this.cDrift;
+    const rainSlow = 0.28 * Math.sin((TAU * y) / this.rPeriod + this.rPhase);
+    const w = {
+      climate,
+      rain: clamp(rainSlow + r.gauss() * 0.48, -1, 1),
+      temp: clamp(climate + r.gauss() * 0.32, -1.2, 1.2),
+      sev: clamp(0.5 - 0.45 * (climate + r.gauss() * 0.55), 0, 1),
+      wx: 0.35 + r.gauss() * 0.5, wz: r.gauss() * 0.3,
+      ev: [],
+    };
+    const sched = [];
+    this.flags = {};
+    if (y > 1) {
+      if (w.rain < -0.55) { w.ev.push('drought'); this.flags.drought = 1; }
+      if (w.rain > 0.55) { w.ev.push('rainy'); if (r.chance(0.5)) { w.ev.push('longrain'); sched.push({ tick: 44 + r.int(10), kind: 'longrain', len: 16 }); } }
+      if (r.chance(y < 4 ? 0 : 0.13)) { w.ev.push('storm'); sched.push({ tick: 42 + r.int(46), kind: 'storm', power: r.range(0.55, 1) }); }
+      if (r.chance(0.07 + 0.08 * clamp(-w.temp))) { w.ev.push('frost'); sched.push({ tick: 15 + r.int(9), kind: 'frost' }); }
+      if (r.chance(0.07)) { w.ev.push('butterflies'); this.flags.butterflies = 1; }
+      else if (r.chance(0.07)) { w.ev.push('fewbugs'); this.flags.fewbugs = 1; }
+      const last = this.hist[this.hist.length - 1];
+      if (last) {
+        let mb = 0; for (let b = 1; b < 13; b++) if (last.bins[b] > last.bins[mb]) mb = b;
+        if (r.chance(last.bins[mb] > 0.42 ? 0.3 : last.bins[mb] > 0.3 ? 0.1 : 0.02)) { w.ev.push('aphids'); sched.push({ tick: 30 + r.int(26), kind: 'aphids', bin: mb }); }
+      }
+      if (r.chance(0.06)) { w.ev.push('bird'); this.flags.bird = 1; }
+    }
+    w.onset = Math.round(TICKS * (0.83 + 0.03 * w.temp));
+    this.w = w; this.sched = sched.sort((a, b) => a.tick - b.tick);
+  }
+
+  buildGrid() {
+    const cell = 0.25, XH = (1 + PERS.PK) / 2, NX = Math.ceil((2 * XH) / cell), NZ = Math.ceil(PERS.DN / cell) + 1, cells = Array.from({ length: NX * NZ }, () => []);
+    this.grid = { cell, XH, NX, NZ, cells };
+    for (const p of this.plants) if (!p.dead) this.gridAdd(p);
+  }
+  gridAdd(p) { const { cell, XH, NX, NZ, cells } = this.grid; cells[clamp((p.wz / cell) | 0, 0, NZ - 1) * NX + clamp(((p.wx + XH) / cell) | 0, 0, NX - 1)].push(p); }
+  near(wx, wz, rad, fn) {
+    const { cell, XH, NX, NZ, cells } = this.grid, c = Math.ceil(rad / cell);
+    const cx = clamp(((wx + XH) / cell) | 0, 0, NX - 1), cz = clamp((wz / cell) | 0, 0, NZ - 1);
+    for (let j = Math.max(0, cz - c); j <= Math.min(NZ - 1, cz + c); j++)
+      for (let i = Math.max(0, cx - c); i <= Math.min(NX - 1, cx + c); i++) {
+        const cl = cells[j * NX + i];
+        for (let k = 0; k < cl.length; k++) { const q = cl[k]; const dx = q.wx - wx, dz = q.wz - wz; const d2 = dx * dx + dz * dz; if (d2 < rad * rad) if (fn(q, Math.sqrt(d2)) === false) return; }
+      }
+  }
+
+  mkPlant(sd) {
+    const g = sd.g, r = this.rng;
+    const p = {
+      id: this.nextId++, g, x: sd.x, z: sd.z, gen: sd.gen, line: sd.line, momG: sd.momG, dadG: sd.dadG, anc: sd.anc,
+      born: this.year, age: 0, wx: toWX(sd.x, sd.z), wz: toWZ(sd.z),
+    };
+    const el = SITE.elev(p.x, p.z), sh = SITE.shadeAt(p.x, p.z), bk = Math.exp(-Math.pow(((p.x - SITE.brookX(p.z)) * persA(p.z)) / 0.42, 2));
+    // 虫にも好きな場所がある：チョウは日なたの丘、アブとガは木かげや水辺
+    p.hab = { bee: 1 - 0.25 * el - 0.2 * sh, butterfly: 0.7 + 0.9 * el - 0.3 * sh, fly: 0.75 + 0.7 * sh + 0.45 * bk - 0.3 * el, moth: 0.8 + 0.7 * sh + 0.2 * bk };
+    this.resetPlant(p);
+    return p;
+  }
+  resetPlant(p) {
+    const r = this.rng, g = p.g, w = this.w;
+    p.bio = p.age > 0 ? 0.38 : 0.04 + 0.1 * g.sd;
+    p.R = p.age > 0 ? 3 : 0; p.stress = 0; p.state = 0; p.open = 0; p.nOpen = 0; p.fert = []; p.visits = 0; p.seeds = 0;
+    p.lodged = 0; p.frost = 0; p.aphid = 0; p.rot = 0; p.light = 1; p.dead = 0; p.bloomed = 0; p.ripen = 0;
+    p.sprout = Math.max(1, Math.round((p.age > 0 ? 5 : 9) + (1 - g.cd) * 9 - w.temp * 4 + r.range(-2, 4)));
+    p.bs = Math.round(TICKS * (G.bloomStart(g) - 0.025 * w.temp)) + r.int(3);
+    p.be = p.bs + Math.round(TICKS * G.bloomDur(g));
+    p.attr = null;
+  }
+
+  newYear() {
+    const r = this.rng;
+    this.tick = 0;
+    this.rollWeather();
+    for (const k of SP_KEYS) { const s = this.sp[k]; s.food = 0; s.act = 0; s.visits = 0; s.bins.fill(0); s.mul = 1; }
+    if (this.flags.butterflies) this.sp.butterfly.mul = 2.6;
+    if (this.flags.fewbugs) { this.sp.bee.mul = 0.3; this.sp.fly.mul = 0.35; this.sp.butterfly.mul = 0.5; }
+    // 越冬した多年草
+    for (const p of this.plants) this.resetPlant(p);
+    this.buildGrid();
+    // 鳥が落としていく旅の種／花が減りすぎたとき
+    const few = this.plants.length + this.bank.length < 120;
+    if (this.flags.bird || few) {
+      const key = 'tabi' + this.year; this.lines[key] = { name: '旅の種', since: this.year, alive: true };
+      const base = mutate(mkGenome(r.pick(FOUNDERS).g), r, 5); delete base._macro; base.h = r.range(0, 360); base.s = r.range(0.35, 0.85); base.l = r.range(0.5, 0.85);
+      const cx = r.range(0.12, 0.88), cz = r.range(0.15, 0.9), n = few ? 120 : 9;
+      for (let i = 0; i < n; i++) { const g = mutate(base, r, 1.5); delete g._macro; this.bank.push({ g, x: clamp(cx + r.gauss() * (few ? 0.3 : 0.05), 0.02, 0.98), z: clamp(cz + r.gauss() * (few ? 0.3 : 0.07), 0.03, 0.99), gen: 1, line: key, momG: null, dadG: null, anc: [], age: 0, w: 3 }); }
+      if (few && !this.flags.bird) { this.w.ev.push('bird'); this.flags.bird = 1; }
+      this.flags.birdAt = [cx, cz];
+    }
+    // 芽生えのくじ引き：種が大きいほど当たりやすい
+    const bank = this.bank;
+    for (const s of bank) s.k = Math.pow(r.next(), 1 / s.w);
+    bank.sort((a, b) => b.k - a.k);
+    const keep = [];
+    for (const s of bank) {
+      let ok = this.plants.length < MAX_PLANTS && !SITE.inBrook(s.x, s.z);
+      if (ok) this.near(toWX(s.x, s.z), toWZ(s.z), SPACING, () => (ok = false));
+      if (ok) {
+        const p = this.mkPlant(s); this.plants.push(p); this.gridAdd(p);
+      } else if (s.age < 2 && r.chance(0.45) && keep.length < 1500) { s.age++; keep.push(s); }
+    }
+    this.bank = keep;
+    // 途絶えた系統
+    const alive = {};
+    for (const p of this.plants) alive[p.line] = 1;
+    for (const s of this.bank) alive[s.line] = 1;
+    for (const k in this.lines) { const L = this.lines[k]; if (L.alive && !alive[k]) { L.alive = false; L.until = this.year; if (this.year - L.since >= 3) this.emit('extinct', { line: k, name: L.name, years: this.year - L.since }); } }
+    // 虫
+    this.agents = [];
+    for (const k of SP_KEYS) { const n = Math.round(this.sp[k].pop * this.sp[k].mul); for (let i = 0; i < n; i++) this.agents.push({ id: k + i, sp: k, at: null, pollen: null }); }
+    this.yr = { died: { dry: 0, frost: 0, storm: 0 }, lodged: 0, frostbit: 0, aphid: 0, rot: 0, sprouts: this.plants.length };
+    this.emit('newyear', { w: this.w });
+  }
+
+  // ── 1 tick ──
+  step() {
+    const t = this.t, w = this.w, r = this.rng, tk = this.tick;
+    while (this.sched.length && this.sched[0].tick <= tk) this.doEvent(this.sched.shift());
+    if (tk % 6 === 0) this.updateLight();
+    const T = seasonTemp(t) + w.temp * 0.45;
+    const dryS = hump(0.28, 0.74, t);
+    const Wbase = 0.22 + 0.34 * w.rain - 0.2 * dryS - (this.flags.drought ? 0.22 * dryS : 0) + (this.flags.rainNow > tk ? 0.25 : 0);
+    const winter = tk >= w.onset;
+    const bloomers = [];
+    for (const p of this.plants) {
+      if (p.dead || tk < p.sprout) continue;
+      if (tk === p.sprout) this.emit('sprout', { plant: p });
+      const g = p.g;
+      if (!winter) {
+        const W = SITE.moist(p.x, p.z) * 0.8 + Wbase;
+        const load = clamp(G.cost(g) / 3.2) * (p.state === 1 ? 1 : 0.3);
+        const need = (0.3 + 0.25 * g.lw * (1 - 0.35 * g.lc) - 0.05 * smooth(0.55, 0.85, g.lh) + 0.42 * load) * (1 - 0.55 * g.dr) * (1 + 0.18 * Math.max(0, T - 0.8));
+        const wF = clamp(W / need);
+        const rot = 1 - 1.1 * g.dr * Math.max(0, W - 0.78);
+        const P = Math.pow(p.light, 1 - 0.55 * g.lw) * (0.8 + 0.2 * g.lw) * (1 - 0.1 * g.lc * g.lw) * (1 - 0.07 * smooth(0.55, 0.85, g.lh));
+        const tf = clamp(0.5 + 0.55 * T + 0.5 * g.cd * clamp(0.6 - T), 0.04, 1);
+        const cf = 1 - 0.26 * g.dr - 0.28 * g.cd - (g.pe > 0.5 ? 0.13 : 0);
+        const gain = P * wF * tf * cf * clamp(rot, 0.2, 1) * (p.aphid ? 0.55 : 1);
+        p.bio += 0.05 * gain * (1 - p.bio);
+        p.R += gain * p.bio - 0.14 * g.ht * p.bio;
+        if (wF < 0.55) { p.stress += (0.55 - wF) * 0.07 * (p.bio < 0.3 ? 1.6 : 1) * (1 - 0.8 * g.dr); if (p.stress > 1) { this.kill(p, 'dry'); continue; } }
+        else p.stress = Math.max(0, p.stress - 0.015);
+      }
+      // 咲く
+      if (p.state === 0) {
+        if (tk >= p.bs && tk < p.be && p.bio > 0.3 && !p.lodged && !p.frost && !winter) {
+          p.state = 1; p.bloomed = 1;
+          p.nOpen = Math.max(1, Math.round(G.count(g) * clamp(p.bio * 1.25 - 0.1) * (p.age === 0 && g.pe > 0.5 ? 0.5 : 1)));
+          p.ovules = p.nOpen * 3;
+          p.nec = 1; p.attr = {}; for (const k of SP_KEYS) p.attr[k] = spAttraction(k, this.sp[k], g) * Math.sqrt(p.nOpen / G.count(g));
+          this.noteSeen(g, false, p);
+          const rc = this.seen.rec;
+          if (this.year > 3) {
+            if (g.sz > rc.sz + 0.06 && g.sz > 0.6) this.emit('record', { kind: 'sz', plant: p });
+            if (g.ht > rc.ht + 0.06 && g.ht > 0.7) this.emit('record', { kind: 'ht', plant: p });
+          }
+          rc.sz = Math.max(rc.sz, g.sz); rc.ht = Math.max(rc.ht, g.ht);
+          this.emit('bloom', { plant: p });
+        } else if (tk >= p.be || winter) p.state = 3;
+      } else if (p.state === 1) {
+        p.open = Math.min(1, p.open + 0.1); p.nec = Math.min(1, p.nec + 0.1);
+        p.R -= G.cost(g) * (p.nOpen / G.count(g)) * 0.17;
+        if (this.flags.rainNow > tk && r.chance(0.035 * g.sz * G.rings(g) * (G.form(g) === 'bell' ? 0.3 : 1))) { p.rot = 1; p.fert.length = Math.floor(p.fert.length * 0.4); this.yr.rot++; p.state = 2; p.ripen = 8; }
+        else if (tk >= p.be || p.R < 0 || winter) { p.state = 2; p.ripen = 8; }
+        else if (p.open > 0.25) bloomers.push(p);
+      } else if (p.state === 2) {
+        p.open = Math.max(0, p.open - 0.14);
+        if (--p.ripen <= 0) { this.disperse(p, winter); p.state = 3; }
+      }
+    }
+    this.bloomers = bloomers;
+    if (tk % 5 === 0) { // それぞれの虫の「お気に入り」：めずらしくても好みに合う花は見つけてもらえる
+      this.fav = {};
+      for (const k of SP_KEYS) this.fav[k] = bloomers.slice().sort((a, b) => b.attr[k] * b.hab[k] - a.attr[k] * a.hab[k]).slice(0, 14);
+    }
+    // 虫が花から花へ
+    if (bloomers.length) {
+      const rainy = this.flags.rainNow > tk ? 0.35 : 1, storm = this.flags.stormNow > tk ? 0 : 1;
+      const tt = t + 0.03 * w.temp;
+      for (const a of this.agents) {
+        const st = this.sp[a.sp];
+        const act = spActivity(a.sp, tt) * rainy * storm;
+        st.act += act / Math.max(1, st.pop * st.mul);
+        if (!r.chance(act)) { if (r.chance(0.15)) a.at = null; continue; }
+        let at = a.at;
+        for (let vv = 0; vv < VISITS; vv++) {
+        let best = null, bs = -1;
+        const fav = this.fav && this.fav[a.sp];
+        for (let i = 0; i < 11; i++) {
+          const c = i < 4 && fav && fav.length ? fav[r.int(fav.length)] : bloomers[r.int(bloomers.length)];
+          if (c === at || c.state !== 1) continue;
+          let sc = c.attr[a.sp] * c.hab[a.sp] * (0.45 + r.next()) * (0.2 + 0.8 * c.nec);
+          if (at) { const dx = c.wx - at.wx, dz = c.wz - at.wz; sc /= 1 + (dx * dx + dz * dz) / 0.5; }
+          if (sc > bs) { bs = sc; best = c; }
+        }
+        if (!best) break;
+        const g = best.g;
+        best.visits++; st.visits++; st.bins[G.hueBin(g)]++;
+        st.food += best.nec * (0.25 + g.ne) * (0.3 + g.sz) * Math.sqrt(best.nOpen); best.nec *= 0.2;
+        if (a.pollen && a.pollen !== best && !a.pollen.dead) { for (let i = 0; i < 3 && best.fert.length < best.ovules; i++) best.fert.push(a.pollen); }
+        if (r.chance(0.85 * (1 - 0.6 * g.dbl))) a.pollen = best; // 八重は花粉が少ない
+        at = best;
+        }
+        a.at = at;
+      }
+    } else for (const a of this.agents) a.at = null;
+
+    this.tick++;
+    if (this.tick === Math.round(TICKS * 0.08)) this.emit('season', { s: 0 });
+    else if (this.tick === Math.round(TICKS * 0.33)) this.emit('season', { s: 1 });
+    else if (this.tick === Math.round(TICKS * 0.58)) this.emit('season', { s: 2 });
+    else if (this.tick === w.onset) this.emit('season', { s: 3 });
+    if (this.tick >= TICKS) this.endYear();
+  }
+
+  updateLight() {
+    this.buildGrid();
+    const tk = this.tick;
+    for (const p of this.plants) {
+      if (p.dead || tk < p.sprout) continue;
+      const h = p.g.ht * p.bio * (p.lodged ? 0.3 : 1);
+      let sh = 0;
+      this.near(p.wx, p.wz, 0.2, (q, d) => { if (q !== p && tk >= q.sprout) { const dh = q.g.ht * q.bio * (q.lodged ? 0.3 : 1) - h; if (dh > 0) sh += dh * (1 - d / 0.2) * (0.5 + 0.5 * q.g.lw); } });
+      p.light = SITE.sun(p.x, p.z) / (1 + 2.4 * sh);
+    }
+  }
+
+  kill(p, cause) { p.dead = 1; p.cause = cause; p.state = 3; p.open = 0; this.yr.died[cause] = (this.yr.died[cause] || 0) + 1; this.emit('die', { plant: p, cause }); }
+
+  doEvent(e) {
+    const r = this.rng;
+    if (e.kind === 'frost') {
+      let n = 0;
+      for (const p of this.plants) {
+        if (p.dead || this.tick < p.sprout) continue;
+        const c = p.g.cd;
+        if (p.state === 1 && c < 0.6) { p.frost = 1; p.state = 3; p.open = 0; p.fert = []; n++; }
+        else if (p.age === 0 && r.chance(0.5 * (1 - c * 2.2))) { this.kill(p, 'frost'); n++; }
+        else if (c < 0.45) { p.bio *= 0.75; }
+      }
+      this.yr.frostbit = n;
+      this.emit('event', { kind: 'frost', n });
+    } else if (e.kind === 'storm') {
+      let n = 0;
+      this.flags.stormNow = this.tick + 5;
+      for (const p of this.plants) {
+        if (p.dead || this.tick < p.sprout) continue;
+        const h = p.g.ht * p.bio;
+        const pr = e.power * Math.pow(h, 1.5) * 2.1 * SITE.expo(p.x, p.z) * (1 - 0.3 * p.g.br) * (1 + 0.4 * clamp(G.cost(p.g) / 3.2));
+        if (r.chance(pr)) { p.lodged = 1; n++; if (p.state === 1) { p.state = 2; p.ripen = 6; } p.fert.length = Math.floor(p.fert.length * 0.35); p.R *= 0.5; }
+      }
+      this.yr.lodged = n;
+      this.emit('event', { kind: 'storm', n, power: e.power });
+    } else if (e.kind === 'longrain') {
+      this.flags.rainNow = this.tick + e.len;
+      this.emit('event', { kind: 'longrain' });
+    } else if (e.kind === 'aphids') {
+      let n = 0;
+      for (const p of this.plants) if (!p.dead && this.tick >= p.sprout && G.hueBin(p.g) === e.bin && r.chance(0.8)) { p.aphid = 1; p.R *= 0.3; n++; }
+      this.yr.aphid = n; this.yr.aphidBin = e.bin;
+      this.emit('event', { kind: 'aphids', bin: e.bin, n });
+    }
+  }
+
+  disperse(p, winter) {
+    const r = this.rng, g = p.g;
+    let fert = p.fert;
+    if (fert.length < p.ovules * 0.34) { const n = Math.round(p.ovules * 0.12); fert = fert.slice(); for (let i = 0; i < n; i++) fert.push(p); } // 虫が来なければ少しだけ自家受粉
+    let n = Math.min(fert.length, Math.floor(Math.max(0, p.R) / (0.22 + 0.9 * g.sd)));
+    if (g.pe > 0.5) n = Math.round(n * 0.45);
+    if (p.aphid) n = Math.round(n * 0.5);
+    if (p.lodged) n = Math.round(n * 0.5);
+    if (winter) n = Math.round(n * 0.25); // 冬に間に合わなかった
+    n = Math.min(n, 30);
+    p.seeds = n;
+    if (!n) return;
+    const sig = 0.12 + 0.4 * g.ht * p.bio * (1 - 0.6 * g.sd), w = this.w;
+    const snap = { g, y: this.year, gen: p.gen };
+    const anc = [snap].concat(p.anc.slice(0, 3)); if (p.anc.length > 3) anc.push(p.anc[p.anc.length - 1]);
+    for (let i = 0; i < n; i++) {
+      const dad = fert[r.int(fert.length)];
+      const tickets = 1 + (r.chance(clamp((0.5 - g.sd) * 2)) ? 1 : 0);
+      for (let k = 0; k < tickets; k++) {
+        const cg = mutate(cross(g, dad.g, r), r);
+        const d = Math.abs(r.gauss()) * sig + 0.03, a = r.range(0, TAU), drift = sig * r.range(0.3, 1.6);
+        const [x, z] = fromW(p.wx + Math.cos(a) * d + w.wx * drift, p.wz + Math.sin(a) * d + w.wz * drift);
+        if (x < 0.01 || x > 0.99 || z < 0.02 || z > 0.995) continue;
+        this.bank.push({ g: cg, x, z, gen: Math.max(p.gen, dad.gen) + 1, line: p.line, momG: g, dadG: dad.g, anc, age: 0, w: 0.4 + 1.6 * cg.sd });
+      }
+    }
+    this.emit('seed', { plant: p, n });
+  }
+
+  // ── 年の終わり：記録をつけ、冬を越す ──
+  endYear() {
+    const r = this.rng, w = this.w;
+    const rec = this.census();
+    this.hist.push(rec); if (this.hist.length > 500) this.hist.shift();
+    const old = this.hist[this.hist.length - 13]; if (old) { delete old.lines; delete old.yr; delete old.food; delete old.binFit; delete old.binVis; delete old.sel; delete old.vis; }
+    // 虫の数と好みが、花に合わせて動く
+    for (const k of SP_KEYS) {
+      const s = this.sp[k];
+      const target = clamp(s.food / (FOOD0 * s.mul), 0.8, 9.5); rec.food[k] = Math.round(s.food); // 蜜の量に見合った数へ
+      s.pop = lerp(s.pop, target, 0.4) * Math.exp(r.gauss() * 0.16);
+      s.pop = clamp(s.pop + (SPECIES[k].pop - s.pop) * 0.16, 1.6, 9.5); // まわりの野山からも少し飛んでくる
+      if (s.visits > 20 && k !== 'moth') {
+        let sx = 0, sy = 0; for (let b = 0; b < 12; b++) { sx += Math.cos((b * 30 * Math.PI) / 180) * s.bins[b]; sy += Math.sin((b * 30 * Math.PI) / 180) * s.bins[b]; }
+        if (sx * sx + sy * sy > 1) { const m = hueWrap((Math.atan2(sy, sx) * 180) / Math.PI); s.pref = hueLerp(s.pref, m, 0.035); }
+        s.pref = hueLerp(s.pref, SPECIES[k].pref, 0.012); // 生まれつきの好みへ少し戻る
+        let dv = s.pref - SPECIES[k].pref; if (dv > 180) dv -= 360; if (dv < -180) dv += 360; s.pref = hueWrap(SPECIES[k].pref + clamp(dv, -20, 20));
+      }
+    }
+    // 冬越し
+    const next = [];
+    for (const p of this.plants) {
+      if (p.dead || p.g.pe <= 0.5) continue;
+      const pr = 0.62 - 1.5 * Math.max(0, w.sev - (0.15 + 0.75 * p.g.cd)) - (p.age >= 3 ? 0.2 * (p.age - 2) : 0) - (p.lodged ? 0.15 : 0);
+      if (r.chance(pr)) { p.age++; next.push(p); }
+    }
+    rec.overwinter = next.length;
+    this.plants = next;
+    this.bank = this.bank.filter((s) => r.chance(1 - 0.6 * Math.max(0, w.sev - 0.5 - 0.5 * s.g.cd)));
+    if (this.bank.length > 12000) { for (let i = this.bank.length - 1; i > 0; i--) { const j = r.int(i + 1); [this.bank[i], this.bank[j]] = [this.bank[j], this.bank[i]]; } this.bank.length = 12000; }
+    this.emit('yearend', { rec });
+    this.year++;
+    this.newYear();
+  }
+
+  census() {
+    const w = this.w, ps = this.plants;
+    const bins = new Array(13).fill(0), zb = { hill: new Array(13).fill(0), shade: new Array(13).fill(0), brook: new Array(13).fill(0), field: new Array(13).fill(0) };
+    const TR = ['sz', 'ht', 'fn', 'dr', 'cd', 'bt', 'lw', 'pe', 'l', 'dbl', 'sd', 'ne'];
+    const m = {}, ms = {}, v = {}; for (const k of TR) { m[k] = 0; ms[k] = 0; v[k] = 0; }
+    let n = 0, fl = 0, seeds = 0, nb = 0, dbl = 0, per = 0, pet = 0;
+    const lines = {}, binSeeds = new Array(13).fill(0), binN = new Array(13).fill(0), names = {};
+    for (const p of ps) {
+      const g = p.g; n++;
+      lines[p.line] = (lines[p.line] || 0) + 1;
+      for (const k of TR) { m[k] += g[k]; ms[k] += g[k] * p.seeds; v[k] += g[k] * g[k]; }
+      seeds += p.seeds;
+      const b = G.hueBin(g); binSeeds[b] += p.seeds; binN[b]++;
+      if (p.bloomed) { nb++; const c = p.nOpen; fl += c; bins[b] += c; zb[SITE.zone(p.x, p.z)][b] += c; if (G.rings(g) > 1) dbl++; if (g.pe > 0.5) per++; pet += G.petals(g); const nm = colorName(g); names[nm] = (names[nm] || 0) + c; }
+    }
+    const sel = {};
+    for (const k of TR) { const mean = m[k] / Math.max(1, n), sd = Math.sqrt(Math.max(1e-6, v[k] / Math.max(1, n) - mean * mean)); sel[k] = seeds > 20 ? +((ms[k] / seeds - mean) / sd).toFixed(2) : 0; m[k] = +mean.toFixed(3); }
+    for (let b = 0; b < 13; b++) bins[b] = +(bins[b] / Math.max(1, fl)).toFixed(3);
+    const zoneTop = {};
+    for (const z in zb) { let tb = -1, tv = 0, tot = 0; for (let b = 0; b < 13; b++) { tot += zb[z][b]; if (zb[z][b] > tv) { tv = zb[z][b]; tb = b; } } zoneTop[z] = tot > 12 ? [tb, +(tv / tot).toFixed(2)] : null; }
+    // どの色が、どの虫にいちばん通われたか／種をよく残したか
+    const binVis = []; for (let b = 0; b < 13; b++) { let top = null, tv = 0; for (const k of SP_KEYS) if (this.sp[k].bins[b] > tv) { tv = this.sp[k].bins[b]; top = k; } binVis.push(top); }
+    const binFit = binN.map((c, b) => (c > 4 && seeds > 0 ? +((binSeeds[b] / c) / (seeds / Math.max(1, n))).toFixed(2) : null));
+    let topName = null, tn = 0; for (const k in names) if (names[k] > tn) { tn = names[k]; topName = k; }
+    const pops = {}, prefs = {}, vis = {}; for (const k of SP_KEYS) { pops[k] = +this.sp[k].pop.toFixed(2); prefs[k] = Math.round(this.sp[k].pref); vis[k] = this.sp[k].visits; }
+    return {
+      y: this.year, n, nb, fl, seeds, bins, m, sel, zoneTop, binVis, binFit, topName, topShare: +(tn / Math.max(1, fl)).toFixed(2),
+      dbl: +(dbl / Math.max(1, nb)).toFixed(2), per: +(per / Math.max(1, nb)).toFixed(2), pet: +(pet / Math.max(1, nb)).toFixed(1),
+      rain: +w.rain.toFixed(2), temp: +w.temp.toFixed(2), sev: +w.sev.toFixed(2), climate: +w.climate.toFixed(2), ev: w.ev.slice(), pops, prefs, vis, lines, yr: this.yr, food: {},
+    };
+  }
+
+  // いま咲いている花のようす（実況用）
+  nowStats() {
+    const bins = new Array(13).fill(0), names = {}; let fl = 0, n = 0;
+    for (const p of this.plants) if (!p.dead && p.state === 1) { n++; fl += p.nOpen; bins[G.hueBin(p.g)] += p.nOpen; const nm = colorName(p.g); names[nm] = (names[nm] || 0) + p.nOpen; }
+    let top = null, tv = 0; for (const k in names) if (names[k] > tv) { tv = names[k]; top = k; }
+    return { n, fl, bins, top, share: fl ? tv / fl : 0, kinds: Object.keys(names).length };
+  }
+
+  // ── 保存（年のはじめの状態だけ） ──
+  save() {
+    const gt = [], gi = new Map();
+    const gid = (g) => { if (!g) return -1; let i = gi.get(g); if (i === undefined) { i = gt.length; gi.set(g, i); gt.push([Math.round(g.h * 10) / 10].concat(GENES.map((k) => Math.round(g[k] * 1000) / 1000))); } return i; };
+    const at = [], ai = new Map();
+    const aid = (anc) => { let i = ai.get(anc); if (i === undefined) { i = at.length; ai.set(anc, i); at.push(anc.map((s) => [gid(s.g), s.y, s.gen])); } return i; };
+    const pk = (o) => [gid(o.g), +o.x.toFixed(4), +o.z.toFixed(4), o.gen, o.line, gid(o.momG), gid(o.dadG), aid(o.anc)];
+    return {
+      v: 1, seed0: this.seed0, rs: this.rng.s, year: this.year, nextId: this.nextId,
+      c: [this.cPeriod, this.cPhase, this.cDrift, this.rPeriod, this.rPhase],
+      sp: Object.fromEntries(SP_KEYS.map((k) => [k, [this.sp[k].pop, this.sp[k].pref]])),
+      plants: this.plants.map((p) => pk(p).concat([p.id, p.born, p.age])), bank: this.bank.map((s) => pk(s).concat([s.age, +s.w.toFixed(2)])),
+      gt, at, hist: this.hist, seen: this.seen, lines: this.lines,
+    };
+  }
+  static load(d) {
+    const s = new Sim(d.seed0);
+    s.rng.s = d.rs; s.year = d.year; s.nextId = d.nextId;
+    [s.cPeriod, s.cPhase, s.cDrift, s.rPeriod, s.rPhase] = d.c;
+    for (const k of SP_KEYS) if (d.sp[k]) { s.sp[k].pop = d.sp[k][0]; s.sp[k].pref = d.sp[k][1]; }
+    const gt = d.gt.map((a) => { const g = { h: a[0] }; GENES.forEach((k, i) => (g[k] = a[i + 1])); return g; });
+    const at = d.at.map((a) => a.map((e) => ({ g: gt[e[0]], y: e[1], gen: e[2] })));
+    const un = (a) => ({ g: gt[a[0]], x: a[1], z: a[2], wx: toWX(a[1], a[2]), wz: toWZ(a[2]), gen: a[3], line: a[4], momG: a[5] < 0 ? null : gt[a[5]], dadG: a[6] < 0 ? null : gt[a[6]], anc: at[a[7]] });
+    s.hist = d.hist; s.seen = d.seen; s.lines = d.lines;
+    // 年のはじめの手前（種と越冬株）に戻してから newYear をやり直す
+    s.bank = d.bank.map((a) => Object.assign(un(a), { age: a[8], w: a[9] }));
+    s.plants = [];
+    const born = d.plants.map((a) => Object.assign(un(a), { id: a[8], born: a[9], age: a[10] }));
+    s._restore = born;
+    return s;
+  }
+  resume() { // load のあとに 1 回だけ呼ぶ
+    const born = this._restore; delete this._restore;
+    this.tick = 0;
+    // 保存時点の株をそのまま置く（芽生えのくじはもう済んでいる）
+    const keepBank = this.bank; this.bank = [];
+    this.w = { temp: 0 };
+    this.plants = born;
+    const yr = this.year; const r0 = this.rng.s;
+    this.rollWeather();
+    for (const k of SP_KEYS) { const s = this.sp[k]; s.food = 0; s.act = 0; s.visits = 0; s.bins.fill(0); s.mul = 1; }
+    if (this.flags.butterflies) this.sp.butterfly.mul = 2.6;
+    if (this.flags.fewbugs) { this.sp.bee.mul = 0.3; this.sp.fly.mul = 0.35; this.sp.butterfly.mul = 0.5; }
+    this.flags.bird = 0; this.w.ev = this.w.ev.filter((e) => e !== 'bird');
+    for (const p of this.plants) { const q = this.mkPlant(p); p.hab = q.hab; this.nextId--; this.resetPlant(p); }
+    this.buildGrid(); this.bank = keepBank;
+    this.agents = [];
+    for (const k of SP_KEYS) { const n = Math.round(this.sp[k].pop * this.sp[k].mul); for (let i = 0; i < n; i++) this.agents.push({ id: k + i, sp: k, at: null, pollen: null }); }
+    this.yr = { died: { dry: 0, frost: 0, storm: 0 }, lodged: 0, frostbit: 0, aphid: 0, rot: 0, sprouts: this.plants.length };
+    this.emit('newyear', { w: this.w });
+  }
+}
+
+// ===== 30-paint.js =====
+// ───────────────────────── 水彩の絵の具箱 ─────────────────────────
+const mkCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
+const freeCanvas = (c) => { if (c) { c.width = 0; c.height = 0; } };
+const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+function ramp(stops, t) { // stops: [[t, [r,g,b]], ...]
+  if (t <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) if (t <= stops[i][0]) { const a = stops[i - 1], b = stops[i]; return mix(a[1], b[1], smooth(a[0], b[0], t)); }
+  return stops[stops.length - 1][1];
+}
+
+// 紙の粒（絵の具の粒状感に使う）
+let GRAIN = null, GRAIN_PAT = null;
+function initGrain() {
+  const n = 128; GRAIN = mkCanvas(n, n); const x = GRAIN.getContext('2d'); const d = x.createImageData(n, n);
+  for (let i = 0; i < n * n; i++) {
+    const a = hash1(i * 7 + 3), b = vnoise2((i % n) / 9, ((i / n) | 0) / 9, 5);
+    const light = a > 0.5; const v = Math.pow(Math.abs(a - 0.5) * 2, 2.2) * 0.5 + (b - 0.5) * 0.25;
+    d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = light ? 255 : 60; d.data[i * 4 + 3] = clamp(v) * 150;
+  }
+  x.putImageData(d, 0, 0);
+  GRAIN_PAT = x.createPattern(GRAIN, 'repeat');
+}
+function grainOver(x, w, h, alpha = 0.5) {
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-atop'; x.globalAlpha = alpha; x.fillStyle = GRAIN_PAT; x.fillRect(0, 0, w, h); x.restore();
+}
+// 画面にかぶせる水彩紙（CSS の multiply 用）
+function paperTexture(n = 256) {
+  const c = mkCanvas(n, n), x = c.getContext('2d'), d = x.createImageData(n, n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const k = (j * n + i) * 4;
+    const per = (f, s) => { // 継ぎ目の出ない雑音
+      const u = i / n, v = j / n; return lerp(lerp(vnoise2(u * f, v * f, s), vnoise2((u - 1) * f, v * f, s), u), lerp(vnoise2(u * f, (v - 1) * f, s), vnoise2((u - 1) * f, (v - 1) * f, s), u), v);
+    };
+    const tooth = per(64, 1) * 0.5 + per(128, 2) * 0.35 + hash2(i, j) * 0.25, blot = per(5, 3);
+    const v = 255 - (tooth - 0.5) * 34 - (blot - 0.5) * 10;
+    d.data[k] = clamp(v + 2, 0, 255); d.data[k + 1] = clamp(v, 0, 255); d.data[k + 2] = clamp(v - 5, 0, 255); d.data[k + 3] = 255;
+  }
+  x.putImageData(d, 0, 0);
+  return c.toDataURL('image/png');
+}
+
+function tracePts(x, pts) {
+  const n = pts.length;
+  x.beginPath();
+  x.moveTo((pts[0][0] + pts[n - 1][0]) / 2, (pts[0][1] + pts[n - 1][1]) / 2);
+  for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; x.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); }
+  x.closePath();
+}
+// ぼんやりした絵の具のしみ
+function blob(x, cx, cy, rx, ry, col, a, seed = 0, rough = 0.18) {
+  const pts = [], n = 14;
+  for (let i = 0; i < n; i++) { const t = (i / n) * TAU, r = 1 + (hash2(i, seed) - 0.5) * 2 * rough; pts.push([cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r]); }
+  tracePts(x, pts);
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry) * 1.15);
+  g.addColorStop(0, rgb(col, a)); g.addColorStop(0.6, rgb(col, a * 0.85)); g.addColorStop(1, rgb(col, 0));
+  x.fillStyle = g; x.fill();
+}
+
+// ── 花びら 1 枚 ──
+function petalPts(g, L, wMul = 1, seed = 0) {
+  const w = L * lerp(0.17, 0.56, g.pw) * wMul, e = lerp(1.45, 0.78, g.pt), q = lerp(0.52, 1.25, g.pt);
+  const n = 16, left = [], right = [];
+  let maxW = 0;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    let hw = w * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(t, e))), q);
+    hw *= 1 + g.fr * 0.16 * Math.sin(t * 19 + seed) * smooth(0.25, 0.6, t);
+    hw *= 1 + (hash2(i, seed | 0) - 0.5) * 0.09;
+    hw = Math.max(hw, L * 0.035 * (1 - t));
+    let y = -L * t;
+    const nt = g.nt * 0.2 * L * smooth(0.7, 1, t) * Math.exp(-Math.pow(hw / (0.5 * w + 0.01), 2));
+    const fr = g.fr * 0.035 * L * smooth(0.55, 0.9, t);
+    maxW = Math.max(maxW, hw);
+    left.push([-hw, y + nt + fr * Math.sin(i * 2.7 + seed)]);
+    right.push([hw, y + nt + fr * Math.sin(i * 3.1 + seed + 2)]);
+  }
+  right.reverse(); right.shift();
+  return { pts: left.concat(right), maxW };
+}
+function petalColors(g, dl = 0) {
+  const white = G.white(g);
+  const S = white ? clamp(g.s * 0.9, 0.03, 0.3) : clamp(g.s * 0.95, 0.2, 0.88), Lg = white ? 0.955 : clamp(g.l + dl, 0.4, 0.93);
+  const H = g.h, Ht = H + (g.h2 - 0.5) * 64;
+  return {
+    H, S, Lg,
+    throat: g.pic > 0.5 ? hsl(H + 20, S * 0.35, lerp(Lg + 0.14, 0.97, (g.pic - 0.5) * 2), 0.95) : hsl(H - 6, S * 0.8, Math.min(0.96, Lg + 0.1), 0.92),
+    mid: hsl(H, S, Lg, 0.93),
+    tip: hsl(Ht, clamp(S * 1.12), Lg - (white ? 0.02 : 0.06), 0.95),
+    rim: hsl(Ht, clamp(S * 1.15 + (white ? 0.14 : 0)), Lg - (white ? 0.2 : 0.22)),
+    vein: hsl(Ht - 8, clamp(S * 1.1 + (white ? 0.2 : 0)), Lg - (white ? 0.16 : 0.2)),
+  };
+}
+function paintPetal(g, L, wMul = 1, dl = 0, seed = 0) {
+  const o = petalPts(g, L, wMul, seed), pad = 3;
+  const w = Math.ceil(o.maxW * 2 + pad * 2 + 2), h = Math.ceil(L * 1.08 + pad * 2);
+  const c = mkCanvas(w, h), x = c.getContext('2d');
+  x.translate(w / 2, h - pad);
+  const k = petalColors(g, dl);
+  tracePts(x, o.pts);
+  const gr = x.createLinearGradient(0, 0, 0, -L);
+  gr.addColorStop(0, k.throat); gr.addColorStop(0.42, k.mid); gr.addColorStop(1, k.tip);
+  x.fillStyle = gr; x.fill();
+  x.globalCompositeOperation = 'source-atop';
+  // 塗り残しの明るい筋
+  const hg = x.createRadialGradient(o.maxW * 0.15, -L * 0.52, 0, o.maxW * 0.15, -L * 0.52, L * 0.5);
+  hg.addColorStop(0, 'rgba(255,255,255,0.32)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = hg; x.fillRect(-w, -h, w * 2, h * 2);
+  for (let i = 0; i < 3; i++) { // むらになった絵の具
+    const bx = (hash2(seed + i, 31) - 0.5) * o.maxW * 1.6, by = -L * (0.25 + 0.7 * hash2(seed + i, 32)), br = L * (0.16 + 0.2 * hash2(seed + i, 33));
+    const bg = x.createRadialGradient(bx, by, 0, bx, by, br), dk = i === 0;
+    bg.addColorStop(0, dk ? hsl(k.H + (g.h2 - 0.5) * 40, clamp(k.S * 1.2), k.Lg - 0.1, 0.3) : 'rgba(255,255,255,0.26)'); bg.addColorStop(1, dk ? hsl(k.H, k.S, k.Lg - 0.1, 0) : 'rgba(255,255,255,0)');
+    x.fillStyle = bg; x.fillRect(-w, -h, w * 2, h * 2);
+  }
+  x.lineJoin = 'round'; x.lineCap = 'round';
+  if (g.pic > 0.6 && !G.white(g)) { tracePts(x, o.pts); x.strokeStyle = `rgba(255,253,246,${(g.pic - 0.6) * 2.2})`; x.lineWidth = L * 0.22; x.stroke(); }
+  if (g.vein > 0.25) {
+    x.strokeStyle = k.vein; x.globalAlpha = (g.vein - 0.2) * 0.55; x.lineWidth = Math.max(0.5, L * 0.018);
+    for (let i = -2; i <= 2; i++) { x.beginPath(); x.moveTo(0, -L * 0.04); x.quadraticCurveTo(i * o.maxW * 0.3, -L * 0.45, i * o.maxW * 0.36, -L * (0.86 - Math.abs(i) * 0.1)); x.stroke(); }
+    x.globalAlpha = 1;
+  }
+  // 縁にたまった絵の具
+  tracePts(x, o.pts);
+  x.strokeStyle = k.rim;
+  x.globalAlpha = 0.16; x.lineWidth = Math.max(2.4, L * 0.2); x.stroke();
+  x.globalAlpha = 0.24; x.lineWidth = Math.max(1.5, L * 0.1); x.stroke();
+  x.globalAlpha = 0.5; x.lineWidth = Math.max(0.8, L * 0.035); x.stroke();
+  x.globalAlpha = 1;
+  return { c, ox: w / 2, oy: h - pad };
+}
+
+// ── 花 1 輪（株ごとに 1 枚つくって使い回す） ──
+function paintFlower(g, R, seed = 1) {
+  const form = G.form(g);
+  if (form === 'tulip') return paintTulip(g, R, seed);
+  if (form === 'bell') return paintBell(g, R, seed);
+  const S = Math.ceil(R * 2.6) + 6, c = mkCanvas(S, S), x = c.getContext('2d'), cx = S / 2, cy = S / 2;
+  const k = petalColors(g);
+  const halo = x.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.28);
+  halo.addColorStop(0, hsl(k.H, k.S, k.Lg, 0.2)); halo.addColorStop(1, hsl(k.H, k.S, k.Lg, 0));
+  x.fillStyle = halo; x.fillRect(0, 0, S, S);
+  const rings = G.rings(g), n = G.petals(g), cup = smooth(0.3, 0.66, g.cup);
+  const rc = R * ((0.1 + 0.2 * (1 - g.pw) * smooth(0.25, 0.8, g.pn)) * (1 - 0.55 * g.dbl) + 0.05);
+  const a0 = hash2(seed, 1) * TAU;
+  for (let r = 0; r < rings; r++) {
+    const Lr = R * (1 - 0.21 * r) * (1 - 0.16 * cup), nr = r === 0 ? n : Math.max(3, Math.round(n * (1 - 0.12 * r)));
+    const wMul = (1 + 0.25 * cup) * Math.min(1.25, Math.max(0.8, 5.5 / nr + 0.45));
+    const pet = paintPetal(g, Lr, wMul, r * 0.035, seed + r * 5);
+    const off = a0 + (r * Math.PI) / nr;
+    for (let pass = 0; pass < 2; pass++) for (let i = pass; i < nr; i += 2) {
+      const ang = off + (i * TAU) / nr + (hash2(seed + i, r + 3) - 0.5) * 0.16, sc = 1 + (hash2(seed + i, r + 9) - 0.5) * 0.14;
+      x.save(); x.translate(cx, cy); x.rotate(ang); x.scale(sc, sc); x.globalAlpha = 0.94;
+      x.drawImage(pet.c, -pet.ox, -pet.oy - rc * 0.3); x.restore();
+    }
+    freeCanvas(pet.c);
+  }
+  // しべ
+  const dark = g.cs > 0.62, ch = dark ? 28 : 50 - g.cs * 26;
+  if (rings === 1 && n <= 8) { // 細いおしべ
+    x.strokeStyle = hsl(ch + 8, 0.7, dark ? 0.3 : 0.62, 0.7); x.fillStyle = hsl(ch, 0.85, dark ? 0.2 : 0.56, 0.95); x.lineWidth = Math.max(0.5, R * 0.03);
+    const ns = 7 + (seed % 5);
+    for (let i = 0; i < ns; i++) { const a = a0 + (i * TAU) / ns + hash2(i, seed) * 0.4, l = rc * (1.5 + hash2(i, seed + 4) * 0.9); x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(a) * l, cy + Math.sin(a) * l); x.stroke(); x.beginPath(); x.arc(cx + Math.cos(a) * l, cy + Math.sin(a) * l, Math.max(0.7, R * 0.05), 0, TAU); x.fill(); }
+  }
+  const cg = x.createRadialGradient(cx - rc * 0.25, cy - rc * 0.25, 0, cx, cy, rc);
+  cg.addColorStop(0, hsl(ch + 6, dark ? 0.35 : 0.85, dark ? 0.34 : 0.7, 0.96)); cg.addColorStop(0.7, hsl(ch, dark ? 0.4 : 0.82, dark ? 0.2 : 0.56, 0.96)); cg.addColorStop(1, hsl(ch - 14, 0.7, dark ? 0.14 : 0.42, 0.9));
+  x.fillStyle = cg; x.beginPath(); x.arc(cx, cy, rc, 0, TAU); x.fill();
+  const nd = Math.round(6 + rc * 1.2);
+  for (let i = 0; i < nd; i++) { const a = hash2(i, seed + 20) * TAU, rr = rc * Math.sqrt(hash2(i, seed + 21)) * 0.92; x.fillStyle = i % 2 ? hsl(ch + 10, 0.9, dark ? 0.6 : 0.8, 0.8) : hsl(ch - 16, 0.7, dark ? 0.1 : 0.38, 0.55); x.beginPath(); x.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, Math.max(0.5, rc * 0.11), 0, TAU); x.fill(); }
+  grainOver(x, S, S, 0.55);
+  return { c, ax: cx, ay: cy, form: 'open', R };
+}
+
+function paintTulip(g, R, seed) {
+  const L = R * 2.05, W = Math.ceil(R * 2.6) + 6, H = Math.ceil(L * 1.15) + 8, c = mkCanvas(W, H), x = c.getContext('2d');
+  const bx = W / 2, by = H - 5;
+  const gg = Object.assign({}, g, { pw: 0.45 + 0.5 * g.pw, nt: g.nt * 0.5 });
+  const k = petalColors(g);
+  const halo = x.createRadialGradient(bx, by - L * 0.5, R * 0.3, bx, by - L * 0.5, R * 1.5);
+  halo.addColorStop(0, hsl(k.H, k.S, k.Lg, 0.16)); halo.addColorStop(1, hsl(k.H, k.S, k.Lg, 0));
+  x.fillStyle = halo; x.fillRect(0, 0, W, H);
+  const back = paintPetal(gg, L * 0.97, 0.8, -0.07, seed), front = paintPetal(gg, L, 0.95, 0.02, seed + 3);
+  const flare = 0.16 + 0.2 * g.pt + 0.1 * g.fr;
+  for (const [a, p, al] of [[-flare * 1.9, back, 0.9], [flare * 1.9, back, 0.9], [0, back, 0.92], [-flare, front, 0.95], [flare, front, 0.95]]) { x.save(); x.translate(bx, by); x.rotate(a); x.globalAlpha = al; x.drawImage(p.c, -p.ox, -p.oy); x.restore(); }
+  freeCanvas(back.c); freeCanvas(front.c);
+  x.fillStyle = 'hsla(105,35%,42%,0.9)'; x.beginPath(); x.ellipse(bx, by - 1, R * 0.34, R * 0.2, 0, 0, TAU); x.fill();
+  grainOver(x, W, H, 0.55);
+  return { c, ax: bx, ay: by, form: 'tulip', R };
+}
+
+function paintBell(g, R, seed) {
+  const L = R * 1.75, mw = R * (0.72 + 0.4 * g.pw), W = Math.ceil(mw * 2.5) + 8, H = Math.ceil(L * 1.25) + 8, c = mkCanvas(W, H), x = c.getContext('2d');
+  const tx = W / 2, ty = 5, k = petalColors(g), n = G.petals(g);
+  const halo = x.createRadialGradient(tx, ty + L * 0.6, R * 0.2, tx, ty + L * 0.6, R * 1.5);
+  halo.addColorStop(0, hsl(k.H, k.S, k.Lg, 0.16)); halo.addColorStop(1, hsl(k.H, k.S, k.Lg, 0));
+  x.fillStyle = halo; x.fillRect(0, 0, W, H);
+  const path = () => {
+    x.beginPath(); x.moveTo(tx - R * 0.16, ty);
+    x.bezierCurveTo(tx - mw * 0.95, ty + L * 0.12, tx - mw * 0.75, ty + L * 0.7, tx - mw, ty + L * (0.96 + 0.05 * g.pt));
+    for (let i = 0; i < n; i++) { const x0 = tx - mw + (i * 2 * mw) / n, x1 = x0 + (2 * mw) / n; x.quadraticCurveTo((x0 + x1) / 2, ty + L * (1.02 + 0.18 * (1 - g.pt) - 0.2 * g.pt), x1, ty + L * (0.96 + 0.05 * g.pt) + (i === n - 1 ? 0 : L * 0.03 * g.pt)); }
+    x.bezierCurveTo(tx + mw * 0.75, ty + L * 0.7, tx + mw * 0.95, ty + L * 0.12, tx + R * 0.16, ty); x.closePath();
+  };
+  path();
+  const gr = x.createLinearGradient(0, ty, 0, ty + L);
+  gr.addColorStop(0, hsl(k.H - 6, k.S * 0.8, Math.min(0.95, k.Lg + 0.1), 0.94)); gr.addColorStop(0.55, k.mid); gr.addColorStop(1, k.tip);
+  x.fillStyle = gr; x.fill();
+  x.globalCompositeOperation = 'source-atop';
+  const hg = x.createRadialGradient(tx - mw * 0.3, ty + L * 0.4, 0, tx - mw * 0.3, ty + L * 0.4, L * 0.5);
+  hg.addColorStop(0, 'rgba(255,255,255,0.4)'); hg.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = hg; x.fillRect(0, 0, W, H);
+  x.strokeStyle = k.vein; x.globalAlpha = 0.25; x.lineWidth = Math.max(0.6, R * 0.04);
+  for (let i = 1; i < n; i++) { const xx = tx - mw + (i * 2 * mw) / n; x.beginPath(); x.moveTo(tx + (xx - tx) * 0.15, ty + L * 0.1); x.quadraticCurveTo(tx + (xx - tx) * 0.9, ty + L * 0.5, xx, ty + L * 0.97); x.stroke(); }
+  path(); x.strokeStyle = k.rim; x.lineJoin = 'round';
+  x.globalAlpha = 0.16; x.lineWidth = Math.max(2.4, R * 0.36); x.stroke();
+  x.globalAlpha = 0.26; x.lineWidth = Math.max(1.5, R * 0.18); x.stroke();
+  x.globalAlpha = 0.5; x.lineWidth = Math.max(0.8, R * 0.07); x.stroke();
+  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  x.fillStyle = hsl(50, 0.85, 0.62, 0.9); for (let i = -1; i <= 1; i++) { x.beginPath(); x.arc(tx + i * mw * 0.22, ty + L * 1.08, Math.max(0.7, R * 0.07), 0, TAU); x.fill(); }
+  x.fillStyle = 'hsla(105,35%,42%,0.92)'; x.beginPath(); x.ellipse(tx, ty + 1, R * 0.3, R * 0.17, 0, 0, TAU); x.fill();
+  grainOver(x, W, H, 0.55);
+  return { c, ax: tx, ay: ty, form: 'bell', R };
+}
+
+// ── 株のからだ（茎と葉）。咲く位置 heads も返す ──
+// gr = 育ち具合 0..1。芽 → 葉が増える → 茎が伸びる → 枝が出る、の順に形が変わる
+function plantGeom(p, gr = 1) {
+  const g = p.g, id = p.id, rnd = (i) => hash2(id, i);
+  const Hf = G.height(g), arr = G.arr(g), F = G.count(g), R = G.radius(g), form = G.form(g);
+  // ロゼット型（lr が小さい）は先に葉を広げ、あとから茎を立てる
+  const H = Hf * Math.max(0.05, lerp(smooth(0.3, 0.97, gr), Math.pow(gr, 1.25), g.lr));
+  const bf = smooth(0.4, 0.88, gr), rf = smooth(0.5, 0.92, gr);
+  const lean = (rnd(1) - 0.5) * 0.3 * H, bend = (rnd(2) - 0.5) * 0.22 * H;
+  const P0 = [0, 0], P1 = [lean * 0.25 + bend, -H * 0.55], P2 = [lean, -H];
+  const q = (t) => { const u = 1 - t; return [u * u * P0[0] + 2 * u * t * P1[0] + t * t * P2[0], u * u * P0[1] + 2 * u * t * P1[1] + t * t * P2[1]]; };
+  const qd = (t) => { const u = 1 - t; return [2 * u * (P1[0] - P0[0]) + 2 * t * (P2[0] - P1[0]), 2 * u * (P1[1] - P0[1]) + 2 * t * (P2[1] - P1[1])]; };
+  const sw = (1.3 + 1.8 * g.ht + 0.6 * g.sz) * (0.45 + 0.55 * gr);
+  const stems = [], leaves = [], heads = [];
+  stems.push({ a: P0, c: P1, b: P2, w: sw, main: 1 });
+  const head = (x, y, ang, r, ord) => heads.push({ x, y, ang, r, ord, rot: rnd(40 + heads.length) * TAU, ph: rnd(60 + heads.length) * TAU });
+  if (arr === 'spray') {
+    head(P2[0], P2[1], Math.atan2(qd(1)[0], -qd(1)[1]), 1, 0);
+    for (let i = 1; i < F; i++) {
+      const t = lerp(0.82, 0.34 + 0.2 * (1 - g.br), i / Math.max(1, F - 1)) + (rnd(10 + i) - 0.5) * 0.06, side = (i % 2 ? 1 : -1) * (rnd(3) < 0.5 ? 1 : -1);
+      const b = q(t), len = Hf * (0.2 + 0.2 * rnd(20 + i)) * (0.7 + 0.5 * g.br) * bf, ang = side * (0.45 + 0.5 * g.br + 0.3 * rnd(30 + i));
+      const e = [b[0] + Math.sin(ang) * len, b[1] - Math.cos(ang) * len * 0.95], cc = [b[0] + Math.sin(ang) * len * 0.75, b[1] - Math.cos(ang) * len * 0.3];
+      if (bf > 0.04) stems.push({ a: b, c: cc, b: e, w: sw * 0.62 });
+      head(e[0], e[1], ang * 0.5, 0.82 + 0.2 * rnd(50 + i), i);
+      if (rnd(70 + i) < 0.6 && bf > 0.2) leaves.push({ x: b[0], y: b[1], ang: side * (0.9 + 0.4 * rnd(80 + i)), len: Hf * 0.13 * bf, k: 0.8 });
+    }
+  } else if (arr === 'umbel') {
+    const spread = R * (1.1 + 0.34 * Math.sqrt(F)) * rf;
+    for (let i = 0; i < F; i++) {
+      const u = F === 1 ? 0.5 : i / (F - 1), layer = i % 2;
+      const ang = lerp(-1.25, 1.25, u) + (rnd(10 + i) - 0.5) * 0.2, len = spread * (layer ? 0.62 : 1) * (0.85 + 0.3 * rnd(20 + i));
+      const e = [P2[0] + Math.sin(ang) * len, P2[1] - Math.cos(ang) * len * 0.72 - (layer ? 0 : R * 0.3 * rf)];
+      if (rf > 0.04) stems.push({ a: P2, c: [P2[0] + Math.sin(ang) * len * 0.5, P2[1] - Math.cos(ang) * len * 0.6], b: e, w: sw * 0.4 });
+      head(e[0], e[1], ang * 0.6, 0.85 + 0.25 * rnd(50 + i), Math.abs(u - 0.5) * F);
+    }
+  } else {
+    for (let i = 0; i < F; i++) {
+      const t = lerp(0.48, 0.99, F === 1 ? 1 : i / (F - 1)), b = q(t), d = qd(t), dl = Math.hypot(d[0], d[1]) || 1, nx = -d[1] / dl, ny = d[0] / dl;
+      const side = i % 2 ? 1 : -1, sz = lerp(1, 0.58, i / Math.max(1, F - 1)), off = R * 0.85 * sz * (i === F - 1 ? 0 : 1) * rf;
+      const e = [b[0] + nx * side * off, b[1] + ny * side * off - R * 0.2 * rf];
+      if (off > 0) stems.push({ a: b, c: [(b[0] + e[0]) / 2, b[1] - R * 0.3], b: e, w: sw * 0.35 });
+      head(e[0], e[1], side * 0.5, sz, i);
+    }
+  }
+  // 葉
+  const lt = G.leaf(g);
+  const leafLen = clamp(Hf * (0.2 + 0.12 * (1 - g.lw)), 10, 38) * (0.75 + 0.4 * g.br) * (lt === 'linear' ? 1.35 : lt === 'round' ? 0.8 : lt === 'palm' ? 0.95 : 1);
+  // lr: 根もとにまとまる株（ロゼット）か、茎に沿って葉をつける株か
+  const nb = Math.max(lt === 'linear' ? 4 : 2, Math.round((2 + g.br * 2.5 + g.lw) * lerp(0.5, 1.7, 1 - g.lr)));
+  const fan = lt === 'linear' ? 0.75 : 1.3;
+  if (gr < 0.2) for (const sg of [-1, 1]) leaves.push({ x: 0, y: -H * 0.9, ang: sg * 1.15, len: 5.5 * (1 - gr * 2.5) + 2, coty: 1 }); // 双葉
+  for (let i = 0; i < nb; i++) {
+    const u = nb === 1 ? 0.5 : i / (nb - 1), sc = clamp((gr * 1.75 - rnd(160 + i) * 0.6 - 0.1) * 2.4); // 1 枚ずつ増える
+    if (sc > 0.06) leaves.push({ x: (rnd(100 + i) - 0.5) * 3, y: 0, ang: (lerp(-fan, fan, u) + (rnd(110 + i) - 0.5) * 0.3) * (0.55 + 0.45 * sc), len: leafLen * (0.7 + 0.5 * rnd(120 + i)) * sc, k: 1, basal: 1 });
+  }
+  const ns = Math.round((0.6 + g.ht * 3.5 + g.br * 1.5) * lerp(0.25, 1.9, g.lr)), topT = arr === 'spike' ? 0.44 : arr === 'spray' && F > 1 ? 0.6 : 0.8;
+  const opp = g.lr > 0.72; // 対生（向かい合わせ）
+  for (let i = 0; i < ns; i++) {
+    const t = lerp(0.14, topT, (i + 0.5) / ns), b = q(t), side = i % 2 ? 1 : -1, ln = leafLen * lerp(0.75, 0.42, t) * (0.8 + 0.4 * rnd(140 + i));
+    const sc = clamp((gr - 0.14 - t * 0.5) * 3.4); if (sc < 0.06) continue;
+    leaves.push({ x: b[0], y: b[1], ang: side * (0.75 + 0.5 * rnd(130 + i)) * (0.5 + 0.5 * sc), len: ln * sc, k: 0.9 });
+    if (opp) leaves.push({ x: b[0], y: b[1], ang: -side * (0.75 + 0.5 * rnd(150 + i)) * (0.5 + 0.5 * sc), len: ln * 0.92 * sc, k: 0.9 });
+  }
+  // bbox
+  let x0 = 0, x1 = 0, y0 = 0, y1 = 6;
+  const ext = (x, y, m) => { x0 = Math.min(x0, x - m); x1 = Math.max(x1, x + m); y0 = Math.min(y0, y - m); y1 = Math.max(y1, y + m); };
+  for (const s of stems) { ext(s.b[0], s.b[1], 3); ext(s.c[0], s.c[1], 3); }
+  for (const l of leaves) ext(l.x + Math.sin(l.ang) * l.len, l.y - Math.cos(l.ang) * l.len, l.len * 0.3);
+  return { H, Hf, R, form, stems, leaves, heads, x0, x1, y0, y1, q, gr };
+}
+
+function leafTone(g, look, j) {
+  // lh: 黄緑 → 緑 → 青緑 → 銀葉 → 銅葉
+  const c = g.lh;
+  let h = lerp(80, 150, smooth(0, 0.78, c)) + g.dr * 10, s = 0.4 - 0.18 * smooth(0.55, 0.85, c) - 0.08 * g.dr, l = 0.5 + 0.13 * smooth(0.6, 0.86, c) + j * 0.12;
+  if (c > 0.88) { const u = smooth(0.88, 1, c); h = lerp(h, 340, u * 0.8); s = lerp(s, 0.32, u); l = lerp(l, 0.36 + j * 0.08, u); }
+  if (look === 'autumn') { h = lerp(58, 26, (j * 3) % 1); s = 0.46; l = 0.64 + j * 0.1; }
+  else if (look === 'dry') { h = 42; s = 0.28; l = 0.56 + j * 0.06; }
+  return [h, s, l];
+}
+// 葉 1 枚ぶんの輪郭（複葉なら小葉ごと）。根もと (0,0) から先 (bend,-len) へ
+function leafShapes(g, len, seed) {
+  const lt = G.leaf(g), cut = G.cut(g), out = [];
+  const blade = (bx, by, ang, L, W, e, q, bend, notch) => {
+    const n = 14, left = [], right = [], ca = Math.cos(ang), sa = Math.sin(ang);
+    const teeth = cut === 'saw' ? Math.round(5 + L / 5) : cut === 'lobe' ? Math.round(3 + g.lw * 2) : 0;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      let hw = W * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(t, e))), q);
+      if (cut === 'saw') hw *= 1 + 0.2 * (((t * teeth) % 1) - 0.5) * smooth(0.05, 0.25, t);
+      else if (cut === 'lobe') hw *= 1 - 0.55 * Math.pow(0.5 + 0.5 * Math.cos(t * teeth * TAU), 1.5) * smooth(0.08, 0.3, t) * (1 - smooth(0.85, 1, t));
+      else if (cut === 'wave') hw *= 1 + 0.1 * Math.sin(t * 16 + seed);
+      const y = -L * t + notch * L * Math.exp(-t * 9) * (hw / (W + 0.01)), cx = bend * t * t;
+      for (const [arrp, sgn] of [[left, -1], [right, 1]]) { const px = cx + sgn * hw, py = y; arrp.push([bx + px * ca - py * sa, by + px * sa + py * ca]); }
+    }
+    right.reverse(); right.shift();
+    const tip = [bx + bend * ca + L * sa, by + bend * sa - L * ca];
+    out.push({ pts: left.concat(right), rib: [[bx, by], tip], L, W });
+  };
+  const wid = len * lerp(0.08, 0.34, g.lw);
+  const bend = (hash1(seed * 13 + 5) - 0.5) * len * 0.45;
+  let petiole = 0;
+  if (lt === 'linear') {
+    if (cut === 'lobe') { // 羽のように裂けた葉
+      const n = 5 + Math.round(g.lw * 4);
+      for (let i = 0; i < n; i++) { const t = (i + 0.6) / (n + 0.4), side = i % 2 ? 1 : -1, l2 = len * 0.3 * Math.sin(Math.PI * Math.pow(t, 0.7)) + len * 0.06; blade(bend * t * t, -len * t, side * 1.05, l2, l2 * 0.2 + 0.6, 0.8, 0.8, 0, 0); }
+      blade(bend * 0.8, -len * 0.86, 0, len * 0.2, len * 0.045 + 0.6, 0.8, 0.8, 0, 0);
+      out.rachis = [[0, 0], [bend * 0.8, -len * 0.9]];
+    } else blade(0, 0, 0, len, wid * 0.42 + 0.7, 0.9, 0.42, bend * 1.6, 0);
+  } else if (lt === 'lance') blade(0, 0, 0, len, wid * 0.8, 0.74, 0.95, bend, 0);
+  else if (lt === 'ovate') blade(0, 0, 0, len, wid * 1.05, 0.68, 0.6, bend * 0.7, 0);
+  else if (lt === 'round') { petiole = len * 0.42; blade(0, -petiole, 0, len * 0.62, wid * 1.5 + len * 0.12, 0.86, 0.4, bend * 0.3, 0.2); }
+  else { // 手のひら形の複葉
+    petiole = len * 0.5;
+    const n = 5 + (g.lw > 0.6 ? 2 : 0);
+    for (let i = 0; i < n; i++) { const u = i / (n - 1) - 0.5; blade(0, -petiole, u * 2.3, len * 0.55 * (1 - 0.35 * Math.abs(u) * 2), wid * 0.4 + 1, 0.7, 0.9, 0, 0); }
+  }
+  out.petiole = petiole; out.lt = lt;
+  return out;
+}
+function paintBody(p, geo, k, look, extra = 0) {
+  const g = p.g, pad = 4 + extra, W = (geo.x1 - geo.x0) * k + pad * 2, Hh = (geo.y1 - geo.y0) * k + pad * 2;
+  const c = mkCanvas(W, Hh), x = c.getContext('2d');
+  const ox = -geo.x0 * k + pad, oy = -geo.y0 * k + pad;
+  x.translate(ox, oy); x.scale(k, k); x.lineCap = 'round'; x.lineJoin = 'round';
+  const leaf = (l, i) => {
+    const j = hash2(p.id, 200 + i); let [h, s, li] = leafTone(g, look, j * 0.6); h += (hash2(p.id, 240 + i) - 0.5) * 20;
+    x.save(); x.translate(l.x, l.y); x.rotate(l.ang);
+    if (l.coty) { x.fillStyle = hsl(96, 0.5, 0.56, 0.88); x.beginPath(); x.ellipse(0, -l.len * 0.5, l.len * 0.34, l.len * 0.52, 0, 0, TAU); x.fill(); x.strokeStyle = hsl(110, 0.45, 0.38, 0.4); x.lineWidth = 0.6; x.stroke(); x.restore(); return; }
+    const shp = leafShapes(g, l.len, p.id * 31 + i);
+    if (shp.petiole || shp.rachis) { const e = shp.rachis ? shp.rachis[1] : [0, -shp.petiole]; x.strokeStyle = hsl(h + 4, s, li - 0.08, 0.75); x.lineWidth = 0.9; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(e[0] * 0.3, e[1] * 0.6, e[0], e[1]); x.stroke(); }
+    shp.forEach((b, bi) => {
+      tracePts(x, b.pts);
+      const gr = x.createLinearGradient(b.rib[0][0], b.rib[0][1], b.rib[1][0], b.rib[1][1]), hh = h + (bi % 2 ? 5 : -3);
+      gr.addColorStop(0, hsl(hh + 8, s, li - 0.08, 0.8)); gr.addColorStop(0.55, hsl(hh, s, li + 0.05, 0.66)); gr.addColorStop(1, hsl(hh - 18, s * 0.9, li + 0.17, 0.56));
+      x.fillStyle = gr; x.fill();
+      x.strokeStyle = hsl(hh + 10, s + 0.05, li - 0.16, 0.2); x.lineWidth = 2; x.stroke();
+      x.strokeStyle = hsl(hh + 10, s + 0.05, li - 0.18, 0.36); x.lineWidth = 0.7; x.stroke();
+      // 葉脈
+      const [a0, a1] = b.rib; x.strokeStyle = hsl(hh - 10, s * 0.6, li + 0.24, 0.5); x.lineWidth = 0.55;
+      x.beginPath(); x.moveTo(a0[0], a0[1]); x.lineTo(lerp(a0[0], a1[0], 0.93), lerp(a0[1], a1[1], 0.93)); x.stroke();
+      if (b.W > 4 && shp.lt !== 'linear') {
+        const dx = a1[0] - a0[0], dy = a1[1] - a0[1], dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl; x.globalAlpha = 0.6; x.lineWidth = 0.4;
+        for (let v = 1; v <= 3; v++) for (const sg of [-1, 1]) { const t = v / 4.3, mx = lerp(a0[0], a1[0], t), my = lerp(a0[1], a1[1], t), r = b.W * 0.62 * Math.sin(Math.PI * t * 0.9); x.beginPath(); x.moveTo(mx, my); x.lineTo(mx + nx * sg * r + dx / dl * r * 0.7, my + ny * sg * r + dy / dl * r * 0.7); x.stroke(); }
+        x.globalAlpha = 1;
+      }
+    });
+    x.restore();
+  };
+  const [sh, ss, sl] = leafTone(g, look, 0.2);
+  geo.leaves.forEach((l, i) => { if (l.basal && i % 2 === 0) leaf(l, i); });
+  for (const s of geo.stems) {
+    x.beginPath(); x.moveTo(s.a[0], s.a[1]); x.quadraticCurveTo(s.c[0], s.c[1], s.b[0], s.b[1]);
+    x.strokeStyle = hsl(sh + 4, ss + 0.04, sl - 0.13, 0.75); x.lineWidth = s.w; x.stroke();
+    x.strokeStyle = hsl(sh - 8, ss, sl + 0.07, 0.8); x.lineWidth = s.w * 0.5; x.stroke();
+  }
+  geo.leaves.forEach((l, i) => { if (!(l.basal && i % 2 === 0)) leaf(l, i); });
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  grainOver(x, W, Hh, 0.5);
+  return { c, ox, oy, k, look };
+}
+
+// ───────────────────────── 風景用の水彩 ─────────────────────────
+// ぼかした丸ではなく、「乾いた縁に絵の具がたまった面」を重ねて描く。
+function noisyBlob(cx, cy, rx, ry, seed, rough = 0.22, n = 30, lobes = 0, lobeAmp = 0.16) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * TAU;
+    let r = 1 + (vnoise(i * 0.37 + seed * 3.1, seed) - 0.5) * 2 * rough + (hash2(i, seed + 5) - 0.5) * rough * 0.5;
+    if (lobes) r += lobeAmp * Math.abs(Math.sin(t * lobes * 0.5 + seed)) - lobeAmp * 0.5;
+    pts.push([cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r]);
+  }
+  return pts;
+}
+function tracePoly(x, pts) { x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) x.lineTo(pts[i][0], pts[i][1]); x.closePath(); }
+// にじんだ面。o.edge=縁の濃さ, o.blooms=バックラン（水が戻ってできる明るい染み）の数, o.grad=[色, 向き] で片側を明るく
+function wash(x, pts, col, a, o = {}) {
+  const smoothEdge = o.smooth !== false;
+  (smoothEdge ? tracePts : tracePoly)(x, pts);
+  x.fillStyle = rgb(col, a); x.fill();
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  x.save(); x.clip();
+  if (o.light) { const g = x.createLinearGradient(x0, y0, x0 + (x1 - x0) * 0.4, y1); g.addColorStop(0, rgb(o.light, o.lightA || 0.35)); g.addColorStop(0.7, rgb(o.light, 0)); x.fillStyle = g; x.fillRect(x0, y0, x1 - x0, y1 - y0); }
+  if (o.shade) { const g = x.createLinearGradient(0, y0 + (y1 - y0) * 0.35, 0, y1); g.addColorStop(0, rgb(o.shade, 0)); g.addColorStop(1, rgb(o.shade, o.shadeA || 0.35)); x.fillStyle = g; x.fillRect(x0, y0, x1 - x0, y1 - y0); }
+  const sd = o.seed || 1, nb = o.blooms || 0, sz = Math.max(x1 - x0, y1 - y0);
+  for (let i = 0; i < nb; i++) {
+    const b = noisyBlob(lerp(x0, x1, hash2(i, sd + 11)), lerp(y0, y1, hash2(i, sd + 12)), sz * (0.08 + 0.14 * hash2(i, sd + 13)), sz * (0.06 + 0.1 * hash2(i, sd + 14)), sd + i, 0.4, 16, 5, 0.3);
+    tracePts(x, b); x.fillStyle = `rgba(255,255,255,${o.bloomA || 0.14})`; x.fill(); x.strokeStyle = rgb(mix(col, [40, 50, 80], 0.3), a * 0.22); x.lineWidth = 0.8; x.stroke();
+  }
+  const ec = o.edgeCol || mix(col, [36, 44, 78], 0.38), e = o.edge == null ? 1 : o.edge, ew = o.ew || Math.max(1.2, sz * 0.012);
+  (smoothEdge ? tracePts : tracePoly)(x, pts); x.lineJoin = 'round';
+  x.strokeStyle = rgb(ec, a * 0.16 * e); x.lineWidth = ew * 5; x.stroke();
+  x.strokeStyle = rgb(ec, a * 0.3 * e); x.lineWidth = ew * 2.2; x.stroke();
+  x.strokeStyle = rgb(ec, Math.min(1, a * 0.7 * e)); x.lineWidth = ew * 0.8; x.stroke();
+  x.restore();
+}
+// 鉛筆の下描き線：かすれて、ところどころ切れる
+function pencil(x, pts, a = 0.32, w = 0.7, seed = 1, col = [112, 86, 74]) {
+  x.strokeStyle = rgb(col, a); x.lineWidth = w; x.lineCap = 'round'; x.lineJoin = 'round';
+  x.beginPath(); let pen = false;
+  for (let i = 0; i < pts.length; i++) {
+    const gap = hash2(i, seed + 77) < 0.14, jx = (hash2(i, seed + 78) - 0.5) * 0.9, jy = (hash2(i, seed + 79) - 0.5) * 0.9;
+    if (gap) { pen = false; continue; }
+    if (!pen) { x.moveTo(pts[i][0] + jx, pts[i][1] + jy); pen = true; } else x.lineTo(pts[i][0] + jx, pts[i][1] + jy);
+  }
+  x.stroke();
+}
+// 葉の一筆
+function dab(x, cx, cy, len, wid, ang, col, a) {
+  x.save(); x.translate(cx, cy); x.rotate(ang); x.fillStyle = rgb(col, a);
+  x.beginPath(); x.moveTo(-len, 0); x.quadraticCurveTo(0, -wid, len, 0); x.quadraticCurveTo(0, wid, -len, 0); x.fill(); x.restore();
+}
+
+// ===== 40-scene.js =====
+// ───────────────────────── 花畑の絵 ─────────────────────────
+const V = {
+  W: 390, H: 844, dpr: 2, unit: 1, yH: 300, cv: null, ctx: null,
+  bgA: null, bgB: null, bgMix: 1, bgKey: '', bgT: 0, fg: null, fgKey: '',
+  views: new Map(), order: [], queue: [], bugs: new Map(), parts: [],
+  wind: 0.2, time: 0, storm: 0, flash: 0, frost: 0, env: null, fast: 0,
+};
+// 透視：奥ほど小さく、地面も奥ほど詰まる（同じ式から大きさと高さを出す）
+const PK = PERS.PK, S_FAR = 1 / (1 + PK), S_NEAR = 2.05;
+// 風は面で渡る：突風の帯が左から右へ流れ、奥ほどゆっくり見える
+function windAt(sx, ds) {
+  const u = sx / V.W, t = V.time;
+  const gust = vnoise(u * 2.2 - t * 0.33 + ds * 1.7, 31), rip = Math.sin(t * 2.6 - u * 9 + ds * 5);
+  return V.wind * (0.35 + 1.5 * gust * gust) + 0.035 * rip * (0.5 + V.wind);
+}
+const depthScale = (z) => S_NEAR / (1 + PK * (1 - z));
+const depthY = (z) => (1 / (1 + PK * (1 - z)) - S_FAR) / (1 - S_FAR);
+function proj(x, z) {
+  const ds = depthScale(z);
+  const fy = depthY(z);
+  return { ds, sx: V.W * (0.5 + (x - 0.5) * 1.06), sy: V.yH + (V.H * 1.05 - V.yH) * fy - SITE.elev(x, z) * V.H * 0.03 * ds };
+}
+function resizeView() {
+  const st = V.cv.parentElement.getBoundingClientRect();
+  V.W = Math.round(st.width); V.H = Math.round(st.height); V.dpr = Math.min(window.devicePixelRatio || 1, V.dprCap || 2);
+  V.cv.width = V.W * V.dpr; V.cv.height = V.H * V.dpr;
+  V.yH = Math.round(V.H * 0.335);
+  V.unit = clamp(V.H / 844, 0.7, 1.35) * clamp(V.W / 390, 0.85, 1.25) * 0.95;
+  for (const c of [V.bgA, V.bgB, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
+  V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1;
+  for (const v of V.views.values()) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); v.body = null; v.fl = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
+  V.queue.length = 0; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
+}
+
+// ── 環境（季節・時刻・天気）から色を決める ──
+const SKY_T = [[0, hex('#b6c5d6')], [0.14, hex('#a8d2e4')], [0.3, hex('#9fd0ea')], [0.46, hex('#7dbbe6')], [0.62, hex('#92c1e4')], [0.76, hex('#a6c4dc')], [0.9, hex('#b6c5d6')], [1, hex('#b6c5d6')]];
+const SKY_B = [[0, hex('#edeef0')], [0.14, hex('#eaf3e2')], [0.3, hex('#e2f1ea')], [0.46, hex('#d9eeee')], [0.62, hex('#f1ecd6')], [0.76, hex('#f4e6cf')], [0.9, hex('#edeef0')], [1, hex('#edeef0')]];
+const GR_F = [[0, hex('#dcd8bb')], [0.1, hex('#d9e5ac')], [0.25, hex('#cfe5a2')], [0.45, hex('#bedb92')], [0.62, hex('#d0d78f')], [0.76, hex('#e2cf90')], [0.86, hex('#dccca4')], [1, hex('#dcd8bb')]];
+const GR_N = [[0, hex('#b5b487')], [0.1, hex('#a8cc79')], [0.25, hex('#8cc468')], [0.45, hex('#69a858')], [0.62, hex('#88aa57')], [0.76, hex('#b89b56')], [0.86, hex('#a8906a')], [1, hex('#b5b487')]];
+const TREE_C = [[0, hex('#8c7b6e')], [0.09, hex('#c9c2a0')], [0.16, hex('#f3cfd6')], [0.24, hex('#f0c4d0')], [0.3, hex('#a9d17e')], [0.45, hex('#5f9f58')], [0.6, hex('#79a552')], [0.7, hex('#e2a445')], [0.78, hex('#d9743c')], [0.85, hex('#a8704c')], [1, hex('#8c7b6e')]];
+
+function computeEnv(sim, frac) {
+  const t = (sim.tick + frac) / TICKS, w = sim.w, tk = sim.tick + frac;
+  let d = (t * 4) % 1; d = lerp(d, 0.36, V.fast);
+  const night = smooth(0.86, 0.92, d) * (1 - smooth(0.965, 1, d)), dusk = hump(0.7, 0.92, d), dawn = (1 - smooth(0, 0.11, d)) * (1 - night) + smooth(0.955, 1, d) * 0;
+  const onset = w.onset / TICKS;
+  const snow = Math.max(smooth(onset + 0.015, onset + 0.07, t), 1 - smooth(0.02, 0.075 - 0.02 * w.temp, t));
+  const snowing = t > onset && t < 0.985 ? 0.4 + 0.5 * w.sev : 0;
+  const longrain = sim.flags.rainNow > tk ? 1 : 0;
+  const shower = w.rain > 0.2 && !snowing && hash2(sim.year, (t * 30) | 0) < (w.rain - 0.15) * 0.42 && t > 0.1 ? 0.7 : 0;
+  const rain = Math.max(longrain, shower, V.storm > 0 ? 1 : 0);
+  const cloud = clamp(0.22 + 0.25 * w.rain + 0.55 * rain + 0.3 * (snowing ? 1 : 0) + (V.storm > 0 ? 0.5 : 0));
+  const dry = (sim.flags.drought ? 1 : clamp(-w.rain * 0.7)) * hump(0.26, 0.8, t);
+  const hazeC = mix(mix(mix(ramp(SKY_B, t), [251, 214, 180], dusk * 0.6), [176, 180, 222], night * 0.8), [226, 230, 232], cloud * 0.4);
+  return { t, d, night, dusk, dawn, snow, snowing, rain, cloud, dry, storm: V.storm > 0 ? 1 : 0, year: sim.year, warm: w.temp, hazeC };
+}
+
+function skyCols(e) {
+  const t = e.t;
+  let top = ramp(SKY_T, t), bot = ramp(SKY_B, t);
+  top = mix(top, hex('#a9a6d8'), e.dusk * 0.6); bot = mix(bot, hex('#fbd0a6'), e.dusk * 0.85);
+  top = mix(top, hex('#b9c4e8'), e.dawn * 0.5); bot = mix(bot, hex('#fbd8c6'), e.dawn * 0.75);
+  top = mix(top, hex('#cfd8e2'), e.cloud * 0.5); bot = mix(bot, hex('#eceeec'), e.cloud * 0.45);
+  top = mix(top, hex('#7c8698'), e.storm * 0.7); bot = mix(bot, hex('#b4bac2'), e.storm * 0.6);
+  top = mix(top, hex('#7482c0'), e.night); bot = mix(bot, hex('#c4c6ea'), e.night);
+  return [top, bot];
+}
+function paintSky(x, e) {
+  const W = V.W, H = V.H, yH = V.yH, t = e.t;
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  const [top, bot] = skyCols(e);
+  const sg = x.createLinearGradient(0, 0, 0, yH + 20);
+  sg.addColorStop(0, rgb(mix(top, [70, 130, 205], 0.22))); sg.addColorStop(0.45, rgb(top)); sg.addColorStop(1, rgb(bot));
+  x.fillStyle = sg; x.fillRect(0, 0, W, yH + 30);
+  // 刷毛のあと：横に引いた薄い帯を重ね、ところどころにバックランを残す
+  for (let i = 0; i < 9; i++) {
+    const cy = yH * (0.04 + 0.11 * i) + (hash2(i, 902) - 0.5) * yH * 0.05, hh = yH * (0.05 + 0.05 * hash2(i, 903)), pts = [];
+    for (let k = 0; k <= 16; k++) pts.push([-20 + (k / 16) * (W + 40), cy - hh * (0.6 + 0.8 * vnoise(k * 0.6, i + 3))]);
+    for (let k = 16; k >= 0; k--) pts.push([-20 + (k / 16) * (W + 40), cy + hh * (0.6 + 0.8 * vnoise(k * 0.5, i + 9))]);
+    wash(x, pts, i % 3 === 0 ? mix(top, [255, 255, 255], 0.55) : mix(top, [70, 110, 180], 0.12 + 0.1 * hash2(i, 904)), 0.12 * (1 - i / 12), { edge: 0.3, ew: 0.8, seed: i + 30 });
+  }
+  for (let i = 0; i < 6; i++) wash(x, noisyBlob(hash2(i, 905) * W, hash2(i, 906) * yH * 0.75, W * (0.12 + 0.16 * hash2(i, 907)), yH * (0.05 + 0.06 * hash2(i, 908)), i + 60, 0.35, 26, 7, 0.3), mix(top, [255, 255, 255], 0.75), 0.16, { edge: 0.35, ew: 0.8, seed: i + 70 });
+  { const g = x.createLinearGradient(0, yH * 0.55, 0, yH + 10); g.addColorStop(0, rgb(bot, 0)); g.addColorStop(1, rgb(mix(bot, [255, 244, 222], 0.5), 0.55)); x.fillStyle = g; x.fillRect(0, yH * 0.5, W, yH * 0.5 + 30); }
+  grainOver(x, W, yH + 40, 0.35);
+  // 太陽・月
+  const sa = lerp(-0.1, 1.1, clamp(e.d / 0.86)), sxp = W * (0.12 + 0.76 * sa), syp = yH * (0.82 - 0.62 * Math.sin(Math.PI * clamp(sa)));
+  if (e.night < 0.9) {
+    const a = (1 - e.night) * (1 - e.cloud * 0.75);
+    const gl = x.createRadialGradient(sxp, syp, 0, sxp, syp, W * 0.42);
+    const sc = mix([255, 248, 214], [255, 190, 130], e.dusk);
+    gl.addColorStop(0, rgb(sc, 0.75 * a)); gl.addColorStop(0.12, rgb(sc, 0.4 * a)); gl.addColorStop(1, rgb(sc, 0));
+    x.fillStyle = gl; x.fillRect(0, 0, W, yH + 20);
+    blob(x, sxp, syp, W * 0.045, W * 0.045, mix([255, 252, 236], [255, 214, 170], e.dusk), 0.95 * a, 77, 0.05);
+  }
+  if (e.night > 0.05) {
+    const mx = W * 0.74, my = yH * 0.24, a = e.night;
+    for (let i = 0; i < 46; i++) { const sxx = hash2(i, 911) * W, syy = hash2(i, 912) * yH * 0.8; x.fillStyle = `rgba(255,250,225,${a * (0.3 + 0.6 * hash2(i, 913))})`; x.beginPath(); x.arc(sxx, syy, 0.5 + hash2(i, 914) * 1, 0, TAU); x.fill(); }
+    const gl = x.createRadialGradient(mx, my, 0, mx, my, W * 0.3); gl.addColorStop(0, `rgba(240,238,255,${0.4 * a})`); gl.addColorStop(1, 'rgba(240,238,255,0)'); x.fillStyle = gl; x.fillRect(0, 0, W, yH);
+    blob(x, mx, my, W * 0.04, W * 0.04, [253, 250, 232], a, 78, 0.04);
+  }
+}
+function paintBG(x, e) {
+  const W = V.W, H = V.H, yH = V.yH, t = e.t;
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, W, H);
+  const [top, bot] = skyCols(e);
+  // 遠くの山
+  const hazeC = mix(bot, top, 0.3), snowy = e.snow;
+  const ridge = (base, amp, f, seed, col, a, detail) => {
+    const top = [], N = 64; for (let i = 0; i <= N; i++) { const u = i / N; top.push([u * W, base - amp * (fbm(u * f + seed, seed) - 0.25) - amp * 0.05 * (hash2(i, seed + 3) - 0.5)]); }
+    const pts = top.concat([[W + 4, yH + 34], [-4, yH + 34]]);
+    tracePoly(x, pts);
+    const g = x.createLinearGradient(0, base - amp, 0, yH + 12); g.addColorStop(0, rgb(col, a)); g.addColorStop(0.55, rgb(mix(col, hazeC, 0.45), a)); g.addColorStop(1, rgb(mix(col, hazeC, 0.85), a));
+    x.fillStyle = g; x.fill();
+    x.save(); x.clip();
+    if (detail) { // 山肌：稜線の下に、にじんだ濃淡をひと刷毛ずつ
+      for (let i = 0; i < 14; i++) { const u = hash2(i, seed + 20), px = u * W, py = base - amp * (fbm(u * f + seed, seed) - 0.25) + amp * (0.12 + 0.3 * hash2(i, seed + 21)); blob(x, px, py, W * (0.05 + 0.07 * hash2(i, seed + 22)), amp * 0.16, i % 2 ? mix(col, [58, 70, 130], 0.5) : mix(col, [255, 255, 255], 0.5), 0.3, i + seed, 0.3); }
+    }
+    x.lineJoin = 'round'; const ec = mix(col, [44, 54, 104], 0.45);
+    x.beginPath(); top.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])));
+    x.strokeStyle = rgb(ec, 0.14); x.lineWidth = 9; x.stroke(); x.strokeStyle = rgb(ec, 0.26); x.lineWidth = 3.6; x.stroke(); x.strokeStyle = rgb(ec, 0.6); x.lineWidth = 1.1; x.stroke();
+    x.restore();
+    if (detail) pencil(x, top.map((p) => [p[0], p[1] - 0.6]), 0.3, 0.6, seed);
+  };
+  const mt = mix(mix(hex('#9fb1d6'), hex('#eef1f6'), snowy * 0.8), hex('#3f4a80'), e.night * 0.7);
+  ridge(yH - H * 0.03, H * 0.13, 2.3, 3, mix(mt, hazeC, 0.5), 0.92, true);
+  ridge(yH - H * 0.008, H * 0.085, 3.1, 11, mix(mt, hex('#7f9cc0'), 0.35), 0.94, true);
+  // 近くの丘と林
+  const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
+  const hillC = mix(mix(near, far, 0.4), hazeC, 0.25);
+  ridge(yH + H * 0.012, H * 0.045, 2.2, 23, hillC, 1, false);
+  const tc = mix(ramp(TREE_C, t), hex('#eef2f5'), snowy * 0.55);
+  for (let i = 0; i < 34; i++) {
+    const u = hash2(i, 930); if (u > 0.7 && u < 0.99) continue;
+    const bx = u * W, by = yH + H * 0.012 - H * 0.045 * (fbm(u * 2.2 + 23, 23) - 0.25) + 3, r = W * (0.014 + 0.02 * hash2(i, 931)), tall = hash2(i, 933) < 0.3;
+    const c = mix(tc, [44, 76, 70], 0.2 + 0.25 * hash2(i, 932));
+    x.strokeStyle = rgb([110, 88, 76], 0.7); x.lineWidth = 1; x.beginPath(); x.moveTo(bx, by + 1); x.lineTo(bx, by - r * 0.9); x.stroke();
+    wash(x, noisyBlob(bx, by - r * (tall ? 1.5 : 1), r * (tall ? 0.6 : 1), r * (tall ? 1.5 : 0.95), i + 300, 0.2, 18, tall ? 0 : 6, 0.25), c, 0.86, { edge: 0.9, ew: 0.7, light: [255, 252, 210], lightA: 0.4, shade: [30, 50, 70], shadeA: 0.3 });
+    for (let k = 0; k < 5; k++) dab(x, bx + (hash2(i * 7 + k, 934) - 0.5) * r * 1.4, by - r * (0.5 + hash2(i * 7 + k, 935) * (tall ? 2 : 1)), 1.6, 0.8, hash2(i * 7 + k, 936) * 3, mix(c, [28, 50, 56], 0.5), 0.5);
+  }
+  // 赤い屋根の小さな家
+  { const hx = W * 0.2, hy = yH + H * 0.012 - H * 0.045 * (fbm(0.2 * 2.2 + 23, 23) - 0.25) + 3, s = W * 0.028;
+    x.fillStyle = rgb(mix([250, 244, 228], [120, 120, 170], e.night * 0.6)); x.fillRect(hx - s, hy - s * 1.1, s * 2, s * 1.2);
+    x.fillStyle = rgb(mix([206, 106, 86], [246, 246, 250], snowy * 0.8)); x.beginPath(); x.moveTo(hx - s * 1.3, hy - s * 1.05); x.lineTo(hx, hy - s * 2.1); x.lineTo(hx + s * 1.3, hy - s * 1.05); x.closePath(); x.fill();
+    x.fillStyle = e.night > 0.3 || e.dusk > 0.5 ? 'rgba(255,214,120,0.95)' : 'rgba(120,140,170,0.7)'; x.fillRect(hx - s * 0.3, hy - s * 0.75, s * 0.55, s * 0.5);
+    x.fillStyle = rgb([150, 110, 96]); x.fillRect(hx + s * 0.45, hy - s * 2.0, s * 0.3, s * 0.6); x.fillStyle = rgb([126, 96, 80], 0.9); x.fillRect(hx + s * 0.35, hy - s * 0.52, s * 0.4, s * 0.62);
+    pencil(x, [[hx - s, hy + s * 0.1], [hx - s, hy - s * 1.1], [hx - s * 1.3, hy - s * 1.05], [hx, hy - s * 2.1], [hx + s * 1.3, hy - s * 1.05], [hx + s, hy - s * 1.1], [hx + s, hy + s * 0.1]], 0.5, 0.7, 5); }
+  // 野原
+  const gg = x.createLinearGradient(0, yH, 0, H);
+  gg.addColorStop(0, rgb(far)); gg.addColorStop(0.3, rgb(mix(far, near, 0.55))); gg.addColorStop(1, rgb(near));
+  x.fillStyle = gg; x.beginPath(); x.moveTo(0, H); x.lineTo(0, yH + 6);
+  for (let i = 0; i <= 30; i++) x.lineTo((i / 30) * W, yH + 3 + 5 * Math.sin(i * 0.5) + 3 * fbm(i * 0.3, 5));
+  x.lineTo(W, H); x.closePath(); x.fill();
+  // 土の湿り気・丘・むら
+  for (let i = 0; i < 260; i++) {
+    const fx = hash2(i, 940), fz = Math.pow(hash2(i, 941), 0.6), p = proj(fx, fz), m = SITE.moist(fx, fz), el = SITE.elev(fx, fz);
+    let c = mix(far, near, fz); const j = hash2(i, 942);
+    c = mix(c, snowy > 0.5 ? [214, 226, 242] : [58, 120, 78], (m - 0.4) * 0.5 * (1 - snowy * 0.6)); c = mix(c, snowy > 0.5 ? [255, 255, 255] : [236, 222, 150], el * 0.4); c = mix(c, j < 0.5 ? [255, 255, 246] : snowy > 0.5 ? [186, 204, 232] : [70, 110, 70], 0.12 + 0.12 * hash2(i, 943));
+    blob(x, p.sx, p.sy, W * 0.1 * p.ds * (0.5 + hash2(i, 944)), H * 0.016 * p.ds * (0.5 + hash2(i, 945)), c, 0.42, i + 500, 0.3);
+  }
+  // 丘の明るい面
+  { const p = proj(SITE.hill.x, SITE.hill.z); blob(x, p.sx, p.sy - H * 0.01, W * 0.3, H * 0.075, mix(far, [255, 250, 215], 0.45), 0.5, 601, 0.12); blob(x, p.sx + W * 0.05, p.sy + H * 0.06, W * 0.3, H * 0.03, mix(near, [40, 80, 70], 0.3), 0.22, 602, 0.15); }
+  // 小川の岸（水そのものは毎フレーム drawBrook が流す）
+  for (let i = 0; i < 60; i++) { const z = 0.02 + (i / 60) * 0.98, sd = i % 2 ? 1 : -1, c = brookAt(z, e.dry); blob(x, c.x + sd * c.hw * 1.25, c.y, c.hw * 1.5 + 3, 2.5 + c.hw * 0.42, mix(near, snowy > 0.5 ? [190, 205, 225] : [46, 104, 70], 0.42), 0.55, i + 640, 0.3); }
+  // 大きな木と木かげ
+  { const sp = proj(SITE.shade.x, SITE.shade.z);
+    wash(x, noisyBlob(sp.sx, sp.sy, W * 0.3, H * 0.034, 610, 0.25, 30, 9, 0.2), mix(near, [40, 70, 110], 0.5), 0.3 * (1 - e.night * 0.5), { edge: 0.4, ew: 0.8 });
+    paintTree(e); x.drawImage(V.treeC, 0, 0, W, V.treeC.height / V.treeC._k); }
+  // 草むら
+  x.lineCap = 'round';
+  for (let i = 0; i < 90; i++) {
+    const fx = hash2(i, 970), fz = Math.pow(hash2(i, 971), 0.5); if (SITE.inBrook(fx, fz)) continue;
+    const p = proj(fx, fz), hgt = (5 + 9 * hash2(i, 972)) * p.ds * V.unit * (1 - 0.45 * snowy);
+    const c = snowy > 0.5 ? mix([176, 160, 120], [255, 255, 255], 0.2) : mix(mix(far, near, fz), i % 2 ? [40, 96, 60] : [240, 240, 190], 0.3);
+    x.strokeStyle = rgb(c, 0.6); x.lineWidth = 1.1 * p.ds;
+    for (let k = -1; k <= 1; k++) { x.beginPath(); x.moveTo(p.sx + k * 1.5 * p.ds, p.sy); x.quadraticCurveTo(p.sx + k * 3 * p.ds, p.sy - hgt * 0.6, p.sx + k * 6 * p.ds + (hash2(i, 973 + k) - 0.5) * 4, p.sy - hgt * (k ? 0.8 : 1)); x.stroke(); }
+  }
+}
+
+// ── 大きな木：枝ぶりを先に作り、その先に葉のかたまりを重ねる ──
+function treeSkeleton() {
+  if (V.treeSk) return V.treeSk;
+  const W = V.W, H = V.H, base = proj(1.0, 0.03), th = H * 0.21, segs = [], tips = [];
+  const grow = (x0, y0, ang, len, w, d, id) => {
+    const bend = (hash2(id, 71) - 0.5) * 0.35, x1 = x0 + Math.sin(ang) * len, y1 = y0 - Math.cos(ang) * len;
+    segs.push({ x0, y0, x1, y1, cx: (x0 + x1) / 2 + Math.cos(ang) * len * bend, cy: (y0 + y1) / 2 + Math.sin(ang) * len * bend, w, d });
+    if (d >= 5 || len < 6) { tips.push({ x: x1, y: y1, d }); return; }
+    if (d >= 2) tips.push({ x: x1, y: y1, d });
+    const n = d === 0 ? 3 : 2 + (hash2(id, 72) < 0.35 ? 1 : 0);
+    for (let i = 0; i < n; i++) { const u = n === 1 ? 0 : i / (n - 1) - 0.5; grow(x1, y1, ang * 0.75 + u * (1.25 - d * 0.08) + (hash2(id * 5 + i, 73) - 0.5) * 0.5 - (d === 0 ? 0.3 : 0), len * (0.66 + 0.16 * hash2(id * 5 + i, 74)), w * 0.66, d + 1, id * 5 + i + 1); }
+  };
+  grow(base.sx - W * 0.035, base.sy + 6, -0.1, th * 0.56, W * 0.058, 0, 1);
+  return (V.treeSk = { segs, tips, base, th });
+}
+function paintTree(e) {
+  const t = e.t, snowy = e.snow, k = Math.min(V.dpr, 1.5), key = [(t * 40) | 0, (snowy * 4) | 0].join(',');
+  const W = V.W, hC = Math.ceil(V.yH + V.H * 0.12);
+  if (!V.treeC) { V.treeC = mkCanvas(W * k, hC * k); V.treeC._k = k; V.treeKey = ''; }
+  if (key === V.treeKey) return; V.treeKey = key;
+  const x = V.treeC.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0); x.clearRect(0, 0, W, hC); x.lineCap = 'round'; x.lineJoin = 'round';
+  const { segs, tips, th } = treeSkeleton();
+  const leafA = clamp(1 - smooth(0.82, 0.9, t) - (1 - smooth(0.07, 0.14, t)));
+  const blossom = hump(0.11, 0.3, t), autumn = smooth(0.6, 0.72, t) * (1 - smooth(0.84, 0.9, t));
+  const baseC = ramp(TREE_C, t), bark = mix([126, 98, 82], [122, 116, 118], snowy * 0.3);
+  const clumpCol = (i, tone) => { // tone: -1 影 / 0 中間 / 1 光
+    let c = baseC;
+    if (autumn > 0.05) c = mix(c, [[226, 150, 52], [208, 92, 54], [236, 196, 84], [176, 66, 60]][(hash2(i, 81) * 4) | 0], autumn * 0.7);
+    if (blossom > 0.05) c = mix(c, hash2(i, 82) < 0.7 ? [250, 214, 224] : [196, 222, 150], blossom * 0.55);
+    return tone < 0 ? mix(c, [36, 66, 84], 0.42) : tone > 0 ? mix(c, [255, 250, 200], 0.42) : c;
+  };
+  const clump = (tp, i, tone, sc) => {
+    const r = W * (0.05 + 0.035 * hash2(i, 83)) * sc * (tp.d >= 4 ? 0.9 : 1.15), cx = tp.x + (hash2(i, 84) - 0.5) * r * 0.8 - (tone > 0 ? r * 0.3 : 0), cy = tp.y - r * 0.2 + (tone < 0 ? r * 0.35 : tone > 0 ? -r * 0.3 : 0);
+    wash(x, noisyBlob(cx, cy, r, r * 0.74, i * 7 + tone * 3 + 9, 0.2, 34, 11, 0.3), clumpCol(i, tone), (tone > 0 ? 0.6 : 0.8) * leafA, { edge: tone > 0 ? 0.5 : 1, ew: 0.9, blooms: tone === 0 ? 2 : 0, bloomA: 0.16, seed: i, light: tone === 0 ? [255, 252, 214] : null, lightA: 0.3, shade: tone <= 0 ? [30, 56, 80] : null, shadeA: 0.3 });
+    return [cx, cy, r];
+  };
+  const limbs = (minD, maxD) => { for (const s of segs) { if (s.d < minD || s.d > maxD) continue;
+    x.beginPath(); x.moveTo(s.x0, s.y0); x.quadraticCurveTo(s.cx, s.cy, s.x1, s.y1);
+    x.strokeStyle = rgb(mix(bark, [50, 40, 54], 0.35), 0.95); x.lineWidth = s.w + 0.8; x.stroke();
+    x.strokeStyle = rgb(bark, 1); x.lineWidth = Math.max(0.5, s.w - 0.6); x.stroke();
+    if (s.w > 3) { x.strokeStyle = rgb(mix(bark, [255, 236, 210], 0.4), 0.7); x.lineWidth = s.w * 0.3; x.beginPath(); x.moveTo(s.x0 - s.w * 0.22, s.y0); x.quadraticCurveTo(s.cx - s.w * 0.22, s.cy, s.x1 - s.w * 0.2, s.y1); x.stroke(); }
+    if (snowy > 0.3 && s.d >= 1 && Math.abs(s.x1 - s.x0) > Math.abs(s.y1 - s.y0) * 0.5) { x.strokeStyle = `rgba(252,253,255,${0.9 * snowy})`; x.lineWidth = Math.max(1, s.w * 0.5); x.beginPath(); x.moveTo(s.x0, s.y0 - s.w * 0.45); x.quadraticCurveTo(s.cx, s.cy - s.w * 0.45, s.x1, s.y1 - s.w * 0.4); x.stroke(); }
+  } };
+  // 奥の葉 → 幹と枝 → 手前の葉 → 光の当たる葉
+  if (leafA > 0.02) tips.forEach((tp, i) => { if (i % 2 === 0) clump(tp, i, -1, 1.15); });
+  limbs(0, 6);
+  { const s0 = segs[0], bw = s0.w; // 幹の根もとと樹皮
+    for (let i = 0; i < 16; i++) { const u = hash2(i, 91), v = hash2(i, 92), yy = lerp(s0.y0, s0.y1, v), xx = lerp(s0.x0, s0.x1, v) + (u - 0.5) * bw * 0.8; x.strokeStyle = rgb(mix(bark, [40, 30, 44], 0.55), 0.5); x.lineWidth = 0.7; x.beginPath(); x.moveTo(xx, yy); x.quadraticCurveTo(xx + (hash2(i, 93) - 0.5) * 3, yy - th * 0.04, xx + (hash2(i, 94) - 0.5) * 2, yy - th * (0.05 + 0.06 * hash2(i, 95))); x.stroke(); }
+    wash(x, [[s0.x0 - bw * 0.95, s0.y0 + 2], [s0.x0 - bw * 0.5, s0.y0 - th * 0.07], [s0.x0 + bw * 0.5, s0.y0 - th * 0.07], [s0.x0 + bw * 1.0, s0.y0 + 2]], bark, 0.95, { edge: 1, ew: 0.8, light: [255, 236, 210], lightA: 0.3 });
+    pencil(x, [[s0.x0 - bw * 0.56, s0.y0 - 2], [lerp(s0.x0, s0.x1, 0.5) - bw * 0.5, lerp(s0.y0, s0.y1, 0.5)], [s0.x1 - bw * 0.42, s0.y1]], 0.4, 0.7, 3); }
+  if (leafA > 0.02) {
+    const cl = []; tips.forEach((tp, i) => { if (i % 2 === 1 || tp.d >= 4) cl.push(clump(tp, i + 100, 0, 1)); });
+    tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); });
+    // 葉の一筆：かたまりの縁と影の側に細かく
+    cl.forEach(([cx, cy, r], i) => {
+      for (let j = 0; j < 26; j++) {
+        const a = hash2(i * 40 + j, 96) * TAU, rr = r * (0.55 + 0.6 * hash2(i * 40 + j, 97)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.74, lit = Math.sin(a) < -0.2 && Math.cos(a) < 0.3;
+        dab(x, dx, dy, 2.2 + 2 * hash2(i * 40 + j, 98), 1 + 0.8 * hash2(i * 40 + j, 99), a + 1.2, clumpCol(i + j, lit ? 1 : -1), (lit ? 0.7 : 0.6) * leafA);
+      }
+      if (i % 2 === 0) pencil(x, noisyBlob(cx, cy, r * 1.02, r * 0.76, i * 7 + 9, 0.2, 34, 11, 0.3).slice(14, 30), 0.3, 0.6, i);
+    });
+    if (blossom > 0.3) for (let i = 0; i < 90; i++) { const tp = tips[(hash2(i, 85) * tips.length) | 0]; x.fillStyle = `rgba(255,${236 + ((hash2(i, 86) * 16) | 0)},242,${0.85 * blossom})`; x.beginPath(); x.arc(tp.x + (hash2(i, 87) - 0.5) * W * 0.13, tp.y + (hash2(i, 88) - 0.5) * W * 0.1, 1 + hash2(i, 89) * 1.3, 0, TAU); x.fill(); }
+  }
+  if (snowy > 0.4 && leafA < 0.3) tips.forEach((tp, i) => { if (i % 3 === 0) wash(x, noisyBlob(tp.x, tp.y - 2, W * 0.03, W * 0.011, i + 400, 0.3, 14), [252, 253, 255], 0.85 * snowy, { edge: 0.5, ew: 0.6, edgeCol: [150, 170, 210] }); });
+  grainOver(x, V.treeC.width, V.treeC.height, 0.4);
+}
+
+// ── 小川：幅も蛇行も、奥へ行くほど細く小さくなる ──
+function brookAt(z, dry = 0) {
+  const zc = clamp(z, 0, 1), p = proj(SITE.brookX(zc), zc), fy = depthY(z);
+  return { x: p.sx + (z > 1 ? (z - 1) * V.W * 0.6 : 0), y: V.yH + (V.H * 1.05 - V.yH) * fy, hw: V.W * 1.06 * SITE.brookW(zc) * (1 - 0.4 * dry), ds: p.ds };
+}
+function brookPoly(wmul, dry) { const Lp = [], Rp = []; for (let i = 0; i <= 48; i++) { const c = brookAt(0.004 + (i / 48) * 1.05, dry); Lp.push([c.x - c.hw * wmul, c.y]); Rp.push([c.x + c.hw * wmul, c.y]); } Rp.reverse(); return Lp.concat(Rp); }
+function drawBrook(ctx, e) {
+  const [top] = skyCols(e), time = V.time, frozen = smooth(0.55, 0.9, e.snow), dry = e.dry;
+  const sky = mix(top, [255, 255, 255], 0.5), water = mix(mix(sky, [120, 186, 222], 0.42), [238, 245, 251], frozen), deep = mix(mix(water, [52, 118, 170], 0.5), [200, 218, 236], frozen), shal = mix(water, [255, 255, 255], 0.5);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const fadeG = (c1, c2, a) => { const g = ctx.createLinearGradient(0, V.yH, 0, V.H); g.addColorStop(0, rgb(c1, 0)); g.addColorStop(0.07, rgb(c1, a * 0.7)); g.addColorStop(0.3, rgb(mix(c1, c2, 0.4), a)); g.addColorStop(1, rgb(c2, a)); return g; };
+  tracePts(ctx, brookPoly(1.14, dry)); ctx.fillStyle = fadeG(mix(deep, [40, 84, 96], 0.25), mix(deep, [40, 84, 96], 0.25), 0.85); ctx.fill();
+  tracePts(ctx, brookPoly(1, dry));
+  const wg = fadeG(mix(shal, [255, 255, 255], 0.2), mix(water, deep, 0.5), 1);
+  ctx.fillStyle = wg; ctx.fill();
+  ctx.save(); ctx.clip();
+  // 岸の影と、反対側の浅瀬の明るさ
+  for (let i = 0; i < 26; i++) { const z = 0.03 + (i / 26) * 1.0, c = brookAt(z, dry); blob(ctx, c.x - c.hw * 0.85, c.y, c.hw * 0.55 + 2, 4 + c.hw * 0.5, deep, 0.5, i + 20, 0.2); blob(ctx, c.x + c.hw * 0.7, c.y, c.hw * 0.5 + 2, 3 + c.hw * 0.4, shal, 0.55, i + 60, 0.2); }
+  // 流れ：光のすじが手前へ流れてくる
+  const flow = (1 - frozen) * (1 - 0.5 * dry);
+  for (let i = 0; i < 64; i++) {
+    const sp = 0.035 + 0.03 * hash2(i, 951), z0 = ((hash2(i, 950) + time * sp * flow) % 1) * 1.04, off = (hash2(i, 952) - 0.5) * 1.5, len = 0.02 + 0.035 * hash2(i, 953);
+    const a = brookAt(z0, dry), m = brookAt(z0 + len * 0.5, dry), b = brookAt(z0 + len, dry), wob = Math.sin(time * 1.7 + i) * 0.12;
+    const fade = Math.min(1, z0 * 14) * (1 - smooth(0.96, 1.04, z0)) * (0.55 + 0.45 * Math.sin(time * 2.2 + i * 1.7));
+    ctx.strokeStyle = i % 4 === 0 ? rgb(deep, 0.5 * fade) : `rgba(255,255,255,${(0.5 + 0.4 * (1 - frozen)) * fade})`;
+    ctx.lineWidth = Math.max(0.6, (0.9 + 1.5 * hash2(i, 954)) * a.ds);
+    ctx.beginPath(); ctx.moveTo(a.x + a.hw * (off + wob), a.y); ctx.quadraticCurveTo(m.x + m.hw * (off - wob), m.y, b.x + b.hw * (off + wob * 0.5), b.y); ctx.stroke();
+  }
+  ctx.restore();
+  // 石と、そのまわりの波紋
+  for (let i = 0; i < 9; i++) {
+    const z = 0.34 + hash2(i, 955) * 0.66, sd = i % 2 ? 1 : -1, c = brookAt(z, dry), sx = c.x + sd * c.hw * (0.55 + 0.4 * hash2(i, 956)), r = (5 + 5 * hash2(i, 957)) * c.ds;
+    if (flow > 0.2) { const ph = (time * 0.7 + i * 0.37) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.5, r * (1.2 + ph * 1.6), r * (0.4 + ph * 0.5), 0, 0, Math.PI); ctx.stroke(); }
+    blob(ctx, sx, c.y, r, r * 0.55, mix([186, 176, 164], [248, 249, 252], e.snow * 0.8), 0.96, i + 660, 0.2); blob(ctx, sx - r * 0.2, c.y - r * 0.2, r * 0.55, r * 0.22, [244, 240, 230], 0.75, i + 680, 0.2);
+  }
+  // きらめき
+  if (e.night < 0.7 && frozen < 0.6) for (let i = 0; i < 16; i++) {
+    const tw = Math.sin(time * (2.4 + hash2(i, 961) * 3) + i * 2.1); if (tw < 0.55) continue;
+    const z = 0.12 + hash2(i + ((time * 0.5 + hash2(i, 962)) | 0) * 17, 960) * 0.88, c = brookAt(z, dry), sx = c.x + (hash2(i, 963) - 0.5) * c.hw * 1.3, s = (1.6 + 2.4 * (tw - 0.55) * 2.2) * c.ds;
+    ctx.strokeStyle = `rgba(255,255,255,${0.95 * (tw - 0.55) * 2.2})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - s, c.y); ctx.lineTo(sx + s, c.y); ctx.moveTo(sx, c.y - s * 0.8); ctx.lineTo(sx, c.y + s * 0.8); ctx.stroke();
+  }
+}
+
+// ── 雲と鳥：1 枚ずつ流す ──
+function buildClouds(e) {
+  const k = [(e.dusk * 4) | 0, (e.night * 4) | 0, e.storm, (e.cloud * 3) | 0, (e.dawn * 3) | 0].join(',');
+  if (k === V.cloudKey && V.clouds) return; V.cloudKey = k;
+  const cw = mix(mix(mix([255, 255, 255], [255, 226, 204], e.dusk * 0.8), [255, 236, 228], e.dawn * 0.5), [196, 202, 236], e.night * 0.8), cs = mix(mix(mix([196, 208, 228], [214, 160, 170], e.dusk * 0.7), [112, 124, 170], e.night * 0.6), [128, 136, 152], e.storm * 0.7 + e.cloud * 0.25);
+  const lit = mix(cw, [176, 182, 196], e.storm * 0.6);
+  if (!V.clouds) V.clouds = [];
+  const paper = mix(mix(mix([255, 254, 249], [255, 232, 214], e.dusk * 0.7), [255, 240, 232], e.dawn * 0.4), [206, 210, 240], e.night * 0.8);
+  const k2 = Math.min(V.dpr, 2);
+  for (let i = 0; i < 7; i++) {
+    const cw_ = 300, ch = 150, c = (V.clouds[i] && V.clouds[i].c) || mkCanvas(cw_ * k2, ch * k2), x = c.getContext('2d'); x.setTransform(k2, 0, 0, k2, 0, 0); x.clearRect(0, 0, cw_, ch);
+    // 輪郭：もくもくした上端、平たい底
+    const n = 5 + (i % 3), top = [], lobes = [];
+    for (let j = 0; j < n; j++) { const u = (j + 0.5) / n, hgt = Math.sin(Math.PI * u) * (0.55 + 0.6 * hash2(i * 31 + j, 922)); lobes.push([36 + u * 228 + (hash2(i * 31 + j, 921) - 0.5) * 18, 104 - 26 * hgt - 12, 26 + 26 * hgt]); }
+    for (let a = 0; a <= 60; a++) { const px = 22 + (a / 60) * 256; let py = 112; for (const [lx, ly, lr] of lobes) { const d = (px - lx) / lr; if (Math.abs(d) < 1) py = Math.min(py, ly - Math.sqrt(1 - d * d) * lr * 0.78); } top.push([px, py + (hash2(a, i + 5) - 0.5) * 1.6]); }
+    const body = top.concat([[282, 114], [250, 120], [150, 122], [50, 120], [18, 114]]);
+    tracePts(x, body); x.fillStyle = rgb(lit === cw ? paper : mix(paper, lit, 0.6), 0.97); x.fill();
+    x.save(); x.clip();
+    // 底の影：濡れた面に差した薄紫が、縁にたまる
+    for (let j = 0; j < 5; j++) { const bx = 50 + hash2(i * 9 + j, 925) * 200, by = 100 + hash2(i * 9 + j, 926) * 14, r = 34 + 40 * hash2(i * 9 + j, 927); blob(x, bx, by, r * 1.1, r * 0.5, cs, 0.5, i * 9 + j, 0.25); }
+    for (const [lx, ly, lr] of lobes) { blob(x, lx + lr * 0.3, ly + lr * 0.5, lr * 0.75, lr * 0.5, cs, 0.3, i + lx, 0.25); wash(x, noisyBlob(lx + lr * 0.34, ly + lr * 0.2, lr * 0.5, lr * 0.3, i + lx, 0.3, 18, 5, 0.25), cs, 0.13, { edge: 1, ew: 0.6 }); }
+    x.restore();
+    // 底は空へ溶かす
+    x.globalCompositeOperation = 'destination-out'; const fg = x.createLinearGradient(0, 100, 0, 124); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = fg; x.fillRect(0, 98, cw_, 52); x.globalCompositeOperation = 'source-over';
+    pencil(x, top.slice(4, 56), 0.26 * (1 - e.night * 0.6), 0.6, i + 2, [120, 120, 150]);
+    grainOver(x, c.width, c.height, 0.35);
+    V.clouds[i] = { c };
+  }
+}
+function drawSkyLife(ctx, e, dt) {
+  buildClouds(e);
+  const W = V.W, yH = V.yH, time = V.time;
+  if (!V.cl) { V.cl = []; for (let i = 0; i < 11; i++) V.cl.push({ x: hash2(i, 931) * 1.6 - 0.3, y: 0.06 + 0.74 * hash2(i, 932), lay: hash2(i, 933), a: 0, sp: i % 7 }); V.cl.sort((a, b) => a.lay - b.lay); }
+  const want = 3.2 + e.cloud * 8;
+  V.cl.forEach((c, i) => {
+    c.x += dt * (0.004 + 0.012 * c.lay) * (0.6 + V.wind * 0.9); if (c.x > 1.35) { c.x = -0.45; c.y = 0.06 + 0.74 * Math.random(); }
+    const ta = i < want ? Math.min(1, want - i) : 0; c.a += (ta - c.a) * Math.min(1, dt * 0.5);
+    if (c.a < 0.01) return;
+    const sc = (0.34 + 0.56 * c.lay) * (W / 390) * (1 + e.cloud * 0.35), yy = yH * (c.y * (0.35 + 0.65 * (1 - c.lay * 0.5)));
+    ctx.globalAlpha = c.a * (0.72 + 0.28 * c.lay); ctx.drawImage(V.clouds[c.sp].c, c.x * W - 150 * sc, yy - 100 * sc, 300 * sc, 150 * sc);
+  });
+  ctx.globalAlpha = 1;
+  // 鳥
+  V.birdT = (V.birdT || 6) - dt;
+  if (V.birdT < 0 && e.night < 0.2 && e.rain < 0.3 && e.snow < 0.6) { V.birdT = 16 + Math.random() * 30; const dir = Math.random() < 0.5 ? 1 : -1; V.birds = { x: dir > 0 ? -0.1 : 1.1, y: 0.2 + Math.random() * 0.4, dir, n: 3 + ((Math.random() * 4) | 0), s: 0.6 + Math.random() * 0.6 }; }
+  const b = V.birds;
+  if (b) { b.x += dt * 0.06 * b.dir; if (b.x < -0.2 || b.x > 1.2) V.birds = null;
+    ctx.strokeStyle = 'rgba(90,80,100,0.55)'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+    for (let i = 0; i < b.n; i++) { const bx = (b.x - b.dir * i * 0.035 * (1 + (i % 2) * 0.3)) * W, by = yH * (b.y + (i % 2 ? 0.03 : -0.02) * i * 0.5) + Math.sin(time * 1.3 + i) * 2, fl = Math.sin(time * 9 + i * 1.3) * 2.6 * b.s, s = 5 * b.s; ctx.beginPath(); ctx.moveTo(bx - s, by - fl); ctx.quadraticCurveTo(bx - s * 0.4, by - 1 - fl * 0.3, bx, by); ctx.quadraticCurveTo(bx + s * 0.4, by - 1 - fl * 0.3, bx + s, by - fl); ctx.stroke(); } }
+  // 星のまたたき
+  if (e.night > 0.2) for (let i = 0; i < 14; i++) { const tw = 0.5 + 0.5 * Math.sin(time * (1.5 + hash2(i, 941)) + i * 3); ctx.fillStyle = `rgba(255,252,230,${e.night * tw * 0.9})`; ctx.beginPath(); ctx.arc(hash2(i, 942) * W, hash2(i, 943) * yH * 0.7, 0.8 + tw, 0, TAU); ctx.fill(); }
+}
+
+// 手前の草（エリカの足もと）
+function paintFG(x, e) {
+  const W = V.W, H = V.H; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
+  const near = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e4ecf2'), e.snow);
+  x.lineCap = 'round';
+  for (let i = 0; i < 110; i++) {
+    const u = hash2(i, 980), bx = u * W, hgt = H * (0.02 + 0.05 * hash2(i, 981)) * (1 + 0.8 * Math.pow(Math.abs(u - 0.5) * 2, 2)) * (1 - 0.5 * e.snow);
+    const c = mix(near, i % 3 === 0 ? [250, 250, 200] : [36, 86, 56], 0.2 + 0.25 * hash2(i, 982));
+    x.strokeStyle = rgb(c, 0.75); x.lineWidth = 2 + 2.5 * hash2(i, 983);
+    const lean = (hash2(i, 984) - 0.5) * hgt * 0.9;
+    x.beginPath(); x.moveTo(bx, H + 4); x.quadraticCurveTo(bx + lean * 0.2, H - hgt * 0.6, bx + lean, H - hgt); x.stroke();
+  }
+  if (e.snow > 0.3) for (let i = 0; i < 9; i++) blob(x, hash2(i, 990) * W, H - 2, W * 0.14, H * 0.014, [250, 252, 255], 0.8 * e.snow, i + 900, 0.2);
+}
+
+// ── 草むら：進化はしない、名もない草たち。花と同じ奥行きで重なり、風にゆれる ──
+const TUFT_KINDS = 12;
+const TUFT_NEAR = 0.985, BAND_Z = [0, 0.14, 0.3, 0.44, 0.56, 0.66, 0.74, 0.81, 0.87, 0.92, 0.955, TUFT_NEAR];
+function buildTufts() {
+  V.tufts = []; V.tuftFar = BAND_Z.slice(1).map(() => []);
+  for (let i = 0; i < 6400; i++) {
+    let z = hash2(i, 1001); if (hash2(i, 1007) > (persA(z) / persA(0)) * (0.5 + 5.5 * z * z * z)) continue; // 地面に一様（奥ほど多い）＋ 手前は厚めに
+    z = clamp(z, 0.004, 1); const x = hash2(i, 1002) * 1.06 - 0.03;
+    if (Math.abs(x - SITE.brookX(z)) < SITE.brookW(z) * 1.3 + 0.004) continue;
+    const m = SITE.moist(clamp(x), z), el = SITE.elev(clamp(x), z);
+    // 水辺は背の高い草、丘は短い草と穂、あとはまぜこぜ
+    const r = hash2(i, 1003); let kind = (r * TUFT_KINDS) | 0;
+    if (el > 0.4 && r < 0.6) kind = 4 + ((r * 10) | 0) % 2; else if (m > 0.75 && r < 0.5) kind = 6 + ((r * 10) | 0) % 2;
+    if (z > 0.6 && hash2(i, 1009) < 0.3) kind = hash2(i, 1010) < 0.5 ? 3 : 9; // 手前の地面はクローバーで覆う
+    const tf = { x, z, kind, s: 0.75 + 0.7 * hash2(i, 1004), ph: hash2(i, 1005) * TAU, flip: hash2(i, 1006) < 0.5 ? -1 : 1, pos: null };
+    if (z >= TUFT_NEAR) V.tufts.push(tf); else { let b = 0; while (z >= BAND_Z[b + 1]) b++; V.tuftFar[b].push(tf); }
+  }
+  V.tufts.sort((a, b) => a.z - b.z); V.tuftFar.forEach((l) => l.sort((a, b) => a.z - b.z));
+  V.bands = null; V.bandJob = 0;
+}
+// 奥の草は帯ごとに 1 枚の絵にまとめておく（1 フレームに 1 帯ずつ描き直す）
+function serviceBands(e) {
+  const d = Math.min(V.dpr, 1.5);
+  if (!V.bands) V.bands = V.tuftFar.map((list, b) => { const y0 = Math.floor(proj(0.5, BAND_Z[b]).sy - 70 * depthScale(BAND_Z[b + 1]) * V.unit - 4), y1 = Math.ceil(proj(0.5, BAND_Z[b + 1]).sy + 4); return { c: mkCanvas(V.W * d, (y1 - y0) * d), y0, h: y1 - y0, key: '' }; });
+  if (V.bandKey !== V.tuftKey) { V.bandKey = V.tuftKey; V.bandJob = V.bands.length; }
+  if (V.bandJob > 0) {
+    const b = --V.bandJob, bd = V.bands[b], x = bd.c.getContext('2d');
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, bd.c.width, bd.c.height);
+    for (const tf of V.tuftFar[b]) { if (!tf.pos) tf.pos = proj(tf.x, tf.z); const p = tf.pos, sc = p.ds * V.unit * tf.s * 0.62 / V.tuftPx, c = V.tuftSpr[tf.kind], hs = 1 - 0.6 * e.snow; x.globalAlpha = 1 - 0.55 * e.snow; x.setTransform(d * sc * tf.flip, 0, 0, d * sc * hs, d * p.sx, d * (p.sy - bd.y0)); x.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); }
+    bd.key = V.tuftKey;
+  }
+}
+function paintTuftSprites(e) {
+  const k = [(e.t * 24) | 0, (e.snow * 3) | 0, (e.dry * 3) | 0].join(',');
+  if (k === V.tuftKey && V.tuftSpr) return; V.tuftKey = k;
+  const px = Math.min(V.dpr, 2) * V.unit * S_NEAR * 0.75, t = e.t;
+  const base = mix(mix(ramp(GR_N, t), hex('#c9b266'), e.dry * 0.55), hex('#b9ad8c'), e.snow * 0.8);
+  const light0 = mix(base, [246, 244, 190], 0.4), dark0 = mix(base, [30, 84, 62], 0.42), gold = mix(mix([226, 196, 110], [236, 226, 180], smooth(0.2, 0.4, t) * (1 - smooth(0.5, 0.7, t))), [190, 160, 110], e.snow * 0.5);
+  if (!V.tuftSpr) V.tuftSpr = [];
+  for (let kd = 0; kd < TUFT_KINDS; kd++) {
+    const Wd = 96, Hd = 92, c = V.tuftSpr[kd] || mkCanvas(Wd * px, Hd * px), x = c.getContext('2d');
+    x.setTransform(px, 0, 0, px, 0, 0); x.clearRect(0, 0, Wd, Hd); x.lineCap = 'round'; x.lineJoin = 'round';
+    const bx = Wd / 2, by = Hd - 3, rn = (i) => hash2(kd * 97 + i, 1010);
+    const ever = kd % 3 === 0 ? 0.6 : kd % 3 === 1 ? 0.25 : 0, eg = mix(ramp(GR_N, 0.45), [70, 120, 80], 0.3); // 秋でも青い草が混じる
+    const dark = mix(dark0, mix(eg, [30, 84, 62], 0.3), ever), light = mix(light0, mix(eg, [240, 240, 190], 0.3), ever);
+    const blade = (ox, hgt, lean, w, col, a) => { x.strokeStyle = rgb(col, a); x.lineWidth = w; x.beginPath(); x.moveTo(bx + ox, by); x.quadraticCurveTo(bx + ox + lean * 0.25, by - hgt * 0.62, bx + ox + lean, by - hgt); x.stroke(); };
+    const type = kd % 6;
+    if (type === 0 || type === 1 || type === 5) { // 葉の束
+      const n = type === 1 ? 16 : 11, hmax = type === 5 ? 74 : type === 1 ? 44 : 56;
+      for (let i = 0; i < n; i++) { const u = rn(i) - 0.5, h = hmax * (0.45 + 0.55 * rn(i + 20)), col = mix(dark, light, rn(i + 40)); blade(u * 16, h, u * (34 + 30 * rn(i + 60)) + (type === 5 ? 10 : 0), 2.6 - 1.4 * rn(i + 80), col, 0.7); blade(u * 16 + 0.6, h * 0.96, u * (34 + 30 * rn(i + 60)) + (type === 5 ? 10 : 0), 0.7, mix(col, [255, 255, 235], 0.5), 0.55); }
+    } else if (type === 2 || type === 4) { // 穂の出る草
+      for (let i = 0; i < 8; i++) { const u = rn(i) - 0.5; blade(u * 12, 34 * (0.5 + 0.5 * rn(i + 20)), u * 40, 2, mix(dark, light, rn(i + 40)), 0.68); }
+      const ns = type === 4 ? 4 : 3;
+      for (let i = 0; i < ns; i++) {
+        const u = (i + 0.5) / ns - 0.5 + (rn(i + 100) - 0.5) * 0.2, h = 62 + 22 * rn(i + 110), lean = u * 44, tx = bx + u * 8 + lean, ty = by - h;
+        blade(u * 8, h, lean, 1.1, mix(base, gold, 0.5), 0.8);
+        if (type === 2) { for (let j = 0; j < 9; j++) { const v = j / 9, hx = tx - lean * 0.16 * v, hy = ty + v * 17; x.strokeStyle = rgb(gold, 0.85); x.lineWidth = 0.9; x.beginPath(); x.moveTo(hx - 3.6 * Math.sin(Math.PI * (v * 0.8 + 0.1)), hy - 2.2); x.lineTo(hx, hy); x.lineTo(hx + 3.6 * Math.sin(Math.PI * (v * 0.8 + 0.1)), hy - 2.2); x.stroke(); } }
+        else { for (let j = 0; j < 7; j++) { const a = -Math.PI / 2 + (j - 3) * 0.4 + u, l = 9 + 5 * rn(j + i * 9 + 130); x.strokeStyle = rgb(gold, 0.7); x.lineWidth = 0.6; x.beginPath(); x.moveTo(tx, ty + 5); x.quadraticCurveTo(tx + Math.cos(a) * l * 0.6, ty + 5 + Math.sin(a) * l, tx + Math.cos(a) * l * 1.3, ty + 5 + Math.sin(a) * l * 0.5 + 3); x.stroke(); x.fillStyle = rgb(gold, 0.85); x.beginPath(); x.arc(tx + Math.cos(a) * l * 1.3, ty + 5 + Math.sin(a) * l * 0.5 + 3, 0.9, 0, TAU); x.fill(); } }
+      }
+    } else { // クローバーのような低い草
+      for (let i = 0; i < 13; i++) {
+        const cx = bx + (rn(i) - 0.5) * 60, cy = by - 3 - rn(i + 20) * 15 - (1 - Math.abs(rn(i) - 0.5) * 2) * 5, r = 3.4 + 2.6 * rn(i + 40), col = mix(dark, light, 0.25 + 0.6 * rn(i + 60));
+        x.strokeStyle = rgb(dark, 0.5); x.lineWidth = 0.7; x.beginPath(); x.moveTo(cx, cy); x.lineTo(bx + (cx - bx) * 0.55, by); x.stroke();
+        for (let j = 0; j < 3; j++) { const a = -Math.PI / 2 + (j * TAU) / 3 + rn(i + 80); x.fillStyle = rgb(col, 0.78); x.beginPath(); x.ellipse(cx + Math.cos(a) * r * 0.6, cy + Math.sin(a) * r * 0.5, r * 0.62, r * 0.5, a, 0, TAU); x.fill(); }
+        x.fillStyle = 'rgba(255,255,240,0.35)'; x.beginPath(); x.arc(cx, cy, r * 0.3, 0, TAU); x.fill();
+      }
+    }
+    grainOver(x, c.width, c.height, 0.4);
+    V.tuftSpr[kd] = c;
+  }
+  V.tuftPx = px;
+}
+function drawTuft(ctx, tf, e) {
+  if (!tf.pos) tf.pos = proj(tf.x, tf.z);
+  const p = tf.pos, sc = p.ds * V.unit * tf.s * 0.62 / V.tuftPx, low = tf.kind % 6 === 3;
+  const sway = low ? 0 : -(windAt(p.sx, p.ds) * 0.14 + Math.sin(V.time * 1.9 + tf.ph) * 0.03 * (0.4 + V.wind));
+  const hs = 1 - 0.6 * e.snow;
+  ctx.globalAlpha = 1 - 0.55 * e.snow;
+  const c = V.tuftSpr[tf.kind], d = V.dpr;
+  ctx.setTransform(d * sc * tf.flip, 0, d * sc * sway * hs, d * sc * hs, d * p.sx, d * p.sy);
+  ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx);
+}
+
+// ── 株の見た目 ──
+function syncViews(sim) {
+  const seen = new Set();
+  let changed = false;
+  for (const p of sim.plants) {
+    seen.add(p.id);
+    let v = V.views.get(p.id);
+    if (!v) {
+      v = { p, geo: plantGeom(p, 1), stage: -1, pos: proj(p.x, p.z), body: null, fl: null, gs: 1, gr: 0, wantStage: 0, alpha: 0, open: [], look: 'green', wantLook: 'green', ph: hash1(p.id) * TAU, lodge: 0, hp: [], queued: 0, gone: 0, flex: 0.35 + p.g.ht * 0.9, pet: 0 };
+      v.R = v.geo.R; v.nh = v.geo.heads.length;
+      const ord = v.geo.heads.map((h, i) => [h.ord, i]).sort((a, b) => a[0] - b[0]); v.rank = []; ord.forEach(([, i], r) => (v.rank[i] = r));
+      for (let i = 0; i < v.geo.heads.length; i++) v.open.push(0);
+      V.views.set(p.id, v); changed = true;
+    } else if (v.p !== p) v.p = p;
+  }
+  for (const [id, v] of V.views) if (!seen.has(id)) { v.gone = 1; if (v.alpha <= 0.01) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); V.views.delete(id); changed = true; } }
+  if (changed) V.order = Array.from(V.views.values()).sort((a, b) => a.p.z - b.p.z);
+}
+function serviceQueue(budgetMs) {
+  const t0 = performance.now();
+  while (V.queue.length && performance.now() - t0 < budgetMs) {
+    const v = V.queue.shift(); v.queued = 0;
+    if (!V.views.has(v.p.id)) continue;
+    const k = v.pos.ds * V.unit * Math.min(V.dpr, 1.5);
+    const lod = v.pos.ds < LOD_DS, wb = lod && v.wantBaked ? 1 : 0;
+    if (!v.fl && (!lod || wb)) { const dp = lod ? Math.min(V.dpr, 1.5) : Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; }
+    if (!v.body || v.body.look !== v.wantLook || v.body.stage !== v.wantStage || (v.body.baked || 0) !== wb) {
+      const old = v.body; v.geo = plantGeom(v.p, STAGES[v.wantStage]);
+      v.body = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); v.body.stage = v.wantStage; v.stage = v.wantStage; v.look = v.wantLook; v.body.baked = wb; freeCanvas(old && old.c);
+      if (wb) { // 遠くの株は、花ごと 1 枚の絵にしてしまう
+        const x = v.body.c.getContext('2d'), fl = v.fl, n = Math.min(v.p.nOpen || 0, v.geo.heads.length), hk = (0.45 + 0.55 * smooth(0.25, 0.9, STAGES[v.wantStage])) * (k / (v.pos.ds * V.unit * fl.dp));
+        for (let i = 0; i < v.geo.heads.length; i++) { if (v.rank[i] >= n) continue; const h = v.geo.heads[i]; x.setTransform(1, 0, 0, 1, v.body.ox + h.x * k, v.body.oy + h.y * k); if (fl.form === 'open') { x.scale(hk * h.r, hk * h.r * 0.9); x.rotate(h.rot); } else { x.rotate(h.ang * 0.5); x.scale(hk * h.r, hk * h.r); } x.drawImage(fl.c, -fl.ax, -fl.ay); }
+      }
+    }
+    if (false) { const dp = Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; }
+  }
+}
+// 育ちの段階。段階ごとに株を描き直し、あいだは少しだけ伸び縮みさせてつなぐ
+const STAGES = [0.07, 0.15, 0.24, 0.34, 0.45, 0.56, 0.67, 0.78, 0.89, 1];
+const sizeOf = (gr) => 0.35 + 0.65 * gr;
+const LOD_DS = 0.75; // これより小さく見える株は簡略に描く
+const easeBack = (t) => { const c = 1.6; t = clamp(t) - 1; return 1 + (c + 1) * t * t * t + c * t * t; };
+
+function drawPlants(ctx, sim, dt, e) {
+  const tk = sim.tick, onset = sim.w.onset, dpr = V.dpr, time = V.time;
+  const wind = V.wind;
+  let veil = 0, ti = 0, bi = 0; const hz = e.hazeC || [235, 240, 240], tufts = V.tufts, nt = tufts.length;
+  paintTuftSprites(e); serviceBands(e);
+  const upTo = (z) => { // この奥行きまでの草と、空気の色
+    while (true) {
+      while (bi < V.bands.length && BAND_Z[bi] <= z) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); ctx.setTransform(dpr, 0, dpr * sh, dpr, dpr * -sh * (bd.y0 + bd.h), 0); ctx.globalAlpha = 1; ctx.drawImage(bd.c, 0, bd.y0, V.W, bd.h); } }
+      const vz = veil < 3 ? [0.3, 0.55, 0.75][veil] : 9;
+      while (ti < nt && tufts[ti].z <= Math.min(z, vz)) { if (!V.noTuft) drawTuft(ctx, tufts[ti], e); ti++; }
+      if (vz > z) break;
+      const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = ctx.createLinearGradient(0, y0, 0, yb);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
+      gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.2, 0.13, 0.07][veil])); gr.addColorStop(1, rgb(hz, 0)); ctx.fillStyle = gr; ctx.fillRect(0, y0, V.W, yb - y0); veil++;
+    }
+  };
+  for (const v of V.order) {
+    const p = v.p, g = p.g, pos = v.pos;
+    upTo(p.z); if (V.noPlant) continue;
+    while (false) {
+      const yb = proj(0.5, [0.3, 0.55, 0.75][veil]).sy + 6, y0 = V.yH - 46, gr = ctx.createLinearGradient(0, y0, 0, yb);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
+      gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.2, 0.13, 0.07][veil])); gr.addColorStop(1, rgb(hz, 0)); ctx.fillStyle = gr; ctx.fillRect(0, y0, V.W, yb - y0); veil++;
+    }
+    const up = !v.gone && tk >= p.sprout;
+    // 目標の姿
+    let ta = up ? 1 : 0; const grT = clamp(p.bio / 0.9);
+    if (grT < v.gr - 0.2) v.gr = grT; // 年が替わって根もとから出直す
+    v.gr += (grT - v.gr) * Math.min(1, dt * 1.6);
+    let st = 0; while (st < STAGES.length - 1 && STAGES[st] < v.gr - 0.02) st++;
+    if (V.fast > 0.5 || pos.ds < 0.5) st = Math.min(STAGES.length - 1, Math.ceil((st + 1) / 3) * 3); // 早送り中と遠くの株は描き直しを減らす
+    v.wantStage = st;
+    const wOff = hash1(p.id * 3) * 9;
+    if (tk >= onset + wOff * 0.6) { ta = clamp(1 - (tk - onset - wOff * 0.6) / 8); if (g.pe > 0.5 && !p.dead) { ta = Math.max(ta, 0.0); } }
+    if (p.dead) { v.deadT = (v.deadT || 0) + dt; ta = Math.min(ta, clamp(0.7 - v.deadT * 0.06)); } // 枯れた株は、ゆっくり土に還る
+    else if (p.state === 3 && g.pe <= 0.5 && tk > p.be + 34 + wOff) ta = Math.min(ta, clamp(1 - (tk - p.be - 34 - wOff) / 14));
+    v.alpha += (ta - v.alpha) * Math.min(1, dt * (ta > v.alpha ? 2.2 : 1.2));
+    if (v.alpha < 0.012) { for (let i = 0; i < v.open.length; i++) v.open[i] = 0; continue; }
+    const want = p.dead && p.cause === 'dry' ? 'dry' : (tk > onset - 14 + wOff || (p.state === 3 && g.pe <= 0.5 && tk > p.be + 26 + wOff)) ? 'autumn' : 'green';
+    if (want !== v.wantLook) v.wantLook = want;
+    const lod = pos.ds < LOD_DS; v.wantBaked = lod && p.state === 1 && p.open > 0.45 ? 1 : 0;
+    if ((!v.body || v.body.look !== v.wantLook || v.body.stage !== v.wantStage || (lod ? (v.body.baked || 0) !== v.wantBaked : !v.fl && p.state >= 1)) && !v.queued) { v.queued = 1; V.queue.push(v); }
+    if (!v.body) continue;
+    v.lodge += ((p.lodged ? 1 : 0) - v.lodge) * Math.min(1, dt * 2.5);
+    v.gs = clamp(sizeOf(v.gr) / sizeOf(STAGES[v.body.stage]), 0.8, 1.2) * Math.min(1, v.alpha * 1.6);
+    const s = pos.ds * V.unit * v.gs, hk = 0.45 + 0.55 * smooth(0.25, 0.9, v.gr);
+    const wl = windAt(pos.sx, pos.ds); v.sw = (v.sw || 0) + (wl - (v.sw || 0)) * Math.min(1, dt * (5 - 2.5 * g.ht)); // 背の高い株ほど遅れてしなる
+    const sway = v.sw * v.flex * 0.085 + Math.sin(time * (1.1 + 0.6 * hash1(p.id * 5)) + v.ph) * 0.014 * (0.4 + wind);
+    const shear = -(sway + v.lodge * (hash1(p.id * 7) < 0.8 ? 1.25 : -1.25)), ys = 1 - 0.52 * v.lodge - (p.aphid ? 0.06 : 0) - clamp(p.stress) * 0.12 - (v.look === 'autumn' ? 0.14 : 0);
+    if (pos.ds >= LOD_DS) { ctx.globalAlpha = v.alpha * 0.16; ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.beginPath(); ctx.ellipse(pos.sx + 2 * s, pos.sy + 1, 12 * s, 3.4 * s, 0, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = v.alpha * (v.look === 'autumn' ? 0.8 : 1);
+    const bs = s / v.body.k;
+    ctx.setTransform(dpr * bs, 0, dpr * bs * shear, dpr * bs * ys, dpr * pos.sx, dpr * pos.sy);
+    ctx.drawImage(v.body.c, -v.body.ox, -v.body.oy);
+    // 花
+    const heads = v.geo.heads, n = heads.length, fl = v.fl;
+    const blooming = p.state === 1, nO = p.nOpen || 0;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const budOn = p.state === 0 && tk > p.bs - 12 && p.bio > 0.28 && !p.frost;
+    for (let i = 0; i < n; i++) {
+      const h = heads[i], r = v.rank[i];
+      const tgt = blooming && r < nO ? clamp(p.open * (nO + 1.5) - r * 0.9) : 0;
+      const o = (v.open[i] += (tgt - v.open[i]) * Math.min(1, dt * (tgt > v.open[i] ? 2.4 : 1.4)));
+      const bob = sway * 9 * s * (1 + 0.5 * Math.sin(time * 2.3 + h.ph));
+      const X = pos.sx + s * (h.x + shear * h.y * ys) + bob, Y = pos.sy + s * h.y * ys;
+      v.hp[i] = X; v.hp[i + n] = Y;
+      if (lod) continue;
+      if (o > 0.02 && fl) {
+        const sc = (easeBack(o) * h.r * hk) / fl.dp;
+        ctx.save(); ctx.translate(X, Y);
+        if (fl.form === 'open') { ctx.rotate(sway * 1.5); ctx.scale(sc, sc * (0.9 - 0.1 * v.lodge)); ctx.rotate(h.rot); }
+        else if (fl.form === 'tulip') { ctx.rotate(h.ang * 0.45 - sway * 2 - v.lodge); ctx.scale(sc * (0.55 + 0.45 * o), sc); }
+        else { ctx.rotate(h.ang * 0.5 + sway * 4); ctx.scale(sc, sc); }
+        ctx.drawImage(fl.c, -fl.ax, -fl.ay); ctx.restore();
+      } else if ((budOn || (blooming && r < nO)) && v.gr > 0.3) { // つぼみ
+        const br = Math.max(1.2, v.geo.R * 0.3 * pos.ds * V.unit * hk * h.r);
+        ctx.fillStyle = hsl(g.h, clamp(g.s * 0.8, 0.1, 0.7), clamp(g.l - 0.05, 0.5, 0.9), 0.9); ctx.beginPath(); ctx.ellipse(X, Y, br * 0.75, br * 1.15, h.ang * 0.4, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'hsla(105,34%,44%,0.85)'; ctx.beginPath(); ctx.ellipse(X, Y + br * 0.45, br * 0.7, br * 0.7, 0, 0, Math.PI); ctx.fill();
+      } else if (p.state >= 2 && p.bloomed && r < nO && !p.frost) { // 実
+        const br = Math.max(1, v.geo.R * 0.22 * pos.ds * V.unit * hk * h.r);
+        ctx.fillStyle = v.look === 'green' ? 'hsla(80,35%,50%,0.9)' : 'hsla(34,38%,48%,0.9)'; ctx.beginPath(); ctx.arc(X, Y, br, 0, TAU); ctx.fill();
+      }
+    }
+  }
+  upTo(2);
+  ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function headPos(v, onlyOpen) {
+  const n = v.geo.heads.length; if (!n || v.hp.length < 2 * n) return null;
+  let i = (Math.random() * n) | 0;
+  if (onlyOpen) for (let k = 0; k < n; k++) { const j = (i + k) % n; if (v.open[j] > 0.4) { i = j; break; } }
+  return [v.hp[i], v.hp[i + n]];
+}
+function pickPlant(px, py) {
+  let best = null, bd = 1e9;
+  for (const v of V.order) {
+    if (v.alpha < 0.3 || !v.body) continue;
+    const n = v.geo.heads.length, s = v.pos.ds * V.unit * v.gs; let d = 1e9;
+    for (let i = 0; i < n; i++) if (v.hp.length >= 2 * n) d = Math.min(d, Math.hypot(v.hp[i] - px, v.hp[i + n] - py) - (v.open[i] > 0.3 ? v.geo.R * v.pos.ds * V.unit : 0));
+    const dx = px - v.pos.sx, dy = py - v.pos.sy; if (dy < 4 && dy > -v.geo.H * s) d = Math.min(d, Math.abs(dx) - 6);
+    d -= v.pos.ds * 6;
+    if (d < bd) { bd = d; best = v; }
+  }
+  return bd < 22 ? best : null;
+}
+
+// ── 虫 ──
+function syncBugs(sim) {
+  const ids = new Set();
+  for (const a of sim.agents) {
+    ids.add(a.id);
+    if (!V.bugs.has(a.id)) { const left = Math.random() < 0.5; V.bugs.set(a.id, { a, sp: a.sp, x: left ? -20 : V.W + 20, y: V.yH + Math.random() * V.H * 0.4, vx: 0, vy: 0, tx: 0, ty: 0, tv: null, sit: 0, ds: 0.6, ph: Math.random() * TAU, alpha: 0, face: 1, hue: 0 }); }
+    else V.bugs.get(a.id).a = a;
+  }
+  for (const [id, b] of V.bugs) if (!ids.has(id)) { b.a = null; if (b.x < -30 || b.x > V.W + 30 || b.alpha < 0.02) V.bugs.delete(id); }
+}
+function drawBugs(ctx, sim, dt, e) {
+  const time = V.time;
+  for (const b of V.bugs.values()) {
+    const a = b.a, sp = b.sp;
+    let vis = a && sim.tick < sim.w.onset && sim.tick > 8 ? 1 : 0;
+    if (sp === 'moth') vis *= clamp(Math.max(e.night, e.dusk * 1.3) + V.fast * 0.8);
+    else vis *= 1 - e.night * 0.9;
+    if (e.rain > 0.5 && sp !== 'bee') vis *= 0.3;
+    b.alpha += (vis - b.alpha) * Math.min(1, dt * 1.5);
+    b.sit -= dt;
+    const tv = a && a.at ? V.views.get(a.at.id) : null;
+    if (b.sit <= 0 && (b.tv !== tv || (tv && Math.random() < dt * 0.5) || (!tv && Math.random() < dt * 0.4))) {
+      b.tv = tv;
+      const hp = tv && tv.alpha > 0.3 ? headPos(tv, true) : null;
+      if (hp) { b.tx = hp[0]; b.ty = hp[1] - 2; b.tds = tv.pos.ds; b.arrive = 0; }
+      else { b.tx = !a ? (b.x < V.W / 2 ? -60 : V.W + 60) : Math.random() * V.W; b.ty = V.yH + V.H * (0.05 + 0.5 * Math.random()); b.tds = 0.5 + 0.4 * Math.random(); b.arrive = 1; b.tv = tv; }
+    }
+    const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
+    const spd = (sp === 'butterfly' ? 70 : sp === 'fly' ? 150 : sp === 'moth' ? 120 : 110) * V.unit;
+    if (b.sit <= 0) {
+      if (dist < 5 && !b.arrive && b.tv) { b.sit = sp === 'fly' ? 0.5 + Math.random() : 0.9 + Math.random() * 1.3; b.arrive = 1; if (Math.random() < 0.5) spawn('pollen', b.x, b.y, { n: 2 }); }
+      const ax = (dx / (dist + 1)) * spd, ay = (dy / (dist + 1)) * spd, k = sp === 'butterfly' ? 1.6 : 3.2;
+      b.vx += (ax - b.vx) * Math.min(1, dt * k); b.vy += (ay - b.vy) * Math.min(1, dt * k);
+      const wob = sp === 'butterfly' ? 46 : sp === 'fly' ? 8 : 18;
+      b.x += (b.vx + Math.sin(time * (sp === 'butterfly' ? 3.1 : 7) + b.ph) * wob + V.wind * 6) * dt; b.y += (b.vy + Math.cos(time * (sp === 'butterfly' ? 4.3 : 9) + b.ph * 2) * wob * 0.8) * dt;
+      if (Math.abs(b.vx) > 4) b.face = b.vx > 0 ? 1 : -1;
+    } else { b.x += (b.tx - b.x) * Math.min(1, dt * 6); b.y += (b.ty - b.y) * Math.min(1, dt * 6); }
+    b.ds += ((b.tds || 0.6) - b.ds) * Math.min(1, dt * 2);
+    if (b.alpha < 0.02) continue;
+    const s = b.ds * V.unit * 1.05;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(s * b.face, s); ctx.globalAlpha = b.alpha;
+    const sitting = b.sit > 0, fl = sitting && sp !== 'butterfly' ? 0.25 : 1;
+    if (sp === 'bee') drawBee(ctx, time * 60 + b.ph, fl, sitting ? Math.sin(time * 9 + b.ph) * 0.15 : 0.1);
+    else if (sp === 'butterfly') drawButterfly(ctx, time * (sitting ? 2.2 : 11) + b.ph, sim.sp.butterfly.pref + (hash1(b.ph * 1000 | 0) - 0.5) * 50);
+    else if (sp === 'fly') drawFly(ctx, time * 80 + b.ph, fl);
+    else drawMoth(ctx, time * 50 + b.ph, fl);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+function wing(ctx, x, y, rx, ry, rot, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, TAU); ctx.fill(); }
+function drawBee(ctx, ph, fl, tilt) {
+  ctx.rotate(tilt);
+  const w = 0.55 + 0.45 * Math.abs(Math.sin(ph)) * fl;
+  wing(ctx, -1, -6, 4.5, 7 * w, -0.5, 'rgba(255,255,255,0.75)'); wing(ctx, 2.5, -6, 4, 6.5 * w, 0.4, 'rgba(235,245,255,0.7)');
+  ctx.fillStyle = '#f6c544'; ctx.beginPath(); ctx.ellipse(0, 0, 7.5, 6, 0, 0, TAU); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 7.5, 6, 0, 0, TAU); ctx.clip(); ctx.fillStyle = '#5b4636'; ctx.fillRect(-3.4, -7, 2.4, 14); ctx.fillRect(1, -7, 2.4, 14); ctx.fillRect(-8, -7, 1.6, 14); ctx.restore();
+  ctx.fillStyle = '#5b4636'; ctx.beginPath(); ctx.arc(6.5, -0.5, 3.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7.6, -1.3, 1.1, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,170,170,0.8)'; ctx.beginPath(); ctx.arc(5.6, 1.3, 1, 0, TAU); ctx.fill();
+}
+function drawButterfly(ctx, ph, hue) {
+  const f = Math.cos(ph), w = 0.25 + 0.75 * Math.abs(f);
+  const c1 = hsl(hue, 0.7, 0.72, 0.9), c2 = hsl(hue + 25, 0.75, 0.82, 0.9), ce = hsl(hue - 20, 0.5, 0.4, 0.5);
+  ctx.rotate(-0.25);
+  for (const sgn of [-1, 1]) {
+    ctx.save(); ctx.scale(sgn * w, 1);
+    ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(4, -13, 15, -14, 13, -3); ctx.bezierCurveTo(12, 1, 4, 2, 0, 0); ctx.fill();
+    ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(0, 1); ctx.bezierCurveTo(5, 2, 12, 5, 9, 10); ctx.bezierCurveTo(5, 12, 1, 6, 0, 1); ctx.fill();
+    ctx.strokeStyle = ce; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(4, -13, 15, -14, 13, -3); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(9.5, -7, 1.8, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#6a5548'; ctx.beginPath(); ctx.ellipse(0, 1, 1.5, 6, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0, -5.5, 1.9, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#6a5548'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -6); ctx.quadraticCurveTo(-2, -10, -3.5, -10.5); ctx.moveTo(0, -6); ctx.quadraticCurveTo(2, -10, 3.5, -10.5); ctx.stroke();
+}
+function drawFly(ctx, ph, fl) {
+  const w = 0.5 + 0.5 * Math.abs(Math.sin(ph)) * fl;
+  wing(ctx, -1, -3.5, 2.6, 5 * w, -0.7, 'rgba(255,255,255,0.7)'); wing(ctx, 1, -3.5, 2.6, 5 * w, 0.7, 'rgba(255,255,255,0.7)');
+  ctx.fillStyle = '#f0a03c'; ctx.beginPath(); ctx.ellipse(-1, 0, 5, 2.6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#6a4b32'; ctx.fillRect(-3, -2.5, 1.2, 5); ctx.fillRect(-0.4, -2.6, 1.2, 5.2);
+  ctx.fillStyle = '#7a4a38'; ctx.beginPath(); ctx.arc(4, 0, 2.3, 0, TAU); ctx.fill();
+}
+function drawMoth(ctx, ph, fl) {
+  const w = 0.4 + 0.6 * Math.abs(Math.sin(ph)) * fl;
+  ctx.fillStyle = 'rgba(244,226,214,0.9)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-11, -9 * w); ctx.lineTo(-7, 3); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, -10 * w); ctx.lineTo(8, 2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(236,170,186,0.9)'; ctx.beginPath(); ctx.ellipse(-4, -2 * w, 3, 2, 0.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#d9b9a0'; ctx.beginPath(); ctx.ellipse(0, 0, 7, 4.2, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#8a6a5a'; ctx.beginPath(); ctx.arc(6, -0.6, 2.8, 0, TAU); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7, -1.2, 0.9, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#8a6a5a'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(8.5, 0); ctx.quadraticCurveTo(13, 2, 13, 7); ctx.stroke();
+}
+
+// ── 粒（種・花びら・雨・雪・ほたる） ──
+function spawn(kind, x, y, o = {}) {
+  const n = o.n || 1;
+  for (let i = 0; i < n; i++) {
+    if (V.parts.length > 420) return;
+    const q = { kind, x: x + (Math.random() - 0.5) * 6, y: y + (Math.random() - 0.5) * 6, vx: 0, vy: 0, life: 0, max: 2, s: 1, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 4, col: o.col, gy: o.gy || V.H };
+    if (kind === 'seed') { q.vx = 8 + Math.random() * 16; q.vy = -14 - Math.random() * 22; q.max = 4 + Math.random() * 4; q.s = (o.s || 1) * (0.7 + Math.random() * 0.6); q.gy = y + 30 + Math.random() * 120; }
+    else if (kind === 'petal') { q.vx = (Math.random() - 0.5) * 16; q.vy = 6 + Math.random() * 12; q.max = 2.6 + Math.random() * 2; q.s = (o.s || 1) * (0.7 + Math.random() * 0.6); }
+    else if (kind === 'pollen') { q.vx = (Math.random() - 0.5) * 14; q.vy = -4 - Math.random() * 10; q.max = 1 + Math.random(); }
+    else if (kind === 'spark') { const a = Math.random() * TAU, sp = 10 + Math.random() * 22; q.vx = Math.cos(a) * sp; q.vy = Math.sin(a) * sp - 8; q.max = 0.7 + Math.random() * 0.7; q.s = o.s || 1; }
+    else if (kind === 'leaf') { q.vx = 10 + Math.random() * 30; q.vy = 16 + Math.random() * 18; q.max = 5 + Math.random() * 3; q.s = 0.6 + Math.random() * 0.6; }
+    else if (kind === 'fire') { q.max = 3 + Math.random() * 3; q.vx = (Math.random() - 0.5) * 10; q.vy = (Math.random() - 0.5) * 8; }
+    V.parts.push(q);
+  }
+}
+function drawParts(ctx, dt, e) {
+  const W = V.W, H = V.H, wind = V.wind;
+  // 雨と雪は毎フレーム降らせる
+  if (e.rain > 0.05) { const n = Math.round(e.rain * (V.storm > 0 ? 9 : 4)); for (let i = 0; i < n; i++) V.parts.push({ kind: 'rain', x: Math.random() * (W + 80) - 40, y: -10, vx: 60 + wind * 120, vy: 620 + Math.random() * 200, life: 0, max: 1.4, s: 0.6 + Math.random() * 0.6, gy: V.yH + Math.random() * (H - V.yH) }); }
+  if (e.snowing > 0.05 && Math.random() < e.snowing * 0.9) V.parts.push({ kind: 'snow', x: Math.random() * (W + 60) - 30, y: -6, vx: 8 + wind * 30, vy: 26 + Math.random() * 30, life: 0, max: 16, s: 0.7 + Math.random() * 1.3, ph: Math.random() * TAU, gy: H });
+  if (e.night > 0.5 && e.t > 0.3 && e.t < 0.62 && Math.random() < dt * 5) { const z = 0.2 + Math.random() * 0.75, p = proj(SITE.brookX(z) + (Math.random() - 0.5) * 0.3, z); spawn('fire', p.sx, p.sy - 10 - Math.random() * 50 * p.ds); }
+  if (e.t > 0.64 && e.t < 0.84 && Math.random() < dt * 0.9) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: hsl(18 + Math.random() * 30, 0.7, 0.55, 0.85) }); }
+  if (e.t > 0.14 && e.t < 0.27 && Math.random() < dt * 1.1) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: 'rgba(250,214,224,0.9)' }); }
+  let w = 0;
+  for (let i = 0; i < V.parts.length; i++) {
+    const q = V.parts[i]; q.life += dt;
+    if (q.life > q.max || q.y > H + 10 || q.x > W + 60 || q.x < -60) continue;
+    V.parts[w++] = q;
+    const u = q.life / q.max, fade = Math.min(1, u * 6) * (1 - smooth(0.7, 1, u));
+    if (q.kind === 'rain') {
+      q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; continue; }
+      ctx.strokeStyle = `rgba(214,228,246,${0.5 * q.s})`; ctx.lineWidth = 1.1 * q.s; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - q.vx * 0.022, q.y - q.vy * 0.022); ctx.stroke();
+    } else if (q.kind === 'snow') {
+      q.x += (q.vx + Math.sin(q.life * 1.6 + q.ph) * 14) * dt; q.y += q.vy * dt;
+      ctx.fillStyle = `rgba(255,255,255,${0.85 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.5 * q.s, 0, TAU); ctx.fill();
+    } else if (q.kind === 'seed') {
+      const landed = q.y >= q.gy;
+      if (!landed) { q.vx += (wind * 46 + 6 - q.vx) * dt * 0.9; q.vy += (9 - q.vy) * dt * 0.8; q.x += (q.vx + Math.sin(q.life * 2.4 + q.rot) * 9) * dt; q.y += q.vy * dt; } else q.life += dt * 2;
+      const s = q.s * 3.2; ctx.strokeStyle = `rgba(255,255,255,${0.9 * fade})`; ctx.lineWidth = 0.7;
+      ctx.beginPath(); for (let k = 0; k < 7; k++) { const a = -Math.PI / 2 + (k - 3) * 0.36 + Math.sin(q.life * 3 + q.rot) * 0.15; ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + Math.cos(a) * s, q.y + Math.sin(a) * s); } ctx.stroke();
+      ctx.fillStyle = `rgba(150,112,78,${fade})`; ctx.beginPath(); ctx.ellipse(q.x, q.y + s * 0.42, 0.9 * q.s, 1.7 * q.s, 0, 0, TAU); ctx.fill();
+    } else if (q.kind === 'petal' || q.kind === 'leaf') {
+      q.vx += (wind * 40 - q.vx) * dt * 0.6; q.x += (q.vx + Math.sin(q.life * 3 + q.rot) * 16) * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.globalAlpha = fade; ctx.fillStyle = q.col; ctx.beginPath(); ctx.ellipse(0, 0, 3.4 * q.s, 1.9 * q.s * Math.abs(Math.cos(q.life * 4 + q.rot)) + 0.5, 0, 0, TAU); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
+    } else if (q.kind === 'pollen') {
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 10 * dt; ctx.fillStyle = `rgba(250,214,96,${0.9 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.2, 0, TAU); ctx.fill();
+    } else if (q.kind === 'spark') {
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 1 - dt * 2; q.vy *= 1 - dt * 2; const s = 2.6 * q.s * (1 - u * 0.5);
+      ctx.strokeStyle = q.col || 'rgba(255,255,255,0.9)'; ctx.globalAlpha = fade; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(q.x - s, q.y); ctx.lineTo(q.x + s, q.y); ctx.moveTo(q.x, q.y - s); ctx.lineTo(q.x, q.y + s); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (q.kind === 'fire') {
+      q.x += (q.vx + Math.sin(q.life * 2 + q.rot) * 10) * dt; q.y += (q.vy + Math.cos(q.life * 1.6 + q.rot) * 8) * dt;
+      const a = fade * (0.55 + 0.45 * Math.sin(q.life * 5 + q.rot)); const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 9); g.addColorStop(0, `rgba(240,255,150,${a})`); g.addColorStop(0.3, `rgba(220,250,120,${a * 0.4})`); g.addColorStop(1, 'rgba(220,250,120,0)'); ctx.fillStyle = g; ctx.fillRect(q.x - 9, q.y - 9, 18, 18);
+    }
+  }
+  V.parts.length = w;
+}
+
+// ── 1 フレーム ──
+function drawScene(sim, frac, dt) {
+  const ctx = V.ctx, dpr = V.dpr, W = V.W, H = V.H;
+  V.time += dt;
+  // 端末が苦しそうなら、解像度を下げて軽くする
+  const nowT = performance.now(), real = V.lastReal ? nowT - V.lastReal : 16; V.lastReal = nowT;
+  V.ft = (V.ft || 16) * 0.95 + Math.min(200, real) * 0.05; V.ftT = (V.ftT || 0) + real;
+  if (V.ftT > 3500 && V.ft > 30 && V.dpr > 1 && !V.dprLock) { V.dprCap = Math.max(1, V.dpr - 0.5); V.ftT = 0; V.ft = 16; resizeView(); }
+  V.storm = Math.max(0, V.storm - dt); V.flash = Math.max(0, V.flash - dt * 2.5); V.frost = Math.max(0, V.frost - dt * 0.25);
+  const e = (V.env = computeEnv(sim, frac));
+  const gust = vnoise(V.time * 0.23, 3) * vnoise(V.time * 0.71, 9);
+  const tw = 0.12 + 0.9 * gust + (V.storm > 0 ? 2.6 : 0) + e.rain * 0.25 + Math.abs(sim.w.wx) * 0.15;
+  V.wind += (tw - V.wind) * Math.min(1, dt * 1.5);
+  // 背景は少しずつ描き替えて、前の絵と溶け合わせる
+  V.bgMix = Math.min(1, V.bgMix + dt / 0.5);
+  const key = [(e.t * 96) | 0, (e.d * 40) | 0, (e.cloud * 8) | 0, (e.snow * 10) | 0, e.storm, (e.dry * 6) | 0].join(',');
+  if (key !== V.bgKey && V.bgMix >= 1) {
+    V.bgKey = key; V.bgT = V.time;
+    let tmp = V.bgA; V.bgA = V.bgB; V.bgB = tmp; tmp = V.skA; V.skA = V.skB; V.skB = tmp;
+    paintSky(V.skB.getContext('2d'), e); paintBG(V.bgB.getContext('2d'), e); V.bgMix = V.bgInit ? 0 : 1; V.bgInit = 1;
+    const fk = [(e.t * 40) | 0, (e.snow * 5) | 0, (e.dry * 3) | 0].join(',');
+    if (fk !== V.fgKey) { V.fgKey = fk; paintFG(V.fg.getContext('2d'), e); }
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  const P = V.prof || (V.prof = {}), T = (k) => { const n = performance.now(); P[k] = (P[k] || 0) * 0.95 + (n - P._l) * 0.05; P._l = n; }; P._l = performance.now();
+  ctx.drawImage(V.skA, 0, 0); if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.skB, 0, 0); ctx.globalAlpha = 1; }
+  drawSkyLife(ctx, e, dt);
+  if (V.bgMix < 1) ctx.drawImage(V.bgA, 0, 0, W, H);
+  if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.bgB, 0, 0, W, H); ctx.globalAlpha = 1; }
+  T('bg'); drawBrook(ctx, e); T('brook');
+  serviceQueue(V.queue.length > 60 ? 9 : 4); T('queue');
+  drawPlants(ctx, sim, dt, e); T('plants');
+  drawBugs(ctx, sim, dt, e); T('bugs');
+  ctx.drawImage(V.fg, 0, 0, W, H);
+  // 時刻の光
+  const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [188, 196, 238], e.night * 0.9);
+  const dim = mix(tint, [190, 198, 212], e.storm * 0.55 + e.rain * 0.12);
+  if (dim[0] < 250 || dim[1] < 250 || dim[2] < 250) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgb(dim); ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+  if (e.dusk > 0.05) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(255,190,120,${0.1 * e.dusk})`); g.addColorStop(1, 'rgba(255,190,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  T('light'); drawParts(ctx, dt, e); T('parts');
+  if (V.frost > 0) { ctx.fillStyle = `rgba(236,246,255,${0.3 * Math.min(1, V.frost * 2)})`; ctx.fillRect(0, V.yH, W, H); }
+  if (V.flash > 0) { ctx.fillStyle = `rgba(255,255,250,${0.5 * V.flash})`; ctx.fillRect(0, 0, W, H); }
+  return e;
+}
+
+// ===== 50-erika.js =====
+// ───────────────────────── エリカ（実況） ─────────────────────────
+// 『うちの宇宙人バイトは株で稼ぎたい』のエリカ。価値の変わらない星から来たので、
+// 毎年ちがう花が咲くこの花畑が、ふしぎでしかたない。
+const ERIKA = { mood: 'calm', moodT: 0, blink: 0, nextBlink: 2, look: 0, lookT: 0, hop: 0 };
+
+function drawErika(ctx, bx, by, sc, o) {
+  const t = o.time, E = ERIKA;
+  const sw = clamp(o.wind, 0, 3) * 2.4 * (0.6 + 0.4 * Math.sin(t * 2.1)) + Math.sin(t * 0.9) * 1.1;
+  const br = Math.sin(t * 1.7) * 0.7, hop = E.hop > 0 ? -Math.sin(Math.min(1, E.hop) * Math.PI) * 5 : 0;
+  const LINE = 'rgba(128,88,92,0.55)';
+  ctx.save(); ctx.translate(bx, by + hop); ctx.scale(sc, sc); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const hairG = (y0, y1, a = 1) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(247,168,202,${a})`); g.addColorStop(0.5, `rgba(240,170,214,${a})`); g.addColorStop(0.78, `rgba(170,205,238,${a})`); g.addColorStop(1, `rgba(134,214,236,${a})`); return g; };
+  const fs = (fill, stroke = LINE, lw = 0.9) => { if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); } };
+  // 傘
+  if (o.rain > 0.3) {
+    ctx.beginPath(); ctx.moveTo(-50, -146); ctx.bezierCurveTo(-44, -186, 56, -186, 62, -146); ctx.quadraticCurveTo(48, -153, 34, -146); ctx.quadraticCurveTo(20, -153, 6, -146); ctx.quadraticCurveTo(-8, -153, -22, -146); ctx.quadraticCurveTo(-36, -153, -50, -146); ctx.closePath();
+    fs('rgba(150,220,232,0.72)', 'rgba(80,140,160,0.5)', 1);
+    ctx.beginPath(); ctx.moveTo(6, -176); ctx.lineTo(6, -146); ctx.moveTo(-22, -146); ctx.quadraticCurveTo(-14, -168, 6, -176); ctx.moveTo(34, -146); ctx.quadraticCurveTo(26, -168, 6, -176); fs(null, 'rgba(255,255,255,0.6)', 0.8);
+  }
+  // うしろ髪
+  ctx.beginPath(); ctx.moveTo(0, -141);
+  ctx.bezierCurveTo(-30, -143, -42, -119, -40, -97); ctx.bezierCurveTo(-39, -79, -48 + sw, -67, -46 + sw, -53); ctx.bezierCurveTo(-45 + sw, -45, -51 + sw, -41, -57 + sw, -37);
+  ctx.bezierCurveTo(-45 + sw, -32, -34 + sw * 0.6, -40, -30, -51); ctx.lineTo(30, -51);
+  ctx.bezierCurveTo(34 + sw * 0.6, -40, 45 + sw, -32, 57 + sw, -37); ctx.bezierCurveTo(51 + sw, -41, 45 + sw, -45, 46 + sw, -53); ctx.bezierCurveTo(48 + sw, -67, 39, -79, 40, -97); ctx.bezierCurveTo(42, -119, 30, -143, 0, -141); ctx.closePath();
+  fs(hairG(-140, -38));
+  ctx.beginPath(); for (const sx of [-1, 1]) { ctx.moveTo(sx * 30, -92); ctx.bezierCurveTo(sx * 33, -78, sx * 40 + sw * 0.7, -68, sx * 38 + sw, -52); ctx.moveTo(sx * 20, -62); ctx.quadraticCurveTo(sx * 24 + sw * 0.4, -52, sx * 34 + sw * 0.8, -44); } fs(null, 'rgba(255,255,255,0.45)', 1.2);
+  // 脚と靴
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 13, -45); ctx.lineTo(sx * 2.5, -45); ctx.lineTo(sx * 4, -9); ctx.lineTo(sx * 11.5, -9); ctx.closePath(); fs('#4a3f3d', 'rgba(60,40,40,0.5)');
+    ctx.beginPath(); ctx.moveTo(sx * 7.5, -40); ctx.lineTo(sx * 8, -14); fs(null, 'rgba(255,255,255,0.14)', 2);
+    ctx.beginPath(); ctx.ellipse(sx * 8.5, -5, 8.5, 5.2, 0, 0, TAU); fs('#fcfbf8');
+    ctx.beginPath(); ctx.ellipse(sx * 8.5, -1.6, 8.5, 2, 0, 0, Math.PI); fs('#8a8f98', null);
+    ctx.beginPath(); ctx.ellipse(sx * 11, -5.5, 3, 1.6, 0, 0, TAU); fs('#7fdbe0', null);
+  }
+  // ショートパンツ
+  ctx.beginPath(); ctx.moveTo(-16, -51); ctx.lineTo(16, -51); ctx.lineTo(15, -40); ctx.lineTo(1.5, -40); ctx.lineTo(0, -44); ctx.lineTo(-1.5, -40); ctx.lineTo(-15, -40); ctx.closePath(); fs('#39333a', 'rgba(40,30,40,0.5)');
+  // 肩と首
+  ctx.beginPath(); ctx.ellipse(0, -80 + br * 0.3, 21, 8, 0, 0, TAU); fs('#fde6da');
+  ctx.beginPath(); ctx.rect(-4.5, -88, 9, 9); fs('#fbdccd', null);
+  ctx.beginPath(); ctx.moveTo(-9, -76); ctx.lineTo(-7.5, -85); ctx.moveTo(9, -76); ctx.lineTo(7.5, -85); fs(null, '#3a3338', 1.8);
+  // ニット
+  ctx.beginPath(); ctx.moveTo(-22, -77 + br * 0.3); ctx.bezierCurveTo(-25, -66, -21, -54, -19, -46); ctx.lineTo(19, -46); ctx.bezierCurveTo(21, -54, 25, -66, 22, -77 + br * 0.3); ctx.closePath();
+  { const g = ctx.createLinearGradient(-22, 0, 22, 0); g.addColorStop(0, '#e9e8f0'); g.addColorStop(0.35, '#fdfcfa'); g.addColorStop(1, '#eeedf3'); fs(g); }
+  ctx.beginPath(); for (let i = -16; i <= 16; i += 4) { ctx.moveTo(i, -50.5); ctx.lineTo(i, -46.5); } fs(null, 'rgba(150,150,175,0.5)', 0.7);
+  ctx.beginPath(); ctx.moveTo(-25, -81 + br * 0.3); ctx.quadraticCurveTo(0, -72 + br * 0.3, 25, -81 + br * 0.3); ctx.lineTo(25, -74 + br * 0.3); ctx.quadraticCurveTo(0, -65 + br * 0.3, -25, -74 + br * 0.3); ctx.closePath(); fs('#fdfcfa');
+  ctx.beginPath(); for (let i = -20; i <= 20; i += 4) { const yy = -78 + (i * i) / 80 + br * 0.3; ctx.moveTo(i, yy); ctx.lineTo(i, yy + 5); } fs(null, 'rgba(150,150,175,0.45)', 0.6);
+  // 冬のマフラー
+  if (o.cold > 0.4) {
+    ctx.beginPath(); ctx.moveTo(-17, -86); ctx.quadraticCurveTo(0, -79, 17, -86); ctx.lineTo(18, -77); ctx.quadraticCurveTo(0, -70, -18, -77); ctx.closePath(); fs('#f3c1c6', 'rgba(150,80,90,0.5)');
+    ctx.beginPath(); ctx.moveTo(8, -76); ctx.lineTo(17 + sw * 0.5, -58); ctx.lineTo(9 + sw * 0.5, -56); ctx.lineTo(2, -74); ctx.closePath(); fs('#efb2b9', 'rgba(150,80,90,0.5)');
+  }
+  // スケッチブックと袖
+  ctx.save(); ctx.translate(0, -62 + br * 0.4); ctx.rotate(-0.06);
+  ctx.beginPath(); ctx.rect(-14, -11, 28, 20); fs('#fff8e6', 'rgba(140,100,70,0.7)', 1);
+  ctx.beginPath(); for (let i = -11; i <= 11; i += 3.6) { ctx.moveTo(i, -12.5); ctx.lineTo(i, -9.5); } fs(null, 'rgba(120,90,70,0.8)', 1);
+  ctx.fillStyle = o.accent || '#f2a0b8'; for (let k = 0; k < 5; k++) { const a = (k * TAU) / 5 + 0.3; ctx.beginPath(); ctx.ellipse(-4 + Math.cos(a) * 3.2, -1 + Math.sin(a) * 3.2, 2.2, 2.2, 0, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#f6cf5a'; ctx.beginPath(); ctx.arc(-4, -1, 1.5, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-4, 2.5); ctx.quadraticCurveTo(-3, 5, -5, 7.5); fs(null, 'rgba(90,150,90,0.9)', 1);
+  ctx.beginPath(); ctx.moveTo(4, -5); ctx.lineTo(11, -5); ctx.moveTo(4, -1); ctx.lineTo(11, -1); ctx.moveTo(4, 3); ctx.lineTo(9, 3); fs(null, 'rgba(150,130,120,0.5)', 0.7);
+  ctx.restore();
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 22, -79 + br * 0.3); ctx.bezierCurveTo(sx * 32, -70, sx * 30, -55, sx * 15, -53 + br * 0.4); ctx.lineTo(sx * 11, -61 + br * 0.4); ctx.bezierCurveTo(sx * 18, -63, sx * 19, -70, sx * 17, -77); ctx.closePath(); fs('#f8f7f5');
+    ctx.beginPath(); ctx.moveTo(sx * 26, -72); ctx.quadraticCurveTo(sx * 28, -61, sx * 17, -56.5); fs(null, 'rgba(120,224,232,0.9)', 1.3);
+    ctx.beginPath(); ctx.ellipse(sx * 12.5, -57 + br * 0.4, 3.6, 3.2, 0, 0, TAU); fs('#fde6da');
+  }
+  ctx.beginPath(); ctx.moveTo(15, -60 + br * 0.4); ctx.lineTo(22, -73 + br * 0.4); fs(null, '#e8b04a', 2); ctx.beginPath(); ctx.moveTo(22, -73 + br * 0.4); ctx.lineTo(22.8, -74.5 + br * 0.4); fs(null, '#6a5040', 1.6);
+  // 顔
+  const tilt = Math.sin(t * 0.6) * 0.03 + E.look * 0.03;
+  ctx.save(); ctx.translate(0, -106 + br); ctx.rotate(tilt);
+  ctx.beginPath(); ctx.moveTo(-29, -2); ctx.bezierCurveTo(-29, 18, -12, 27.5, 0, 27.5); ctx.bezierCurveTo(12, 27.5, 29, 18, 29, -2); ctx.bezierCurveTo(29, -22, 14, -28, 0, -28); ctx.bezierCurveTo(-14, -28, -29, -22, -29, -2); ctx.closePath();
+  { const g = ctx.createRadialGradient(-6, -4, 4, 0, 0, 34); g.addColorStop(0, '#fff1e8'); g.addColorStop(1, '#fbdccd'); fs(g); }
+  ctx.fillStyle = 'rgba(246,150,160,0.36)'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * 17.5, 11, 6, 3.6, 0, 0, TAU); ctx.fill(); }
+  const ex = E.look * 1.6, closed = E.blink > 0 || E.mood === 'happy';
+  for (const sx of [-1, 1]) {
+    const cx = sx * 12.5, cy = 3;
+    if (closed) { ctx.beginPath(); ctx.moveTo(cx - 6, cy + 1); ctx.quadraticCurveTo(cx, cy + (E.mood === 'happy' ? -5 : 4), cx + 6, cy + 1); fs(null, '#5a3f44', 1.8); continue; }
+    const ry = E.mood === 'wow' ? 8.8 : 7.8;
+    ctx.beginPath(); ctx.ellipse(cx, cy, 6.6, ry, 0, 0, TAU); fs('#fffdfb', null);
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, 6.6, ry, 0, 0, TAU); ctx.clip();
+    const g = ctx.createLinearGradient(0, cy - ry, 0, cy + ry); g.addColorStop(0, '#16785e'); g.addColorStop(0.55, '#35b98a'); g.addColorStop(1, '#a6f0cc');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx + ex, cy + 0.6, 5.6, ry - 0.6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#0f4a3d'; ctx.beginPath(); ctx.ellipse(cx + ex, cy + 0.4, 2.5, 3.6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(40,30,40,0.28)'; ctx.fillRect(cx - 8, cy - ry - 1, 16, 4.5);
+    ctx.restore();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(cx + ex - 2.2, cy - 3.2, 2.4, 2.8, -0.3, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(cx + ex + 2.4, cy + 3.6, 1.1, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - 7.2, cy - 2.5); ctx.quadraticCurveTo(cx, cy - ry - 2.6, cx + 7.2, cy - 2.5); fs(null, '#5a3f44', 2);
+    ctx.beginPath(); ctx.moveTo(cx + sx * 7, cy - 3); ctx.lineTo(cx + sx * 9, cy - 5); fs(null, '#5a3f44', 1.2);
+  }
+  ctx.beginPath(); for (const sx of [-1, 1]) { const up = E.mood === 'wow' ? -2.5 : E.mood === 'sad' ? 1.5 * sx * 0 : 0; ctx.moveTo(sx * 7, -9.5 + up + (E.mood === 'sad' ? -1.5 : 0)); ctx.quadraticCurveTo(sx * 12, -11.5 + up, sx * 17.5, -9 + up + (E.mood === 'sad' ? 1.5 : 0)); } fs(null, 'rgba(190,120,140,0.8)', 1);
+  if (E.mood === 'wow') { ctx.beginPath(); ctx.ellipse(0, 17, 2.4, 3, 0, 0, TAU); fs('#d9788a', 'rgba(120,60,70,0.6)', 0.7); }
+  else if (E.mood === 'happy' || o.talking) { const op = o.talking ? 1.2 + Math.abs(Math.sin(t * 9)) * 2.2 : 3; ctx.beginPath(); ctx.moveTo(-3.6, 15.5); ctx.quadraticCurveTo(0, 15.5 + op * 1.7, 3.6, 15.5); ctx.closePath(); fs('#e58a98', 'rgba(120,60,70,0.6)', 0.8); }
+  else if (E.mood === 'sad') { ctx.beginPath(); ctx.moveTo(-3, 18); ctx.quadraticCurveTo(0, 15.5, 3, 18); fs(null, 'rgba(120,60,70,0.75)', 1.1); }
+  else { ctx.beginPath(); ctx.moveTo(-3, 16); ctx.quadraticCurveTo(0, 18.6, 3, 16); fs(null, 'rgba(120,60,70,0.75)', 1.1); }
+  // 前髪
+  ctx.beginPath(); ctx.moveTo(-31, -4);
+  ctx.bezierCurveTo(-35, -30, -12, -38.5, 2, -36.5); ctx.bezierCurveTo(22, -38.5, 36, -24, 31, -3); ctx.bezierCurveTo(28, -11, 23, -17, 17, -20); ctx.bezierCurveTo(15, -12, 7, -6, -1, -4); ctx.bezierCurveTo(3, -10, 4, -15, 3, -19);
+  ctx.bezierCurveTo(-5, -10, -15, -4, -24, -2.5); ctx.bezierCurveTo(-21.5, -8, -21.5, -12, -22.5, -16); ctx.bezierCurveTo(-27, -12, -30, -9, -31, -4); ctx.closePath();
+  { const g = ctx.createLinearGradient(0, -38, 0, 0); g.addColorStop(0, '#f9b3cf'); g.addColorStop(1, '#f39fc4'); fs(g); }
+  ctx.beginPath(); ctx.moveTo(-18, -27); ctx.quadraticCurveTo(-4, -33, 14, -28); fs(null, 'rgba(255,255,255,0.7)', 2.2);
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 30, -10); ctx.bezierCurveTo(sx * 37, 6, sx * 33 + sw * 0.3, 20, sx * 37 + sw * 0.7, 33); ctx.bezierCurveTo(sx * 30 + sw * 0.6, 30, sx * 27, 22, sx * 27, 8); ctx.closePath(); fs(hairG(-10, 36));
+  }
+  ctx.beginPath(); ctx.moveTo(-25, -24); ctx.lineTo(-17, -22); ctx.lineTo(-23, -16); ctx.closePath(); fs('#7fe0e2', 'rgba(40,120,130,0.7)', 0.9);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ── 吹き出しと実況 ──
+const Talk = { q: [], cur: null, endAt: 0, gapUntil: 3, on: true, cool: {}, coolY: {}, diary: [], el: null, said: 0, lastIdle: 0 };
+const now = () => performance.now() / 1000;
+function say(text, o = {}) {
+  if (!text) return;
+  const pri = o.pri || 1, tp = o.topic;
+  if (tp && Talk.cool[tp] && now() < Talk.cool[tp]) return;
+  if (tp) Talk.cool[tp] = now() + (o.cool || 45);
+  if (o.diary !== false && o.year) { Talk.diary.push([o.year, text]); if (Talk.diary.length > 160) Talk.diary.shift(); }
+  if (!Talk.on && !o.force) return;
+  Talk.q.push({ text, pri, mood: o.mood || 'calm', exp: now() + (o.ttl || 14), force: o.force });
+  if (Talk.q.length > 4) { Talk.q.sort((a, b) => b.pri - a.pri); Talk.q.length = 4; }
+}
+function talkTick(dt) {
+  const t = now(), E = ERIKA;
+  E.nextBlink -= dt; E.blink -= dt; if (E.nextBlink < 0) { E.blink = 0.13; E.nextBlink = 2 + Math.random() * 4; }
+  E.lookT -= dt; if (E.lookT < 0) { E.look = Math.random() < 0.3 ? 0 : Math.random() * 2 - 0.6; E.lookT = 2 + Math.random() * 4; }
+  E.moodT -= dt; if (E.moodT < 0) E.mood = 'calm'; E.hop -= dt * 2.4;
+  if (Talk.cur && t > Talk.endAt) { Talk.el.classList.remove('show'); Talk.cur = null; Talk.gapUntil = t + 2.2; }
+  if (!Talk.cur && t > Talk.gapUntil && Talk.q.length) {
+    Talk.q = Talk.q.filter((m) => m.exp > t); if (!Talk.q.length) return;
+    Talk.q.sort((a, b) => b.pri - a.pri); const m = Talk.q.shift();
+    Talk.cur = m; Talk.endAt = t + 3.4 + m.text.length * 0.115;
+    Talk.el.firstElementChild.textContent = m.text; Talk.el.classList.add('show');
+    E.mood = m.mood; E.moodT = Talk.endAt - t; if (m.mood === 'wow' || m.mood === 'happy') E.hop = 1;
+  }
+}
+
+const SP_NAME = { bee: 'ミツバチ', fly: 'ハナアブ', butterfly: 'チョウ', moth: 'スズメガ' };
+const SP_LIKES = { bee: '青や紫、それに黄色', fly: '白や黄色の小さな花', butterfly: '赤や桃色の大きな花', moth: '白っぽい、筒の形の花' };
+const BIN_SAY = ['赤い', '橙色の', '黄色い', '黄緑の', '緑の', '青緑の', '水色の', '青い', '青紫の', '紫の', '赤紫の', '桃色の', '白い'];
+const FORM_WHY = {
+  double: '花びらが増えると虫の目を引きますが、そのぶん花粉は減ります', triple: 'おしべまで花びらに変わっています。きれいですが、種は残しにくい形です',
+  bell: 'うつむいた筒の形は、雨から蜜を守れます', tulip: '筒の形の花は、口の長いスズメガ向きです', spike: '下から順に咲いていくので、長いあいだ虫を呼べます',
+  umbel: '小さな花が集まると、遠くからは大きな一輪に見えます', frill: 'ふちが波うつと、花が大きく見えます', star: '細くとがった花びらです', heart: '花びらの先が、少しへこんでいます',
+  big: '大きいぶん、水と栄養をたくさん使います', picotee: '花びらのふちだけ、色が抜けています',
+};
+
+function onSimEvent(ev, sim) {
+  const y = ev.year, base = { year: y };
+  if (ev.type === 'newyear') {
+    const w = ev.w, e = w.ev;
+    if (e.includes('drought')) say('今年は日照りの年です。水をたくさん使う大きな花には、つらい夏になります', { ...base, pri: 3, mood: 'sad', topic: 'ny' + y });
+    else if (e.includes('rainy')) say('今年は雨の多い年です。大きな花も、水に困らずのびのび育ちます', { ...base, pri: 3, topic: 'ny' + y });
+    else if (e.includes('butterflies')) say('今年はチョウが大発生しています。チョウは赤や桃色の大きな花が好きなんです', { ...base, pri: 3, mood: 'wow', topic: 'ny' + y });
+    else if (e.includes('fewbugs')) say('今年は虫が少ないみたいです。よく目立つ花でないと、花粉を運んでもらえません', { ...base, pri: 3, mood: 'sad', topic: 'ny' + y });
+    else if (w.temp < -0.7) say('今年は寒い年です。寒さに強い株から、先に芽を出します', { ...base, pri: 2, topic: 'ny' + y });
+    else if (w.temp > 0.75) say('今年は暖かい年です。花の咲く時期が、少し早まります', { ...base, pri: 2, topic: 'ny' + y });
+    else if ([10, 25, 50, 100, 150, 200, 300, 500].includes(y)) say(`観察をはじめて${y}年目です。最初の花畑とは、もう別の場所みたいです`, { ...base, pri: 2, mood: 'happy', topic: 'ny' + y });
+    if (e.includes('bird')) say('鳥が、よその種を落としていきました。見たことのない花が咲くかもしれません', { ...base, pri: 2, topic: 'bird' + y });
+  } else if (ev.type === 'event') {
+    if (ev.kind === 'storm') say(ev.n > 3 ? `嵐です。${ev.n}株が倒れました。背の高い花ほど、風をまともに受けます` : '嵐です。でも背の低い花ばかりなので、ほとんど倒れませんでした', { ...base, pri: 4, mood: 'wow', topic: 'storm' + y });
+    else if (ev.kind === 'frost') say(ev.n > 2 ? `遅霜です。${ev.n}株やられました。早く咲くと虫をひとりじめできますが、これが怖いんです` : '遅霜がおりました。寒さに強い株ばかりで、被害は少しでした', { ...base, pri: 4, mood: 'sad', topic: 'frost' + y });
+    else if (ev.kind === 'longrain') say('長雨です。花びらの多い大きな花は、雨で傷みやすいんです。虫もあまり飛べません', { ...base, pri: 3, mood: 'sad', topic: 'lr' + y });
+    else if (ev.kind === 'aphids' && ev.n > 4) say(`${BIN_SAY[ev.bin]}花にアブラムシがつきました。同じ色ばかり増えると、こうして狙われます`, { ...base, pri: 3, mood: 'sad', topic: 'aph' + y });
+  } else if (ev.type === 'novel') {
+    const p = ev.plant; if (!p) return;
+    if (ev.kind === 'color') {
+      const mc = p.momG ? colorName(p.momG) : null, dc = p.dadG ? colorName(p.dadG) : null;
+      let tail = '';
+      if (p.g._macro) tail = '。親とはまるで違う色です。突然変異ですね';
+      else if (mc && dc && mc !== dc && mc !== ev.name) tail = `。${mc}と${dc}のあいだに生まれた子です`;
+      else if (mc && mc !== ev.name) tail = `。親は${mc}でした。少しずつ色がずれてきたんです`;
+      say(`おや、はじめて見る${ev.name}の花です${tail}`, { ...base, pri: 3, mood: 'wow', topic: 'novc', cool: 20 });
+    } else say(`${ev.name}の花が、はじめて咲きました。${FORM_WHY[ev.key] || ''}`, { ...base, pri: 3, mood: 'wow', topic: 'novf', cool: 20 });
+    addSketch(p, ev.kind === 'color' ? `はじめての${ev.name}` : `はじめての${ev.name}`);
+  } else if (ev.type === 'record') {
+    if (ev.kind === 'sz') say('これまでで一番大きな花が咲きました。よく目立ちますが、水と栄養をたくさん使います', { ...base, pri: 2, mood: 'wow', topic: 'rec', cool: 90 });
+    else say('これまでで一番背の高い株です。日なたは取れますが、嵐が来たら心配です', { ...base, pri: 2, topic: 'rec', cool: 90 });
+    addSketch(ev.plant, ev.kind === 'sz' ? '一番大きな花' : '一番背の高い株');
+  } else if (ev.type === 'extinct') {
+    say(`${ev.name}の系統が、とうとう途絶えました。${ev.years}年つづいた血筋でした`, { ...base, pri: 3, mood: 'sad', topic: 'ext' + ev.line });
+  } else if (ev.type === 'season') {
+    if (ev.s === 3 && (y <= 2 || Math.random() < 0.12)) say('冬です。一年草は種だけ残して枯れます。多年草は根で冬を越します', { ...base, pri: 1, topic: 'winter', cool: 200, diary: false });
+    else if (ev.s === 0 && (y <= 2 || Math.random() < 0.1)) say('春です。土の中の種が、芽を出しはじめました', { ...base, pri: 1, topic: 'spring', cool: 200, diary: false });
+  } else if (ev.type === 'yearend') yearReview(ev.rec, sim);
+}
+
+// 1 年をふり返って、いちばん語るべきことを 1 つだけ選ぶ
+function yearReview(r, sim) {
+  const H = sim.hist, prev = H[H.length - 2], p5 = H[H.length - 6], p10 = H[H.length - 11];
+  const c = [], y = r.y, ev = r.ev;
+  const add = (score, key, text, mood) => { if (!(Talk.coolY[key] > y - 7)) c.push({ score, key, text, mood }); };
+  const S = r.sel || {};
+  const dry = ev.includes('drought') || r.rain < -0.4, wet = r.rain > 0.4, storm = ev.includes('storm'), frost = ev.includes('frost');
+  const sel = (k, hi, lo) => { const v = S[k] || 0; if (v > 0.33 && hi) add(v * 2.2, k + '+', hi); else if (v < -0.33 && lo) add(-v * 2.2, k + '-', lo); };
+  sel('sz', wet ? '今年よく種を残したのは、大きな花でした。雨が多くて、水に困らなかったからです' : ev.includes('butterflies') ? '今年は大きな花がよく種を残しました。大発生したチョウが、大きな花ばかり選んだからです' : '今年は大きな花ほど、虫がよく来て種を残しました',
+    dry ? '今年よく種を残したのは、小さな花でした。日照りの年は、水を使わない花が勝ちます' : '今年は小さな花のほうが種を残しました。大きな花は、咲くだけで栄養を使いきったみたいです');
+  sel('ht', '背の高い株が、種を多く残しました。まわりより上に出て、日なたを取れたからです', storm ? '嵐で背の高い株が倒れて、低い株ばかりが種を残しました' : '今年は背の低い株が有利でした。茎を伸ばさないぶん、種に栄養を回せます');
+  sel('dr', dry ? '乾きに強い株が、日照りを生きのびて種を残しました' : '乾きに強い株が種を増やしました。丘の上まで広がれるからです', wet ? '雨の年は、乾きへの備えがむだになります。備えのない株のほうが、よく育ちました' : null);
+  sel('cd', frost ? '遅霜のあと、寒さに強い株だけが花を咲かせられました' : r.temp < -0.3 ? '寒い年でした。寒さに強い株が、種を多く残しました' : null, r.temp > 0.3 ? '暖かい年は、寒さへの備えがいりません。備えを捨てた株が伸びました' : null);
+  sel('bt', frost ? '遅霜で早咲きがやられて、遅く咲いた株が種を残しました' : '遅咲きの株が有利でした。夏から秋の虫を、ゆっくり待てたからです', '早咲きの株が、種を多く残しました。ほかの花が咲く前なら、虫をひとりじめできます');
+  sel('pe', '多年草が種を増やしました。芽生えからやり直さなくていいぶん、春に早く動けます', r.sev > 0.6 ? '冬が厳しいと、根で越す多年草は枯れてしまいます。種で越す一年草が増えそうです' : '一年草がよく種を残しました。一年で使いきるぶん、種の数が多いんです');
+  sel('dbl', '八重に近い花ほど、種を残しました。花びらが多いと、虫の目を引くからです', ev.includes('longrain') ? '長雨で、花びらの多い花が傷みました。すっきりした一重の花が種を残しました' : null);
+  sel('fn', '花数の多い株が有利でした。たくさん咲けば、それだけ虫が立ち寄ります', dry ? '花数の少ない株が種を残しました。日照りの年に、たくさんは咲かせられません' : null);
+  sel('ne', '蜜の多い花に、虫が通いつめました。蜜を作るのも、ただではないんですけどね', null);
+  sel('lw', '葉の広い株がよく育ちました。木かげでも光を集められます', dry ? '葉の細い株が種を残しました。葉が小さいほど、水が逃げません' : null);
+  // 色の移り変わりと、その理由
+  if (p5 && p5.bins) {
+    let ub = -1, uv = 0.11; for (let b = 0; b < 13; b++) { const d = r.bins[b] - p5.bins[b]; if (d > uv) { uv = d; ub = b; } }
+    if (ub >= 0) { const sp = r.binVis && r.binVis[ub]; add(1 + uv * 5, 'col' + ub, `この5年で、${BIN_SAY[ub]}花が増えました。${sp ? `${SP_NAME[sp]}がいちばん通っている色です。${SP_NAME[sp]}は${SP_LIKES[sp]}が好きなんです` : '虫の好みに合ったのでしょう'}`, 'happy'); }
+    for (const k of SP_KEYS) { const a = r.pops[k], b = p5.pops[k]; if (a > b * 1.7 && a > 4) add(1.4, 'pop+' + k, `${SP_NAME[k]}が増えてきました。好みの花が増えて、蜜に困らなくなったからです`); else if (a < b * 0.55 && b > 3.5) add(1.4, 'pop-' + k, `${SP_NAME[k]}が減ってきました。${SP_LIKES[k]}が、少なくなったからです`, 'sad'); }
+  }
+  if (r.topShare > 0.44 && r.topName) add(1.2 + r.topShare, 'dom' + r.topName, `花畑の${Math.round(r.topShare * 10)}割が${r.topName}です。増えすぎると、同じ虫を取り合って、かえって苦しくなります`);
+  const zt = r.zoneTop || {}, zk = ['hill', 'shade', 'brook'].filter((k) => zt[k] && zt[k][1] > 0.42);
+  for (let i = 0; i < zk.length; i++) for (let j = i + 1; j < zk.length; j++) if (zt[zk[i]][0] !== zt[zk[j]][0]) {
+    const why = zk.includes('hill') ? 'チョウは日なたの丘が好きで、アブは水辺が好き。通う虫が違うからです' : '場所ごとに、通ってくる虫が違うからです';
+    add(1.7, 'zone', `${ZONE_NAME[zk[i]]}は${BIN_SAY[zt[zk[i]][0]]}花、${ZONE_NAME[zk[j]]}は${BIN_SAY[zt[zk[j]][0]]}花。場所で色が分かれてきました。${why}`, 'happy');
+  }
+  if (p10 && Math.abs(r.climate - p10.climate) > 0.33) add(1.3, 'clim', r.climate > p10.climate ? 'この10年、だんだん暖かくなっています。寒さへの備えが、少しずついらなくなってきました' : 'この10年、だんだん涼しくなっています。寒さに強い株が、じわじわ増えています');
+  if (prev && r.nb < prev.nb * 0.5 && prev.nb > 40) add(2.4, 'crash', '今年は、咲けた花が少ない年でした。でも土の中では、種が来年を待っています', 'sad');
+  if (prev && r.nb > prev.nb * 1.8 && r.nb > 80) add(2, 'boom', '去年の倍ちかく咲きました。空いた土に、いっせいに芽が出たんです', 'happy');
+  const prefD = (k) => { let d = r.prefs[k] - SPECIES[k].pref; if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+  for (const k of ['bee', 'butterfly']) if (Math.abs(prefD(k)) > 13) add(1.1, 'pref' + k, `${SP_NAME[k]}の好みが、少し変わってきました。花に合わせて、虫のほうも変わるんですね`);
+  if (!c.length) return;
+  c.sort((a, b) => b.score - a.score);
+  const m = c[0]; Talk.coolY[m.key] = y;
+  say(m.text, { year: y, pri: 2, mood: m.mood, topic: 'rev' + y, ttl: 20 });
+}
+
+function erikaStatus(sim) {
+  const st = sim.nowStats(), t = sim.t;
+  if (t >= sim.w.onset / TICKS || t < 0.06) return `いまは冬です。土の中で、種が${sim.bank.length}粒ねむっています`;
+  if (!st.n) return 'まだ咲いている花はありません。もうすぐです';
+  const top = Object.entries(sim.sp).sort((a, b) => b[1].visits - a[1].visits)[0];
+  return `いま咲いているのは${st.n}株、${st.kinds}色です。一番多いのは${st.top}。今年よく働いているのは${SP_NAME[top[0]]}です`;
+}
+const IDLE = [
+  (s) => 'わたしの星では、花の色は変わりません。ここは毎年ちがうので、目が離せません',
+  (s) => '誰も手を入れていないのに、花は勝手に変わっていきます',
+  (s) => 'ミツバチは青や紫が好きです。赤い色は、あまり見えていないそうです',
+  (s) => '種は風に乗って、親の近くに落ちます。だから場所ごとに、少しずつ違う花になるんです',
+  (s) => '気になる花があったら、さわってみてください。何代目か、わかりますよ',
+  (s) => { const n = Object.values(s.lines).filter((l) => l.alive).length; return `いま残っている系統は${n}つです`; },
+];
+function idleTalk(sim) {
+  const t = now(); if (t - Talk.lastIdle < 75 || Talk.cur || Talk.q.length) return;
+  Talk.lastIdle = t; const i = (Talk.said++) % IDLE.length;
+  say(IDLE[i](sim), { pri: 0, diary: false, ttl: 8 });
+}
+
+// ===== 60-ui.js =====
+// ───────────────────────── 画面まわり ─────────────────────────
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const UI = { sheet: null, zukan: [], speed: 1, sound: false };
+const SPEEDS = [[0.5, 'ゆっくり'], [1, 'ふつう'], [4, 'はやい'], [16, '早送り']];
+
+// 花 1 輪の小さな絵
+function flowerThumb(g, size, seed = 7) {
+  const dp = Math.min(window.devicePixelRatio || 1, 2), c = mkCanvas(size * dp, size * dp), x = c.getContext('2d');
+  c.style.width = c.style.height = size + 'px';
+  const form = G.form(g), R = size * dp * (form === 'open' ? 0.36 : 0.26), fl = paintFlower(g, R, seed);
+  const cx = size * dp / 2, cy = size * dp / 2;
+  x.drawImage(fl.c, cx - fl.ax, form === 'open' ? cy - fl.ay : form === 'tulip' ? cy + R * 1.05 - fl.ay : cy - R * 0.95 - fl.ay);
+  freeCanvas(fl.c);
+  return c;
+}
+// 株まるごとの肖像
+function plantPortrait(g, w, h, id = 11) {
+  const dp = Math.min(window.devicePixelRatio || 1, 2), c = mkCanvas(w * dp, h * dp), x = c.getContext('2d');
+  c.style.width = w + 'px'; c.style.height = h + 'px';
+  const p = { g, id }, geo = plantGeom(p, 1);
+  const k = Math.min((h * 0.86) / (geo.y1 - geo.y0 + geo.R * 1.4), (w * 0.9) / (geo.x1 - geo.x0 + geo.R * 2.4)) * dp;
+  const body = paintBody(p, geo, k, 'green'), bx = w * dp / 2 - ((geo.x0 + geo.x1) / 2) * k, by = h * dp * 0.95;
+  blob(x, w * dp / 2, by, w * dp * 0.36, h * dp * 0.035, [120, 150, 110], 0.3, 3, 0.2);
+  x.drawImage(body.c, bx - body.ox, by - body.oy);
+  const fl = paintFlower(g, geo.R * k, id);
+  for (const hd of geo.heads) { x.save(); x.translate(bx + hd.x * k, by + hd.y * k); if (fl.form === 'open') { x.scale(hd.r, hd.r * 0.92); x.rotate(hd.rot); } else { x.rotate(hd.ang * 0.5); x.scale(hd.r, hd.r); } x.drawImage(fl.c, -fl.ax, -fl.ay); x.restore(); }
+  freeCanvas(body.c); freeCanvas(fl.c);
+  return c;
+}
+
+const bloomSeason = (g) => { const t = G.bloomStart(g); return t < 0.2 ? '早春' : t < 0.33 ? '春' : t < 0.45 ? '初夏' : t < 0.58 ? '夏' : '秋'; };
+const LEAF_NAME = { linear: '細長い葉', lance: '笹のような葉', ovate: '卵形の葉', round: '丸い葉', palm: '手のひら形の葉' };
+const CUT_NAME = { entire: '', wave: '・波うつ', saw: '・ぎざぎざ', lobe: '・切れ込み' };
+
+function openSheet(kind, build) {
+  const s = $('sheet'), b = $('sheetBody');
+  b.innerHTML = ''; b.scrollTop = 0; build(b);
+  s.className = 'open ' + kind; UI.sheet = kind;
+}
+function closeSheet() { $('sheet').className = ''; UI.sheet = null; }
+
+function showPlant(p, sim) {
+  openSheet('plant', (b) => {
+    const g = p.g;
+    const head = el('div', 'phead');
+    head.appendChild(plantPortrait(g, 132, 176, p.id));
+    const info = el('div', 'pinfo');
+    info.appendChild(el('h2', null, varietyName(g)));
+    const st = p.dead ? '枯れてしまいました' : p.lodged ? '嵐で倒れています' : p.state === 1 ? '咲いています' : p.state >= 2 && p.bloomed ? (p.seeds ? `種を${p.seeds}粒とばしました` : '実をつけています') : p.frost ? '霜で花がやられました' : sim.tick < p.sprout ? '土の中です' : '育っています';
+    info.appendChild(el('p', 'meta', `${sim.lineName(p.line)}の系統 <b>${p.gen}</b>代目<br>${G.perennial(g) ? `多年草・${p.age + 1}年目` : '一年草'}・${ZONE_NAME[SITE.zone(p.x, p.z)]}<br>${st}${p.visits ? `<br>今年、虫が<b>${p.visits}</b>回きました` : ''}`));
+    const btn = el('button', 'ink', '押し花にして図鑑へ'); btn.onclick = () => { addSketch(p, '押し花', true); btn.textContent = '図鑑に入れました'; btn.disabled = true; };
+    info.appendChild(btn); head.appendChild(info); b.appendChild(head);
+    // 遺伝子
+    const genes = el('div', 'genes');
+    const bar = (label, v, txt, hue) => { const r = el('div', 'gene'); r.innerHTML = `<span>${label}</span><i><em style="width:${Math.round(clamp(v) * 100)}%;background:${hue || 'var(--leaf)'}"></em></i><b>${txt || ''}</b>`; genes.appendChild(r); };
+    bar('花の色', 1, colorName(g), hsl(g.h, clamp(g.s, 0.1, 0.8), clamp(g.l, 0.5, 0.9)));
+    bar('花びら', (G.petals(g) * G.rings(g)) / 40, `${G.petals(g)}枚${G.rings(g) > 1 ? '×' + G.rings(g) + '重' : ''}`);
+    bar('大きさ', g.sz, g.sz > 0.7 ? '大輪' : g.sz < 0.25 ? '小花' : '');
+    bar('花の数', g.fn, `${G.count(g)}輪`);
+    bar('背丈', g.ht, g.ht > 0.7 ? 'のっぽ' : g.ht < 0.3 ? '低い' : '');
+    bar('咲く季節', g.bt, bloomSeason(g));
+    bar('乾きに強い', g.dr); bar('寒さに強い', g.cd); bar('蜜', g.ne); bar('種の大きさ', g.sd);
+    const lf = el('div', 'gene'); lf.innerHTML = `<span>葉</span><b class="wide">${LEAF_NAME[G.leaf(g)]}${CUT_NAME[G.cut(g)]}</b>`; genes.appendChild(lf);
+    b.appendChild(genes);
+    // 親と祖先
+    const fam = el('div', 'fam');
+    const card = (lab, gg, sub) => { const c = el('div', 'kin'); if (gg) c.appendChild(flowerThumb(gg, 52)); else c.appendChild(el('div', 'nothumb', '？')); c.appendChild(el('span', null, lab)); if (sub) c.appendChild(el('small', null, sub)); return c; };
+    if (p.momG || p.dadG) { b.appendChild(el('h3', null, '親')); fam.appendChild(card('母（種をつけた株）', p.momG, p.momG && colorName(p.momG))); fam.appendChild(card(p.dadG === p.momG ? '父（自分の花粉）' : '父（虫が運んだ花粉）', p.dadG, p.dadG && colorName(p.dadG))); b.appendChild(fam); }
+    else b.appendChild(el('p', 'note', 'この株は、最初から花畑にいた野の花です。'));
+    if (p.anc && p.anc.length > 1) {
+      b.appendChild(el('h3', null, '母方をさかのぼると'));
+      const row = el('div', 'fam anc');
+      p.anc.slice(1).forEach((a, i, arr) => { if (i === arr.length - 1 && arr.length > 3) row.appendChild(el('div', 'dots', '…')); row.appendChild(card(`${a.y}年`, a.g, `${a.gen}代目`)); });
+      b.appendChild(row);
+    }
+  });
+}
+
+// ── 図鑑（エリカのスケッチ帳） ──
+function addSketch(p, note, manual) {
+  if (!p) return;
+  const nm = varietyName(p.g);
+  if (!manual && UI.zukan.some((z) => z.n === nm)) return;
+  UI.zukan.unshift({ g: [Math.round(p.g.h)].concat(GENES.map((k) => +p.g[k].toFixed(3))), n: nm, y: p.born, note, gen: p.gen, id: p.id, star: manual ? 1 : 0 });
+  if (UI.zukan.length > 120) { for (let i = UI.zukan.length - 1; i >= 0; i--) if (!UI.zukan[i].star) { UI.zukan.splice(i, 1); break; } UI.zukan.length = Math.min(UI.zukan.length, 120); }
+  $('bZukan').classList.add('ping'); setTimeout(() => $('bZukan').classList.remove('ping'), 1400);
+}
+const unpackG = (a) => { const g = { h: a[0] }; GENES.forEach((k, i) => (g[k] = a[i + 1] == null ? 0.5 : a[i + 1])); return g; };
+function showZukan() {
+  openSheet('zukan', (b) => {
+    b.appendChild(el('h2', null, 'エリカのスケッチ帳'));
+    b.appendChild(el('p', 'note', UI.zukan.length ? 'はじめて見た花は、エリカが描きとめます。名前はさわると書きかえられます。' : 'まだ何も描いていません。はじめての色や形が咲くと、ここに増えていきます。'));
+    const grid = el('div', 'zgrid');
+    UI.zukan.forEach((z) => {
+      const c = el('div', 'zcard' + (z.star ? ' star' : '')); const g = unpackG(z.g);
+      c.appendChild(plantPortrait(g, 96, 124, z.id || 5));
+      const nm = el('div', 'zname'); nm.textContent = z.n; nm.contentEditable = 'true'; nm.spellcheck = false;
+      nm.onblur = () => { z.n = nm.textContent.trim().slice(0, 20) || varietyName(g); nm.textContent = z.n; saveAll(); };
+      nm.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); nm.blur(); } };
+      c.appendChild(nm); c.appendChild(el('small', null, `${z.y}年・${z.note}`));
+      grid.appendChild(c);
+    });
+    b.appendChild(grid);
+  });
+}
+
+// ── 年表 ──
+const EV_MARK = { drought: ['日照り', '#e0a44a'], rainy: ['雨の年', '#6fa8d8'], longrain: null, storm: ['嵐', '#7a7f95'], frost: ['遅霜', '#9fc7e8'], butterflies: ['チョウ', '#ec8fa8'], fewbugs: ['虫が少ない', '#b9a98c'], aphids: ['アブラムシ', '#9bbf5a'], bird: ['旅の種', '#b48ad0'] };
+function showHistory(sim) {
+  openSheet('hist', (b) => {
+    b.appendChild(el('h2', null, '花畑の年表'));
+    const H = sim.hist;
+    if (H.length < 2) { b.appendChild(el('p', 'note', 'まだ1年目です。年がめぐると、ここに色の移り変わりが残ります。')); }
+    else {
+      const w = Math.min(b.clientWidth || 340, 520), dp = Math.min(window.devicePixelRatio || 1, 2);
+      const mk = (h) => { const c = mkCanvas(w * dp, h * dp); c.style.width = w + 'px'; c.style.height = h + 'px'; const x = c.getContext('2d'); x.scale(dp, dp); return [c, x]; };
+      const n = H.length, X = (i) => 6 + ((w - 12) * i) / (n - 1);
+      // 色の帯
+      const [c1, x1] = mk(150);
+      const order = [12, 2, 1, 0, 11, 10, 9, 8, 7, 6, 5, 4, 3];
+      let acc = new Array(n).fill(0);
+      for (const bn of order) {
+        const top = acc.map((a, i) => a + H[i].bins[bn]);
+        x1.beginPath(); for (let i = 0; i < n; i++) x1.lineTo(X(i), 8 + 130 * acc[i]); for (let i = n - 1; i >= 0; i--) x1.lineTo(X(i), 8 + 130 * top[i]); x1.closePath();
+        x1.fillStyle = binColor(bn, 0.6, 0.7); x1.fill(); x1.strokeStyle = 'rgba(255,255,255,0.5)'; x1.lineWidth = 0.6; x1.stroke();
+        acc = top;
+      }
+      grainOver(x1, w * dp, 150 * dp, 0.5);
+      b.appendChild(el('h3', null, '花の色のうつりかわり')); b.appendChild(c1);
+      const ax = el('div', 'axis', `<span>${H[0].y}年</span><span>${H[n - 1].y}年</span>`); b.appendChild(ax);
+      // 出来事
+      const [c2, x2] = mk(54), kinds = Object.keys(EV_MARK).filter((k) => EV_MARK[k]);
+      kinds.forEach((k, r) => { x2.fillStyle = EV_MARK[k][1]; H.forEach((rec, i) => { if (rec.ev.includes(k)) { x2.globalAlpha = 0.85; x2.beginPath(); x2.arc(X(i), 5 + r * 6.4, 2.4, 0, TAU); x2.fill(); } }); });
+      b.appendChild(c2);
+      b.appendChild(el('div', 'legend', kinds.map((k) => `<span><i style="background:${EV_MARK[k][1]}"></i>${EV_MARK[k][0]}</span>`).join('')));
+      // 折れ線
+      const line = (title, series) => {
+        const [c, x] = mk(84);
+        x.strokeStyle = 'rgba(120,100,90,0.25)'; x.lineWidth = 1; x.beginPath(); x.moveTo(6, 78); x.lineTo(w - 6, 78); x.stroke();
+        for (const s of series) {
+          const vals = H.map(s.f), mx = s.max || Math.max(...vals, 0.001), mn = s.min || 0;
+          x.strokeStyle = s.col; x.lineWidth = 2; x.lineJoin = 'round'; x.globalAlpha = 0.85; x.beginPath();
+          vals.forEach((v, i) => { const yy = 76 - 68 * clamp((v - mn) / (mx - mn)); if (i) x.lineTo(X(i), yy); else x.moveTo(X(i), yy); }); x.stroke();
+        }
+        b.appendChild(el('h3', null, title)); b.appendChild(c);
+        b.appendChild(el('div', 'legend', series.map((s) => `<span><i style="background:${s.col}"></i>${s.name}</span>`).join('')));
+      };
+      line('花のすがた', [{ name: '花の大きさ', col: '#e58aa0', f: (r) => r.m.sz, max: 1 }, { name: '背丈', col: '#6fae6a', f: (r) => r.m.ht, max: 1 }, { name: '花の数', col: '#e0b040', f: (r) => r.m.fn, max: 1 }, { name: '八重', col: '#a98ad0', f: (r) => r.dbl, max: 1 }]);
+      line('暮らしかた', [{ name: '多年草の割合', col: '#5fa090', f: (r) => r.per, max: 1 }, { name: '乾きに強い', col: '#d6a24c', f: (r) => r.m.dr, max: 1 }, { name: '寒さに強い', col: '#7fa8d8', f: (r) => r.m.cd, max: 1 }, { name: '咲く季節（上ほど遅い）', col: '#c98a70', f: (r) => r.m.bt, max: 1 }]);
+      line('虫の数', SP_KEYS.map((k, i) => ({ name: SP_NAME[k], col: ['#e0b040', '#e08a3c', '#ec8fa8', '#b0a0c8'][i], f: (r) => r.pops[k], max: 9.5 })));
+      line('天気', [{ name: '雨', col: '#6fa8d8', f: (r) => r.rain, min: -1, max: 1 }, { name: '気温', col: '#e08a6a', f: (r) => r.temp, min: -1.2, max: 1.2 }, { name: '気候の流れ', col: '#b9a98c', f: (r) => r.climate, min: -1, max: 1 }]);
+      b.appendChild(el('h3', null, 'いまの虫の好み'));
+      b.appendChild(el('div', 'prefs', SP_KEYS.map((k) => `<span><i style="background:${k === 'moth' ? '#f6f0e4' : hsl(sim.sp[k].pref, 0.65, 0.68)}"></i>${SP_NAME[k]}</span>`).join('')));
+    }
+    b.appendChild(el('h3', null, '系統'));
+    b.appendChild(el('p', 'note', Object.values(sim.lines).filter((l) => l.name !== '旅の種' || l.alive).map((l) => (l.alive ? `<b>${l.name}</b>（${l.since}年〜）` : `<s>${l.name}</s>（〜${l.until}年）`)).join('　')));
+    b.appendChild(el('h3', null, '観察日記'));
+    const dl = el('div', 'diary');
+    Talk.diary.slice(-50).reverse().forEach(([y, t]) => dl.appendChild(el('p', null, `<b>${y}年</b>${t}`)));
+    if (!Talk.diary.length) dl.appendChild(el('p', 'note', 'まだ何も書いていません。'));
+    b.appendChild(dl);
+    const rs = el('button', 'ink quiet', '新しい花畑ではじめる');
+    rs.onclick = () => { if (rs.dataset.sure) { resetAll(); } else { rs.dataset.sure = 1; rs.textContent = 'いまの花畑は消えます。もう一度おすと、はじめます'; } };
+    b.appendChild(rs);
+  });
+}
+
+function setHud(sim) {
+  const t = sim.t, s = SEASON_OF(t);
+  $('yr').textContent = sim.year; $('ss').textContent = SEASON_NAME[s]; $('ss').dataset.s = s;
+  const tags = [];
+  for (const k of sim.w.ev) { const m = EV_MARK[k] || (k === 'longrain' ? ['長雨', '#5f95c8'] : null); if (m) tags.push(`<span style="--c:${m[1]}">${k === 'drought' ? '日照りの年' : k === 'butterflies' ? 'チョウ大発生' : k === 'bird' ? '旅の種' : k === 'fewbugs' ? '虫の少ない年' : m[0]}</span>`); }
+  if (sim.w.sev > 0.76) tags.push('<span style="--c:#9fb6d8">寒い冬</span>'); else if (sim.w.sev < 0.22) tags.push('<span style="--c:#e6b48a">暖かい冬</span>');
+  const h = tags.join(''); if ($('tags').dataset.h !== h) { $('tags').innerHTML = h; $('tags').dataset.h = h; }
+}
+
+// ===== 70-audio.js =====
+// ───────────────────────── 音（さりげなく） ─────────────────────────
+const AU = { ctx: null, on: false, wind: null, rain: null, lastChime: 0, nextBird: 3 };
+function audioStart() {
+  if (!AU.ctx) {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    const a = (AU.ctx = new C());
+    const buf = a.createBuffer(1, a.sampleRate * 2, a.sampleRate), d = buf.getChannelData(0); let b = 0;
+    for (let i = 0; i < d.length; i++) { b = b * 0.98 + (Math.random() * 2 - 1) * 0.02; d[i] = b * 6 + (Math.random() * 2 - 1) * 0.15; }
+    const mk = (type, f, q) => { const s = a.createBufferSource(); s.buffer = buf; s.loop = true; const fl = a.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = a.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(AU.master); s.start(); return { g, fl }; };
+    AU.master = a.createGain(); AU.master.gain.value = 0; AU.master.connect(a.destination);
+    AU.wind = mk('bandpass', 420, 0.6); AU.rain = mk('highpass', 2400, 0.3);
+  }
+  AU.ctx.resume(); AU.on = true; AU.master.gain.linearRampToValueAtTime(0.9, AU.ctx.currentTime + 1.2);
+}
+function audioStop() { if (AU.ctx) { AU.on = false; AU.master.gain.linearRampToValueAtTime(0, AU.ctx.currentTime + 0.5); } }
+function tone(f, dur, vol, type = 'sine', slide = 0, delay = 0) {
+  const a = AU.ctx, t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + dur + 0.05);
+}
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5];
+function chime(hue, big) { // 花が開く音。色で高さが変わる
+  if (!AU.on) return; const t = performance.now(); if (t - AU.lastChime < 140) return; AU.lastChime = t;
+  const f = PENTA[Math.floor((hueWrap(hue) / 360) * PENTA.length)];
+  tone(f, 1.6, big ? 0.07 : 0.035, 'sine'); tone(f * 2, 0.9, 0.012, 'triangle'); if (big) tone(f * 1.5, 1.8, 0.03, 'sine', 0, 0.12);
+}
+function audioTick(dt, e) {
+  if (!AU.on) return; const a = AU.ctx, t = a.currentTime;
+  AU.wind.g.gain.setTargetAtTime(0.02 + clamp(V.wind / 3) * 0.2, t, 0.4); AU.wind.fl.frequency.setTargetAtTime(320 + V.wind * 260, t, 0.5);
+  AU.rain.g.gain.setTargetAtTime(e.rain * 0.09, t, 0.5);
+  AU.nextBird -= dt;
+  if (AU.nextBird < 0) {
+    AU.nextBird = 2.5 + Math.random() * 7;
+    if (e.night > 0.5 && e.t > 0.4 && e.t < 0.8) { for (let i = 0; i < 5; i++) tone(4200, 0.07, 0.012, 'sine', 1.02, i * 0.09); } // 虫の声
+    else if (e.night < 0.3 && e.snow < 0.5 && e.rain < 0.3) { const f = 2200 + Math.random() * 1400, n = 2 + ((Math.random() * 3) | 0); for (let i = 0; i < n; i++) tone(f * (1 + i * 0.06), 0.11, 0.016, 'sine', 1.25, i * 0.14); } // 鳥
+  }
+}
+
+// ===== 90-main.js =====
+// ───────────────────────── 進行 ─────────────────────────
+const SAVE_KEY = 'hanabatake.v1', YEAR_SEC = 80;
+const HASH = Object.fromEntries(location.hash.slice(1).split('&').filter(Boolean).map((s) => s.split('=')));
+let sim = null, snap = null, acc = 0, lastT = 0, speedIdx = 1, hiddenAt = 0, faceOK = false, titleOn = true;
+
+function saveAll() {
+  if (HASH.nosave) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ sim: snap, zukan: UI.zukan, diary: Talk.diary, coolY: Talk.coolY, opt: { speed: speedIdx, talk: Talk.on }, ts: Date.now() })); } catch (e) { /* 容量いっぱいなら諦める */ }
+}
+function resetAll() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.hash = ''; location.reload(); }
+
+function handleEvents(live) {
+  const out = sim.out; if (!out.length) return;
+  for (let i = 0; i < out.length; i++) {
+    const ev = out[i];
+    if (ev.type === 'newyear') { snap = sim.save(); if (live) saveAll(); }
+    if (!live) { if (ev.type === 'novel' && ev.plant) addSketch(ev.plant, `はじめての${ev.name}`); continue; }
+    if (ev.type === 'bloom') {
+      const v = V.views.get(ev.plant.id);
+      if (v && V.fast < 0.5) { const hp = headPos(v, false); if (hp) spawn('spark', hp[0], hp[1], { n: 3, col: hsl(ev.plant.g.h, 0.5, 0.9, 0.95), s: v.pos.ds }); }
+      if (V.fast < 0.5 || Math.random() < 0.12) chime(ev.plant.g.h, ev.plant.g.sz > 0.6);
+    } else if (ev.type === 'seed') {
+      const v = V.views.get(ev.plant.id);
+      if (v && v.hp.length) { const n = Math.min(V.fast > 0.5 ? 1 : 4, ev.n); for (let k = 0; k < n; k++) { const hp = headPos(v, false); if (hp) spawn('seed', hp[0], hp[1], { s: v.pos.ds }); } const hp = headPos(v, false); if (hp && V.fast < 0.5) spawn('petal', hp[0], hp[1], { n: 3, s: v.pos.ds, col: hsl(ev.plant.g.h, clamp(ev.plant.g.s, 0.1, 0.8), clamp(ev.plant.g.l, 0.5, 0.92), 0.85) }); }
+    } else if (ev.type === 'event') {
+      if (ev.kind === 'storm') { V.storm = 5; V.flash = 1; setTimeout(() => (V.flash = 0.8), 900); }
+      else if (ev.kind === 'frost') V.frost = 1;
+    }
+    onSimEvent(ev, sim);
+  }
+  out.length = 0;
+}
+
+// 留守のあいだ（または早回し）をまとめて進める
+function fastForward(years, greet) {
+  const before = sim.hist[sim.hist.length - 1], y0 = sim.year, seen0 = Object.keys(sim.seen.colors).length;
+  sim.quiet = true; const target = sim.year + years; let ext = [];
+  while (sim.year < target) { sim.step(); for (const e of sim.out) if (e.type === 'extinct' && e.name !== '旅の種') ext.push(e.name); handleEvents(false); }
+  sim.quiet = false;
+  for (const v of V.views.values()) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); } V.views.clear(); V.order = []; V.queue.length = 0; V.bugs.clear(); V.parts.length = 0;
+  saveAll();
+  if (!greet) return;
+  const after = sim.hist[sim.hist.length - 1]; let msg = `おかえりなさい。留守のあいだに${sim.year - y0}年たちました。`;
+  if (before && after && before.topName !== after.topName) msg += `前は${before.topName}が多かったのに、いまは${after.topName}の花畑です`;
+  else if (Object.keys(sim.seen.colors).length > seen0) msg += `はじめての色が${Object.keys(sim.seen.colors).length - seen0}つ咲きました。スケッチ帳に描いてあります`;
+  else if (ext.length) msg += `${ext[0]}の系統が、途絶えてしまいました`;
+  else msg += '花は少しずつ、形を変えています';
+  say(msg, { pri: 5, mood: 'happy', year: sim.year, ttl: 30 });
+}
+
+function setSpeed(i) { speedIdx = i; $('bSpeed').dataset.i = i; $('bSpeed').querySelector('small').textContent = SPEEDS[i][1]; }
+function setFace(m) { if (!faceOK) return; for (const im of $('erika').children) im.classList.toggle('on', im.dataset.m === m); }
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
+  const mult = SPEEDS[speedIdx][0];
+  V.fast += ((mult >= 4 ? 1 : 0) - V.fast) * Math.min(1, dt * 1.5);
+  if (!titleOn && !UI.paused) {
+    acc += (dt * TICKS * mult) / YEAR_SEC;
+    let n = 0; while (acc >= 1 && n < 10) { sim.step(); acc -= 1; n++; handleEvents(true); }
+    if (acc > 3) acc = 0;
+  }
+  syncViews(sim); syncBugs(sim);
+  const e = drawScene(sim, Math.min(1, acc), dt);
+  const ctx = V.ctx;
+  if (!faceOK) drawErika(ctx, V.W * 0.17, V.H - 4, V.unit * 0.98, { time: V.time, wind: V.wind, rain: e.rain, cold: e.snow, talking: !!Talk.cur });
+  talkTick(dt); idleTalk(sim); setFace(ERIKA.mood === 'calm' && Talk.cur ? 'calm' : ERIKA.mood);
+  setHud(sim); audioTick(dt, e);
+}
+
+function boot() {
+  initGrain();
+  V.cv = $('cv'); V.ctx = V.cv.getContext('2d'); Talk.el = $('bubble');
+  $('paper').style.backgroundImage = `url(${paperTexture()})`;
+  resizeView(); addEventListener('resize', () => { clearTimeout(boot.rt); boot.rt = setTimeout(resizeView, 120); });
+  // 続きから／はじめから
+  let saved = null; try { saved = HASH.fresh || HASH.nosave ? null : JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
+  if (saved && saved.sim && saved.sim.v === 1) {
+    try { sim = Sim.load(saved.sim); sim.resume(); snap = saved.sim; UI.zukan = saved.zukan || []; Talk.diary = saved.diary || []; Talk.coolY = saved.coolY || {}; if (saved.opt) { speedIdx = saved.opt.speed ?? 1; Talk.on = saved.opt.talk !== false; } sim.out.length = 0; }
+    catch (e) { sim = null; }
+  }
+  const isNew = !sim;
+  if (!sim) { sim = Sim.fresh(+HASH.seed || (Date.now() % 1e9)); snap = sim.save(); sim.out.length = 0; }
+  if (HASH.y) fastForward(+HASH.y - sim.year, false);
+  else if (!isNew && saved.ts) { const yrs = Math.min(400, Math.floor((Date.now() - saved.ts) / 1000 / YEAR_SEC)); if (yrs >= 1) fastForward(yrs, true); }
+  if (HASH.tk) { sim.quiet = true; while (sim.tick < +HASH.tk) sim.step(); sim.quiet = false; sim.out.length = 0; }
+  if (HASH.speed) speedIdx = +HASH.speed;
+  setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on);
+  // エリカの顔（絵があれば絵、なければ手描き）
+  const moods = ['calm', 'wow', 'happy', 'sad']; let loaded = 0;
+  moods.forEach((m) => { const im = new Image(); im.dataset.m = m; im.alt = ''; im.onload = () => { if (++loaded === 4) { faceOK = true; $('erika').classList.add('ready'); setFace('calm'); } }; im.src = `erika-${m}.webp`; $('erika').appendChild(im); });
+  // 操作
+  $('bSpeed').onclick = () => { setSpeed((speedIdx + 1) % SPEEDS.length); saveAll(); };
+  $('bZukan').onclick = () => (UI.sheet === 'zukan' ? closeSheet() : showZukan());
+  $('bHist').onclick = () => (UI.sheet === 'hist' ? closeSheet() : showHistory(sim));
+  $('bSound').onclick = () => { UI.sound = !UI.sound; $('bSound').classList.toggle('off', !UI.sound); UI.sound ? audioStart() : audioStop(); };
+  $('bTalk').onclick = () => { Talk.on = !Talk.on; $('bTalk').classList.toggle('off', !Talk.on); if (!Talk.on) { Talk.q.length = 0; Talk.endAt = 0; } else say('はい。また気づいたことを、お話ししますね', { pri: 5, diary: false }); saveAll(); };
+  $('close').onclick = closeSheet;
+  $('erika').onclick = $('bubble').onclick = () => { if (Talk.cur) { Talk.endAt = 0; return; } say(erikaStatus(sim), { pri: 6, force: true, diary: false, mood: 'happy' }); ERIKA.hop = 1; };
+  let down = null;
+  V.cv.addEventListener('pointerdown', (e) => (down = [e.clientX, e.clientY]));
+  V.cv.addEventListener('pointerup', (e) => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 10) return; down = null;
+    if (UI.sheet) return closeSheet();
+    const r = V.cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    if (!faceOK && px < V.W * 0.34 && py > V.H - 150 * V.unit) return $('erika').onclick();
+    const v = pickPlant(px, py); if (v) { showPlant(v.p, sim); spawn('spark', px, py, { n: 4 }); }
+  });
+  const endTitle = () => { if (!titleOn) return; titleOn = false; $('title').classList.add('gone'); setTimeout(() => $('title').remove(), 1800);
+    if (isNew) { say('こんにちは。エリカです。この花畑を観察しています', { pri: 9, mood: 'happy', diary: false, ttl: 40 }); say('誰も手を入れません。虫と風と天気にまかせて、花がどう変わるか見ています', { pri: 8, diary: false, ttl: 60 }); say('わたしの星では、花は毎年おなじです。ここは違うみたいなんです', { pri: 7, diary: false, ttl: 90 }); } };
+  $('title').onclick = endTitle;
+  if (HASH.notitle) { titleOn = false; $('title').remove(); } else setTimeout(endTitle, 4200);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); saveAll(); }
+    else if (hiddenAt) { const yrs = Math.min(400, Math.floor(((Date.now() - hiddenAt) / 1000 / YEAR_SEC) * SPEEDS[speedIdx][0])); hiddenAt = 0; lastT = performance.now(); if (yrs >= 2) fastForward(yrs, true); }
+  });
+  addEventListener('pagehide', saveAll);
+  if (HASH.panel === 'hist') showHistory(sim); else if (HASH.panel === 'zukan') showZukan(); else if (HASH.panel === 'plant') setTimeout(() => { const p = sim.plants.find((q) => q.state === 1) || sim.plants[0]; if (p) showPlant(p, sim); }, 600);
+  if (HASH.storm) setTimeout(() => { V.storm = 6; }, 300);
+  if (HASH.say) setTimeout(() => say(decodeURIComponent(HASH.say), { pri: 9, force: true, mood: HASH.mood || 'calm' }), 400);
+  if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
+  window.__hana = { get sim() { return sim; }, V, Talk, say };
+  requestAnimationFrame(frame);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+})();
+</script>
+</body>
+</html>
