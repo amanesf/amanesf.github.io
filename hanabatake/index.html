@@ -245,7 +245,7 @@ const G = {
   // キク科らしさ：細い花びらが多く、まんなかに小花の集まった大きな花芯がある（0..1）
   comp(g) { return G.form(g) === 'open' ? smooth(0.4, 0.8, g.pn) * smooth(0.25, 0.7, g.dc) * (1 - 0.6 * g.dbl) : 0; },
   // 色素のコスト：青はつくるのに手間がかかる。白と黄は安い
-  pig(g) { return G.white(g) ? 0.84 : 1 + 0.24 * gaussHue(g.h, 228, 36) * g.s + 0.08 * gaussHue(g.h, 280, 28) * g.s - 0.1 * gaussHue(g.h, 52, 30); },
+  pig(g) { return G.white(g) ? 0.8 : 1 + 0.24 * gaussHue(g.h, 228, 36) * g.s + 0.08 * gaussHue(g.h, 280, 28) * g.s - 0.1 * gaussHue(g.h, 52, 30); },
   flat(g) { const f = G.form(g); return f === 'open' || f === 'pansy' || f === 'funnel'; },
   // 咲き方：散らし咲き／手まり／レース（小花が平たく）／玉／穂／房（細かい花の円錐）
   arr(g) { return g.arr < 0.4 ? 'spray' : g.arr < 0.7 ? (g.ar2 > 0.82 ? 'globe' : g.ar2 > 0.62 ? 'lace' : 'umbel') : g.ar2 > 0.64 ? 'plume' : 'spike'; },
@@ -405,14 +405,16 @@ LINE_NAME.tabi = '旅の種';
 // ───────────────────────── シミュレーション ─────────────────────────
 // 描画に一切さわらない。node でもそのまま回る（test/sim-test.mjs）。
 const TICKS = 120; // 1年
-const MAX_PLANTS = 1200;
+const MAX_PLANTS = 1300;
 const SPACING = 0.092; // 地面の座標で。手前の画面幅に 9〜10 株ならぶ
-const VISITS = 2; // 虫 1 匹が 1 tick に回る花の数
+const VISITS = 2;
+// 手前は近くで見ているぶん、株の間隔を詰める（画面の下のほうが、すかすかにならないように）
+const spacingAt = (z) => SPACING * lerp(1, 0.44, smooth(0.6, 0.98, z)); // 虫 1 匹が 1 tick に回る花の数
 const SPECIES = {
   bee: { name: 'ミツバチ', pref: 250, sig: 44, pop: 5 },
   fly: { name: 'ハナアブ', pref: 62, sig: 26, pop: 4 },
-  butterfly: { name: 'チョウ', pref: 346, sig: 38, pop: 3.5 },
-  moth: { name: 'スズメガ', pref: 300, sig: 80, pop: 3.4 },
+  butterfly: { name: 'チョウ', pref: 346, sig: 38, pop: 3.1 },
+  moth: { name: 'スズメガ', pref: 300, sig: 80, pop: 4.4 },
 };
 const FOOD0 = 520;
 const SP_KEYS = Object.keys(SPECIES);
@@ -435,18 +437,18 @@ function spAttraction(sp, st, g) {
   const yel = gaussHue(g.h, 54, 26);
   let col, shp;
   if (sp === 'bee') { // 青紫と黄色。白い花にも来る。赤は見えにくい
-    col = white ? 0.6 : Math.max(1.1 * gaussHue(g.h, st.pref, st.sig), 0.9 * yel) * sat;
+    col = white ? 0.8 : Math.max(1.1 * gaussHue(g.h, st.pref, st.sig), 0.9 * yel) * sat;
     if (!white && hueDist(g.h, 2) < 24 && g.s > 0.4) col *= 0.3;
     shp = (1.15 - Math.abs(g.sz - 0.38)) * (arr === 'spike' ? 1.35 : arr === 'spray' ? 1 : 1.1) * (form === 'bell' ? 1.4 : form === 'pea' || form === 'pansy' ? 1.7 : form === 'open' ? 0.85 : 0.7) * (1 + 0.3 * Math.max(g.blot, g.spot)); // 左右対称の花と蜜標はハチ向き
   } else if (sp === 'butterfly') { // 桃・赤・橙。紫（薊）にもよく来る
     col = white ? 0.42 : Math.max(0.9 * gaussHue(g.h, st.pref, st.sig), 0.7 * gaussHue(g.h, 292, 26), 0.5 * gaussHue(g.h, 30, 22)) * sat;
     shp = (0.45 + 1.1 * g.sz) * (form === 'open' ? 1.3 : form === 'funnel' || form === 'pansy' ? 0.9 : 0.45) * (0.7 + 0.6 * g.ht) * (arr === 'globe' ? 1.6 : arr === 'umbel' ? 1.35 : arr === 'spray' ? 1.1 : 0.8); // とまりやすい平らな花
   } else if (sp === 'fly') { // 黄色と白。明るければなんでも
-    col = white ? 0.6 : Math.max(0.3 + 0.5 * smooth(0.6, 0.9, g.l), 1.35 * yel * sat); // アブは黄色がいちばん
+    col = white ? 0.76 : Math.max(0.3 + 0.5 * smooth(0.6, 0.9, g.l), 1.35 * yel * sat); // アブは黄色がいちばん
     shp = (1.35 - g.sz) * (form === 'open' ? 1 : form === 'funnel' ? 0.6 : 0.3) * (0.7 + 0.5 * g.fn) * (arr === 'lace' ? 1.6 : arr === 'plume' ? 1.4 : arr === 'umbel' ? 1 : 0.75); // 口の短いアブは、浅い小花の集まりへ
   } else { // 夕闇に浮かぶ白と淡い色
     col = white ? 1.25 : 0.2 + 0.8 * smooth(0.62, 0.92, g.l) + 0.15 * yel; // 白はスズメガの受け持ち
-    shp = (form === 'funnel' ? 2 : form === 'tulip' ? 1.6 : form === 'bell' ? 1.1 : 0.45) * (0.5 + 1.2 * g.ne) * (arr === 'spray' ? 1.2 : 1); // 筒の深い花
+    shp = (form === 'funnel' ? 2 : form === 'tulip' ? 1.6 : form === 'bell' ? 1.1 : 0.7) * (0.5 + 1.2 * g.ne) * (arr === 'spray' ? 1.2 : 1); // 筒の深い花
   }
   return col * shp * (0.6 + 0.8 * g.ne) * G.showy(g) * (1 + 0.3 * comp); // キク科型の花は、どの虫でもとまれる
 }
@@ -613,7 +615,7 @@ class Sim {
     const keep = [];
     for (const s of bank) {
       let ok = this.plants.length < MAX_PLANTS && !SITE.inBrook(s.x, s.z);
-      if (ok) this.near(toWX(s.x, s.z), toWZ(s.z), SPACING, () => (ok = false));
+      if (ok) this.near(toWX(s.x, s.z), toWZ(s.z), spacingAt(s.z), () => (ok = false));
       if (ok) {
         const p = this.mkPlant(s); this.plants.push(p); this.gridAdd(p);
       } else if (s.age < 2 && r.chance(0.45) && keep.length < 1500) { s.age++; keep.push(s); }
@@ -801,8 +803,9 @@ class Sim {
       const tickets = 1 + (r.chance(clamp((0.5 - g.sd) * 2)) ? 1 : 0);
       for (let k = 0; k < tickets; k++) {
         const cg = mutate(cross(g, dad.g, r), r);
-        const d = Math.abs(r.gauss()) * sig + 0.03, a = r.range(0, TAU), drift = sig * r.range(0.3, 1.6);
-        const [x, z] = fromW(p.wx + Math.cos(a) * d + w.wx * drift, p.wz + Math.sin(a) * d + w.wz * drift);
+        const far = r.chance(0.14), d = far ? r.range(0.3, 1.6) : Math.abs(r.gauss()) * sig * 1.5 + r.range(0, 0.12), a = r.range(0, TAU), drift = sig * r.range(0.3, 1.6); // たまに遠くまで運ばれる種がある
+        const [x0, z0] = fromW(p.wx + Math.cos(a) * d + w.wx * drift, p.wz + Math.sin(a) * d + w.wz * drift);
+        let [x, z] = [x0, z0]; if (z > 0.995) z = 1.99 - z; if (x < 0.01) x = 0.02 - x; if (x > 0.99) x = 1.98 - x; // 手前と左右の端では、こぼれた種がはね返る（端がやせないように）
         if (x < 0.01 || x > 0.99 || z < 0.02 || z > 0.995) continue;
         this.bank.push({ g: cg, x, z, gen: Math.max(p.gen, dad.gen) + 1, line: p.line, momG: g, dadG: dad.g, anc, age: 0, w: 0.4 + 1.6 * cg.sd });
       }
@@ -1316,14 +1319,12 @@ function plantGeom(p, gr = 1) {
       head(e[0], e[1], ang * 0.5, 0.82 + 0.2 * rnd(50 + i), i);
       if (rnd(70 + i) < 0.6 && bf > 0.2) leaves.push({ x: b[0], y: b[1], ang: side * (0.9 + 0.4 * rnd(80 + i)), len: Hf * 0.13 * bf, k: 0.8 });
     }
-  } else if (arr === 'umbel') {
-    const spread = R * (1.1 + 0.34 * Math.sqrt(F)) * rf;
+  } else if (arr === 'umbel') { // 手まり：茎の先から、花がこんもりとまるく集まる（まんなかも埋まる）
+    const rx = R * (0.9 + 0.5 * Math.sqrt(F)) * rf, ry = rx * 0.62;
     for (let i = 0; i < F; i++) {
-      const u = F === 1 ? 0.5 : i / (F - 1), layer = i % 2;
-      const ang = lerp(-1.25, 1.25, u) + (rnd(10 + i) - 0.5) * 0.2, len = spread * (layer ? 0.62 : 1) * (0.85 + 0.3 * rnd(20 + i));
-      const e = [P2[0] + Math.sin(ang) * len, P2[1] - Math.cos(ang) * len * 0.72 - (layer ? 0 : R * 0.3 * rf)];
-      if (rf > 0.04) stems.push({ a: P2, c: [P2[0] + Math.sin(ang) * len * 0.5, P2[1] - Math.cos(ang) * len * 0.6], b: e, w: sw * 0.4 });
-      head(e[0], e[1], ang * 0.6, 0.85 + 0.25 * rnd(50 + i), Math.abs(u - 0.5) * F);
+      const a = i * 2.39996 + rnd(6) * 6, rr = F === 1 ? 0 : Math.sqrt((i + 0.35) / F), e = [P2[0] + Math.cos(a) * rr * rx, P2[1] - R * 0.9 * rf - ry * 0.75 + Math.sin(a) * rr * ry - (1 - rr * rr) * ry * 0.25];
+      if (rf > 0.04) stems.push({ a: P2, c: [P2[0] + (e[0] - P2[0]) * 0.45, P2[1] - R * 0.5 * rf], b: e, w: sw * 0.36 });
+      head(e[0], e[1], Math.cos(a) * rr * 0.6, 0.85 + 0.25 * rnd(50 + i), rr * F);
     }
   } else if (arr === 'lace') { // 小花が平たい皿のように集まる（人参の花）
     const rx = R * (1.5 + 0.8 * Math.sqrt(F)) * rf, ry = rx * 0.32, hubs = F > 20 ? 7 : 5, hub = [];
@@ -1340,7 +1341,7 @@ function plantGeom(p, gr = 1) {
     for (let i = 0; i < F; i++) {
       const a = i * 2.39996 + rnd(6) * 6, rr = Math.sqrt((i + 0.5) / F), e = [C[0] + Math.cos(a) * rr * rg, C[1] + Math.sin(a) * rr * rg * 0.96];
       if (rf > 0.3 && (rr > 0.6 || i % 3 === 0)) stems.push({ a: P2, c: [(P2[0] + e[0]) / 2, (P2[1] + e[1]) / 2], b: e, w: sw * 0.16 });
-      head(e[0], e[1], Math.cos(a) * rr, 0.8 + 0.35 * rnd(50 + i), (1 - rr) * F);
+      head(e[0], e[1], Math.cos(a) * rr, 0.8 + 0.35 * rnd(50 + i), rr * F); // まんなかから咲く（外側だけ咲いて輪に見えないように）
     }
   } else if (arr === 'plume') { // 細かい花が、けむるような房になる（下野草）
     for (let i = 0; i < F; i++) {
@@ -2350,6 +2351,8 @@ function buildTufts() {
   V.bands = null; V.bandJob = 0;
 }
 const TUFT_SC = 0.55;
+// 草も一年かけて伸びる：春は短く、背の低い春の花がよく見える
+const grassGrow = (t) => lerp(0.42, 1, smooth(0.1, 0.46, t));
 function serviceBands(e) {
   const d = Math.min(V.dpr, 1.5);
   if (!V.bands) V.bands = V.tuftFar.map((list, b) => { const y0 = Math.floor(proj(0.5, BAND_Z[b]).sy - 70 * depthScale(BAND_Z[b + 1]) * V.unit - 4), y1 = Math.ceil(proj(0.5, BAND_Z[b + 1]).sy + 4); return { c: mkCanvas(V.W * d, (y1 - y0) * d), y0, h: y1 - y0, key: '' }; });
@@ -2357,7 +2360,7 @@ function serviceBands(e) {
   if (V.bandJob > 0) {
     const b = --V.bandJob, bd = V.bands[b], x = bd.c.getContext('2d');
     x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, bd.c.width, bd.c.height);
-    for (const tf of V.tuftFar[b]) { if (!tf.pos) tf.pos = proj(tf.x, tf.z); const p = tf.pos, sc = p.ds * V.unit * tf.s * TUFT_SC / V.tuftPx, c = V.tuftSpr[tf.kind], hs = 1 - 0.7 * e.snow; x.globalAlpha = 1 - 0.86 * e.snow; x.setTransform(d * sc * tf.flip, 0, 0, d * sc * hs, d * p.sx, d * (p.sy - bd.y0)); x.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); }
+    for (const tf of V.tuftFar[b]) { if (!tf.pos) tf.pos = proj(tf.x, tf.z); const p = tf.pos, sc = p.ds * V.unit * tf.s * TUFT_SC / V.tuftPx, c = V.tuftSpr[tf.kind], hs = (1 - 0.7 * e.snow) * grassGrow(e.t); x.globalAlpha = 1 - 0.86 * e.snow; x.setTransform(d * sc * tf.flip, 0, 0, d * sc * hs, d * p.sx, d * (p.sy - bd.y0)); x.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); }
     bd.key = V.tuftKey;
   }
 }
@@ -2413,7 +2416,7 @@ function drawTuft(ctx, tf, e) {
   if (!tf.pos) tf.pos = proj(tf.x, tf.z);
   const p = tf.pos, sc = p.ds * V.unit * tf.s * TUFT_SC / V.tuftPx, low = tf.kind % 6 === 3;
   const sway = low ? 0 : -(windAt(p.sx, p.ds) * 0.14 + Math.sin(V.time * 1.9 + tf.ph) * 0.03 * (0.4 + V.wind));
-  const hs = 1 - 0.7 * e.snow;
+  const hs = (1 - 0.7 * e.snow) * grassGrow(e.t);
   ctx.globalAlpha = 1 - 0.8 * e.snow;
   const c = V.tuftSpr[tf.kind], d = V.dpr;
   ctx.setTransform(d * sc * tf.flip, 0, d * sc * sway * hs, d * sc * hs, d * p.sx, d * p.sy);
