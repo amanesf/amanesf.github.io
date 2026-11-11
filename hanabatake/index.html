@@ -1920,7 +1920,7 @@ function drawParts(ctx, dt, e) {
   // 雨と雪は毎フレーム降らせる
   if (e.rain > 0.05) { const n = Math.round(e.rain * (V.storm > 0 ? 9 : 4)); for (let i = 0; i < n; i++) V.parts.push({ kind: 'rain', x: Math.random() * (W + 80) - 40, y: -10, vx: 60 + wind * 120, vy: 620 + Math.random() * 200, life: 0, max: 1.4, s: 0.6 + Math.random() * 0.6, gy: V.yH + Math.random() * (H - V.yH) }); }
   if (e.snowing > 0.05 && Math.random() < e.snowing * 0.9) V.parts.push({ kind: 'snow', x: Math.random() * (W + 60) - 30, y: -6, vx: 8 + wind * 30, vy: 26 + Math.random() * 30, life: 0, max: 16, s: 0.7 + Math.random() * 1.3, ph: Math.random() * TAU, gy: H });
-  if (e.night > 0.5 && e.t > 0.3 && e.t < 0.62 && Math.random() < dt * 5) { const z = 0.2 + Math.random() * 0.75, p = proj(SITE.brookX(z) + (Math.random() - 0.5) * 0.3, z); spawn('fire', p.sx, p.sy - 10 - Math.random() * 50 * p.ds); }
+  if (e.night > 0.4 && e.t > 0.3 && e.t < 0.62 && Math.random() < dt * 9) { const z = 0.2 + Math.random() * 0.75, p = proj(SITE.brookX(z) + (Math.random() - 0.5) * 0.3, z); spawn('fire', p.sx, p.sy - 10 - Math.random() * 50 * p.ds); }
   if (e.t > 0.64 && e.t < 0.84 && Math.random() < dt * 0.9) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: hsl(18 + Math.random() * 30, 0.7, 0.55, 0.85) }); }
   if (e.t > 0.14 && e.t < 0.27 && Math.random() < dt * 1.1) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: 'rgba(250,214,224,0.9)' }); }
   let w = 0;
@@ -1930,8 +1930,10 @@ function drawParts(ctx, dt, e) {
     V.parts[w++] = q;
     const u = q.life / q.max, fade = Math.min(1, u * 6) * (1 - smooth(0.7, 1, u));
     if (q.kind === 'rain') {
-      q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; continue; }
+      q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; if (Math.random() < 0.35 && V.parts.length < 460) V.parts.push({ kind: 'ring', x: q.x, y: q.gy, life: 0, max: 0.55, s: 0.6 + 0.8 * (q.gy - V.yH) / (V.H - V.yH), vx: 0, vy: 0, gy: V.H + 99 }); continue; }
       ctx.strokeStyle = `rgba(214,228,246,${0.5 * q.s})`; ctx.lineWidth = 1.1 * q.s; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - q.vx * 0.022, q.y - q.vy * 0.022); ctx.stroke();
+    } else if (q.kind === 'ring') { // 雨つぶの波紋・しぶき
+      const u2 = q.life / q.max; ctx.strokeStyle = `rgba(232,240,252,${0.6 * (1 - u2)})`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(q.x, q.y, (1 + 5 * u2) * q.s, (0.4 + 1.6 * u2) * q.s, 0, 0, TAU); ctx.stroke();
     } else if (q.kind === 'snow') {
       q.x += (q.vx + Math.sin(q.life * 1.6 + q.ph) * 14) * dt; q.y += q.vy * dt;
       ctx.fillStyle = `rgba(255,255,255,${0.85 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.5 * q.s, 0, TAU); ctx.fill();
@@ -2011,14 +2013,19 @@ function drawScene(sim, frac, dt) {
   drawBugs(ctx, sim, dt, e); T('bugs');
   ctx.drawImage(V.fg, 0, 0, W, H);
   // 時刻の光
-  const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [204, 210, 244], e.night * 0.9);
+  const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [120, 136, 196], e.night * 0.92); // 夜は青く沈む
   const dim = mix(tint, [190, 198, 212], e.storm * 0.55 + e.rain * 0.12);
   if (dim[0] < 250 || dim[1] < 250 || dim[2] < 250) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgb(dim); ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+  if (e.night > 0.05) { // 月あかり：月のほうから斜めに、花の白さだけがほのかに浮く
+    ctx.globalCompositeOperation = 'screen'; const mg = ctx.createRadialGradient(W * 0.22, V.yH * 0.52, 0, W * 0.22, V.yH * 0.52, H * 0.9); mg.addColorStop(0, `rgba(170,184,236,${0.32 * e.night})`); mg.addColorStop(0.5, `rgba(120,140,210,${0.12 * e.night})`); mg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+  }
+  drawNightLights(ctx, e);
   if (e.dusk > 0.05) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(255,190,120,${0.1 * e.dusk})`); g.addColorStop(1, 'rgba(255,190,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   T('light'); drawParts(ctx, dt, e); T('parts');
   if (V.frost > 0) { ctx.fillStyle = `rgba(236,246,255,${0.3 * Math.min(1, V.frost * 2)})`; ctx.fillRect(0, V.yH, W, H); }
   if (!V.vig) buildVignette();
   ctx.drawImage(V.vig, 0, 0, W, H);
+  if (e.storm > 0 || e.rain > 0.5) { const sg = ctx.createLinearGradient(0, 0, 0, H * 0.6); const a = 0.28 * Math.max(e.storm, (e.rain - 0.5) * 0.8); sg.addColorStop(0, `rgba(70,82,104,${a})`); sg.addColorStop(1, 'rgba(70,82,104,0)'); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H * 0.6); ctx.globalCompositeOperation = 'source-over'; } // 雨雲の下は、上から暗い
   if (V.flash > 0) { ctx.fillStyle = `rgba(255,255,250,${0.5 * V.flash})`; ctx.fillRect(0, 0, W, H); }
   return e;
 }
@@ -2061,7 +2068,7 @@ function paintSky(x, e) {
     wash(x, noisyBlob(sxp, syp, W * 0.043, W * 0.043, 77, 0.05, 28), mix([255, 253, 238], [255, 220, 176], e.dusk), 0.96 * a, { edge: 0.25, ew: 0.8, edgeCol: [240, 190, 120] });
   }
   if (e.night > 0.05) {
-    const mx = W * 0.3, my = yH * 0.22, a = e.night;
+    const mx = W * 0.22, my = yH * 0.52, a = e.night;
     for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(255,250,225,${a * (0.25 + 0.6 * hash2(i, 913))})`; x.beginPath(); x.arc(hash2(i, 911) * W, hash2(i, 912) * yH * 0.85, 0.4 + hash2(i, 914) * 0.9, 0, TAU); x.fill(); }
     const gl = x.createRadialGradient(mx, my, 0, mx, my, W * 0.36); gl.addColorStop(0, `rgba(244,242,255,${0.5 * a})`); gl.addColorStop(1, 'rgba(244,242,255,0)'); x.fillStyle = gl; x.fillRect(0, 0, W, yH);
     wash(x, noisyBlob(mx, my, W * 0.038, W * 0.038, 78, 0.04, 26), [254, 251, 236], a, { edge: 0.3, ew: 0.7, edgeCol: [170, 170, 210] });
@@ -2131,7 +2138,7 @@ function drawSkyLife(ctx, e, dt) {
   if (b) { b.x += dt * 0.06 * b.dir; if (b.x < -0.2 || b.x > 1.2) V.birds = null;
     ctx.strokeStyle = 'rgba(90,80,100,0.55)'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';
     for (let i = 0; i < b.n; i++) { const bx = (b.x - b.dir * i * 0.035 * (1 + (i % 2) * 0.3)) * W, by = yH * (b.y + (i % 2 ? 0.03 : -0.02) * i * 0.5) + Math.sin(time * 1.3 + i) * 2, fl = Math.sin(time * 9 + i * 1.3) * 2.6 * b.s, s = 5 * b.s; ctx.beginPath(); ctx.moveTo(bx - s, by - fl); ctx.quadraticCurveTo(bx - s * 0.4, by - 1 - fl * 0.3, bx, by); ctx.quadraticCurveTo(bx + s * 0.4, by - 1 - fl * 0.3, bx + s, by - fl); ctx.stroke(); } }
-  if (e.night > 0.2) for (let i = 0; i < 14; i++) { const tw = 0.5 + 0.5 * Math.sin(time * (1.5 + hash2(i, 941)) + i * 3); ctx.fillStyle = `rgba(255,252,230,${e.night * tw * 0.9})`; ctx.beginPath(); ctx.arc(hash2(i, 942) * W, hash2(i, 943) * yH * 0.7, 0.8 + tw, 0, TAU); ctx.fill(); }
+  if (false) for (let i = 0; i < 14; i++) { const tw = 0.5 + 0.5 * Math.sin(time * (1.5 + hash2(i, 941)) + i * 3); ctx.fillStyle = `rgba(255,252,230,${e.night * tw * 0.9})`; ctx.beginPath(); ctx.arc(hash2(i, 942) * W, hash2(i, 943) * yH * 0.7, 0.8 + tw, 0, TAU); ctx.fill(); }
 }
 // 家の煙突の煙（山より手前に描く）
 function drawSmoke(ctx, e) {
@@ -2192,7 +2199,7 @@ function paintBG(x, e) {
     blob(x, bx, by - hh * 0.5, r, hh * 0.52, mix(tc, [30, 58, 60], 0.25), 0.92, i + 950, 0.18); blob(x, bx - r * 0.3, by - hh * 0.62, r * 0.5, hh * 0.3, mix(tc, [255, 252, 214], 0.3), 0.55, i + 960, 0.2); }
   // 赤い屋根の小さな家
   { const hx = W * 0.2, hy = hillY(0.2) + 3, s = W * 0.034, wall = mix([252, 246, 230], [150, 150, 190], e.night * 0.5), roof = mix([208, 104, 84], [246, 246, 250], snowy * 0.8);
-    V.house = [hx + s * 0.6, hy - s * 2.1];
+    V.house = [hx + s * 0.6, hy - s * 2.1]; V.win = [hx - s * 0.45, hy - s * 0.6, s];
     blob(x, hx + s * 0.5, hy + 1, s * 1.8, 2, [50, 80, 80], 0.35, 5, 0.2);
     x.fillStyle = rgb([156, 112, 98]); x.fillRect(hx + s * 0.45, hy - s * 2.05, s * 0.3, s * 0.7);
     wash(x, [[hx - s, hy], [hx - s, hy - s * 1.1], [hx + s, hy - s * 1.1], [hx + s, hy]], wall, 1, { smooth: false, edge: 0.5, ew: 0.6, shade: [150, 140, 150], shadeA: 0.25 });
@@ -2217,6 +2224,11 @@ function paintBG(x, e) {
     blob(x, p.sx, p.sy, W * 0.06 * (0.4 + p.ds) * (0.5 + hash2(i, 944)), H * 0.012 * (0.3 + p.ds) * (0.5 + hash2(i, 945)), c, 0.42, i + 500, 0.3);
   }
   for (let i = 0; i < 9; i++) { const p = proj(hash2(i, 620), 0.1 + 0.85 * hash2(i, 621)); blob(x, p.sx, p.sy, W * (0.2 + 0.2 * hash2(i, 622)), H * 0.012 + H * 0.05 * p.ds, i % 3 === 2 ? mix(nearL, [110, 160, 170], 0.5) : [255, 250, 214], (i % 3 === 2 ? 0.22 : 0.4) * airy, i + 620, 0.25); } // 日だまりと、青みがかった陰
+  if (snowy > 0.3) { // 雪のうねり：日の当たる面は紙の白、くぼみは青い影。枯れ草がところどころ頭を出す
+    for (let i = 0; i < 40; i++) { const z = Math.pow(hash2(i, 640), 0.6), p = proj(hash2(i, 641), z), rx = W * (0.08 + 0.16 * p.ds), ry = H * 0.004 + H * 0.012 * p.ds; blob(x, p.sx + rx * 0.2, p.sy + ry * 0.6, rx, ry, [150, 170, 214], 0.28 * snowy, i + 640, 0.4); blob(x, p.sx - rx * 0.1, p.sy - ry * 0.2, rx * 0.8, ry * 0.7, [255, 255, 255], 0.55 * snowy, i + 690, 0.4); }
+    x.lineCap = 'round'; for (let i = 0; i < 180; i++) { const z = Math.pow(hash2(i, 650), 0.7), p = proj(hash2(i, 651), z), hgt = (3 + 9 * hash2(i, 652)) * p.ds * V.unit; x.strokeStyle = `rgba(150,128,96,${0.55 * snowy})`; x.lineWidth = Math.max(0.5, 0.9 * p.ds); for (let k = -1; k <= 1; k++) { x.beginPath(); x.moveTo(p.sx + k * 1.4 * p.ds, p.sy); x.lineTo(p.sx + k * 3 * p.ds + (hash2(i, 653 + k) - 0.5) * 3, p.sy - hgt * (k ? 0.75 : 1)); x.stroke(); } }
+    for (let i = 0; i < 26; i++) { const z = 0.45 + i * 0.021, p = proj(0.24 + 0.32 * Math.sin(i * 0.4) * (1 - z * 0.5) + (i % 2 ? 0.006 : -0.006), z); x.fillStyle = `rgba(140,156,200,${0.42 * snowy})`; x.beginPath(); x.ellipse(p.sx, p.sy, 1.6 * p.ds, 0.9 * p.ds, 0, 0, TAU); x.fill(); } // うさぎの足あと
+  }
   if (snowy > 0.3) for (let i = 0; i < 26; i++) { const p = proj(hash2(i, 630), Math.pow(hash2(i, 631), 0.5)); blob(x, p.sx, p.sy, W * (0.06 + 0.1 * p.ds), H * 0.004 + H * 0.016 * p.ds, i % 2 ? [176, 196, 232] : [255, 255, 255], (i % 2 ? 0.3 : 0.6) * snowy, i + 630, 0.3); } // 雪のうねりと、青い陰
   { const p = proj(SITE.hill.x, SITE.hill.z); blob(x, p.sx, p.sy - H * 0.01, W * 0.3, H * 0.06, mix(far, [255, 250, 215], 0.45), 0.5, 601, 0.12); blob(x, p.sx + W * 0.05, p.sy + H * 0.05, W * 0.3, H * 0.025, mix(near, [40, 80, 70], 0.3), 0.22, 602, 0.15); }
   // 大きな木と木かげ
@@ -2494,6 +2506,17 @@ function drawTuft(ctx, tf, e) {
   const c = V.tuftSpr[tf.kind], d = V.dpr;
   ctx.setTransform(d * sc * tf.flip, 0, d * sc * sway * hs, d * sc * hs, d * p.sx, d * p.sy);
   ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx);
+}
+
+// ── 夜の光：夜の色を掛けたあとに描く（月や窓あかりまで青く沈まないように） ──
+function drawNightLights(ctx, e) {
+  if (e.night < 0.05) return;
+  const W = V.W, yH = V.yH, a = e.night, time = V.time;
+  for (let i = 0; i < 70; i++) { const tw = 0.55 + 0.45 * Math.sin(time * (1.2 + hash2(i, 941) * 2) + i * 3), sx = hash2(i, 942) * W, sy = hash2(i, 943) * yH * 0.78, r = 0.4 + 1.1 * hash2(i, 944) * hash2(i, 945); ctx.fillStyle = `rgba(255,250,228,${a * tw * (0.35 + 0.6 * hash2(i, 946)) * (1 - e.cloud * 0.8)})`; ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill(); }
+  const mx = W * 0.22, my = yH * 0.52, mr = W * 0.036, ma = a * (1 - e.cloud * 0.6); // 月は、日付の札にかからない空のひらけたところに
+  const g = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, W * 0.3); g.addColorStop(0, `rgba(236,238,255,${0.45 * ma})`); g.addColorStop(0.3, `rgba(200,210,250,${0.14 * ma})`); g.addColorStop(1, 'rgba(200,210,250,0)'); ctx.fillStyle = g; ctx.fillRect(mx - W * 0.3, my - W * 0.3, W * 0.6, W * 0.6);
+  ctx.globalAlpha = ma; wash(ctx, noisyBlob(mx, my, mr, mr, 78, 0.04, 26), [255, 252, 236], 1, { edge: 0.25, ew: 0.6, edgeCol: [196, 196, 220] }); blob(ctx, mx + mr * 0.3, my - mr * 0.15, mr * 0.32, mr * 0.26, [222, 222, 236], 0.55, 79, 0.25); blob(ctx, mx - mr * 0.28, my + mr * 0.3, mr * 0.22, mr * 0.18, [228, 228, 240], 0.5, 80, 0.25); ctx.globalAlpha = 1;
+  if (V.win) { const [wx, wy, s] = V.win, fl = 0.85 + 0.15 * Math.sin(time * 3.1) * Math.sin(time * 1.7); const wg = ctx.createRadialGradient(wx, wy, 0, wx, wy, s * 2.2); wg.addColorStop(0, `rgba(255,214,130,${0.7 * a * fl})`); wg.addColorStop(1, 'rgba(255,214,130,0)'); ctx.fillStyle = wg; ctx.fillRect(wx - s * 2.2, wy - s * 2.2, s * 4.4, s * 4.4); ctx.fillStyle = `rgba(255,226,150,${0.95 * a})`; ctx.fillRect(wx - s * 0.25, wy - s * 0.22, s * 0.5, s * 0.45); }
 }
 
 // ===== 42-bugs.js =====
@@ -3156,7 +3179,7 @@ function frame(ts) {
   const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
   const mult = SPEEDS[speedIdx][0];
   V.fast += ((mult >= 4 ? 1 : 0) - V.fast) * Math.min(1, dt * 1.5);
-  if (!titleOn && !UI.paused) {
+  if (!titleOn && !UI.paused && !HASH.freeze) {
     acc += (dt * TICKS * mult) / YEAR_SEC;
     let n = 0; while (acc >= 1 && n < 10) { sim.step(); acc -= 1; n++; handleEvents(true); }
     if (acc > 3) acc = 0;
@@ -3184,7 +3207,7 @@ function boot() {
   if (!sim) { sim = Sim.fresh(+HASH.seed || (Date.now() % 1e9)); snap = sim.save(); sim.out.length = 0; }
   if (HASH.y) fastForward(+HASH.y - sim.year, false);
   else if (!isNew && saved.ts) { const yrs = Math.min(400, Math.floor((Date.now() - saved.ts) / 1000 / YEAR_SEC)); if (yrs >= 1) fastForward(yrs, true); }
-  if (HASH.tk) { sim.quiet = true; while (sim.tick < +HASH.tk) sim.step(); sim.quiet = false; sim.out.length = 0; }
+  if (HASH.tk) { sim.quiet = true; while (sim.tick < Math.floor(+HASH.tk)) sim.step(); sim.quiet = false; sim.out.length = 0; acc = +HASH.tk % 1; }
   if (HASH.speed) speedIdx = +HASH.speed;
   setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on);
   // エリカの顔（絵があれば絵、なければ手描き）
