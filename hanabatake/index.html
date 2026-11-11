@@ -1626,9 +1626,9 @@ function resizeView() {
   V.cv.width = V.W * V.dpr; V.cv.height = V.H * V.dpr;
   V.yH = Math.round(V.H * 0.335);
   V.unit = clamp(V.H / 844, 0.7, 1.35) * clamp(V.W / 390, 0.85, 1.25) * 0.95;
-  for (const c of [V.bgA, V.bgB, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
+  for (const c of [V.bgA, V.bgB, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); if (V.farSpr) { for (const q of V.farSpr.values()) freeCanvas(q.c); V.farSpr.clear(); } V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
   V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1;
-  for (const v of V.views.values()) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); v.body = null; v.fl = null; v.flB = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
+  for (const v of V.views.values()) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); v.body = null; v.fl = null; v.flB = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
   V.queue.length = 0; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
 }
 
@@ -1673,30 +1673,47 @@ function syncViews(sim) {
       V.views.set(p.id, v); changed = true;
     } else if (v.p !== p) v.p = p;
   }
-  for (const [id, v] of V.views) if (!seen.has(id)) { v.gone = 1; if (v.alpha <= 0.01) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); V.views.delete(id); changed = true; } }
+  for (const [id, v] of V.views) if (!seen.has(id)) { v.gone = 1; if (v.alpha <= 0.01) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); V.views.delete(id); changed = true; } }
   if (changed) V.order = Array.from(V.views.values()).sort((a, b) => a.p.z - b.p.z);
 }
 function serviceQueue(budgetMs) {
   const t0 = performance.now();
-  while (V.queue.length && performance.now() - t0 < budgetMs) {
+  let free = 0, hit = true;
+  while (V.queue.length && (performance.now() - t0 < budgetMs || (hit && free < 400))) { hit = false;
     const v = V.queue.shift(); v.queued = 0;
     if (!V.views.has(v.p.id)) continue;
-    const k = v.pos.ds * V.unit * Math.min(V.dpr, 1.5);
-    const lod = v.pos.ds < LOD_DS, wb = lod && v.wantBaked ? 1 : 0;
+    const coarse = v.pos.ds >= LOD_DS && !v.body; // 手前の株も、まずは使い回しの絵で場所をうめ、あとで描きこむ
+    const lod = v.pos.ds < LOD_DS || coarse, wb = lod && (coarse ? v.p.state === 1 && v.p.open > 0.45 : v.wantBaked) ? 1 : 0;
+    // 遠くの株は、同じ種類・同じ育ちの絵を何株ぶんも使い回す（遠目には見分けがつかない。読みこみ直後に奥がからっぽにならないように）
+    const dsb = lod ? Math.max(0.12, Math.round(v.pos.ds * 7) / 7) : v.pos.ds, k = dsb * V.unit * Math.min(V.dpr, 1.5);
+    if (lod) {
+      const key = [v.p.line, v.wantLook, v.wantStage, wb, dsb, wb ? G.hueBin(v.p.g) : 0, (hash1(v.p.id) * 2) | 0].join('|'), cache = V.farSpr || (V.farSpr = new Map());
+      let sp = cache.get(key); if (sp) { free++; hit = true; }
+      if (!sp) { if (cache.size > 900) { for (const w of V.views.values()) if (w.body && w.body.shared) { w.body = null; if (!w.queued) { w.queued = 1; V.queue.push(w); } } for (const q of cache.values()) freeCanvas(q.c); cache.clear(); }
+        if (wb && !v.fl) { const dp = Math.min(V.dpr, 1.5); v.fl = paintFlower(v.p.g, v.geo.R * dsb * V.unit * dp, v.p.id); v.fl.dp = dp; }
+        v.geo = plantGeom(v.p, STAGES[v.wantStage]); sp = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); sp.stage = v.wantStage; sp.baked = wb; sp.shared = 1;
+        if (wb) bakeFlowers(v, sp, k, dsb);
+        cache.set(key, sp); }
+      else if (v.geo.gr !== STAGES[v.wantStage]) v.geo = plantGeom(v.p, STAGES[v.wantStage]);
+      const old = v.body; v.body = sp; v.stage = v.wantStage; v.look = v.wantLook; if (old && !old.shared && old !== sp) freeCanvas(old.c);
+      if (coarse) { v.coarse = 1; v.queued = 1; V.queue.push(v); }
+      continue;
+    }
     if (!v.fl && (!lod || wb)) { const dp = lod ? Math.min(V.dpr, 1.5) : Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; if (!lod && v.fl.form === 'open' && v.face.some((f) => f.back)) v.flB = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id, true); }
-    if (!v.body || v.body.look !== v.wantLook || v.body.stage !== v.wantStage || (v.body.baked || 0) !== wb) {
-      const old = v.body; v.geo = plantGeom(v.p, STAGES[v.wantStage]);
-      v.body = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); v.body.stage = v.wantStage; v.stage = v.wantStage; v.look = v.wantLook; v.body.baked = wb; freeCanvas(old && old.c);
-      if (wb) { // 遠くの株は、花ごと 1 枚の絵にしてしまう
-        const x = v.body.c.getContext('2d'), fl = v.fl, n = Math.min(v.p.nOpen || 0, v.geo.heads.length), hk = (0.45 + 0.55 * smooth(0.25, 0.9, STAGES[v.wantStage])) * (k / (v.pos.ds * V.unit * fl.dp));
-        const soft = v.pos.ds < 0.5, fc = toneRgb(v.p.g);
-        for (let i = 0; i < v.geo.heads.length; i++) { if (v.rank[i] >= n) continue; const h = v.geo.heads[i];
-          if (soft) { x.setTransform(1, 0, 0, 1, 0, 0); const hx = v.body.ox + h.x * k, hy = v.body.oy + h.y * k; let rr = Math.max(1.6, v.geo.R * k * h.r * hk * (fl.dp * v.pos.ds * V.unit / k)); rr *= 1.45; blob(x, hx, hy, rr * 1.9, rr * 1.3, fc, 0.34, i, 0.3); blob(x, hx, hy, rr * 1.05, rr * 0.82, fc, 0.95, i + 9, 0.3); blob(x, hx - rr * 0.25, hy - rr * 0.25, rr * 0.45, rr * 0.35, mix(fc, [255, 255, 250], 0.55), 0.7, i + 19, 0.2); continue; } // ずっと奥の花は、にじんだ色のひと置き
-          x.setTransform(1, 0, 0, 1, v.body.ox + h.x * k, v.body.oy + h.y * k); const f = v.face[i]; if (fl.kind === 'face') { x.rotate(f.lean * 0.6); x.scale(hk * h.r, hk * h.r * f.th); x.rotate(fl.upright ? 0 : h.rot); } else { x.rotate(h.ang * 0.5); x.scale(hk * h.r * (fl.form === 'pea' && h.rot > Math.PI ? -1 : 1), hk * h.r); } x.drawImage(fl.c, -fl.ax, -fl.ay); }
-      }
+    if (!v.body || v.coarse || v.body.look !== v.wantLook || v.body.stage !== v.wantStage || (v.body.baked || 0) !== wb) {
+      const old = v.body; v.coarse = 0; v.geo = plantGeom(v.p, STAGES[v.wantStage]);
+      v.body = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); v.body.stage = v.wantStage; v.stage = v.wantStage; v.look = v.wantLook; v.body.baked = wb; if (old && !old.shared) freeCanvas(old.c);
     }
     if (false) { const dp = Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; }
   }
+}
+
+function bakeFlowers(v, sp, k, dsb) { // 遠くの株は、花ごと 1 枚の絵にしてしまうしまう
+        const x = sp.c.getContext('2d'), fl = v.fl, n = Math.min(v.p.nOpen || 0, v.geo.heads.length), hk = (0.45 + 0.55 * smooth(0.25, 0.9, STAGES[v.wantStage])) * (k / (dsb * V.unit * fl.dp));
+        const soft = dsb < 0.5, fc = toneRgb(v.p.g);
+        for (let i = 0; i < v.geo.heads.length; i++) { if (v.rank[i] >= n) continue; const h = v.geo.heads[i];
+          if (soft) { x.setTransform(1, 0, 0, 1, 0, 0); const hx = sp.ox + h.x * k, hy = sp.oy + h.y * k; let rr = Math.max(1.6, v.geo.R * k * h.r * hk * (fl.dp * dsb * V.unit / k)); rr *= 1.45; blob(x, hx, hy, rr * 1.9, rr * 1.3, fc, 0.34, i, 0.3); blob(x, hx, hy, rr * 1.05, rr * 0.82, fc, 0.95, i + 9, 0.3); blob(x, hx - rr * 0.25, hy - rr * 0.25, rr * 0.45, rr * 0.35, mix(fc, [255, 255, 250], 0.55), 0.7, i + 19, 0.2); continue; } // ずっと奥の花は、にじんだ色のひと置き
+          x.setTransform(1, 0, 0, 1, sp.ox + h.x * k, sp.oy + h.y * k); const f = v.face[i]; if (fl.kind === 'face') { x.rotate(f.lean * 0.6); x.scale(hk * h.r, hk * h.r * f.th); x.rotate(fl.upright ? 0 : h.rot); } else { x.rotate(h.ang * 0.5); x.scale(hk * h.r * (fl.form === 'pea' && h.rot > Math.PI ? -1 : 1), hk * h.r); } x.drawImage(fl.c, -fl.ax, -fl.ay); }
 }
 // 育ちの段階。段階ごとに株を描き直し、あいだは少しだけ伸び縮みさせてつなぐ
 const STAGES = [0.07, 0.15, 0.24, 0.34, 0.45, 0.56, 0.67, 0.78, 0.89, 1];
@@ -1775,7 +1792,7 @@ function drawPlants(ctx, sim, dt, e) {
       const dipv = v.bumpT > 0 && v.bumpI === i ? Math.sin(v.bumpT * Math.PI) * Math.exp(-(1 - v.bumpT) * 2) * 5 * pos.ds : 0;
       const X = pos.sx + s * (h.x + shear * h.y * ys) + bob, Y = pos.sy + s * h.y * ys + dipv;
       v.hp[i] = X; v.hp[i + n] = Y;
-      if (lod) continue;
+      if (lod || v.coarse) continue;
       if (o > 0.02 && fl) {
         const sc = (easeBack(o) * h.r * hk) / fl.dp;
         ctx.save(); ctx.translate(X, Y);
@@ -1985,7 +2002,7 @@ function drawScene(sim, frac, dt) {
   if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.bgB, 0, 0, W, H); ctx.globalAlpha = 1; }
   drawSmoke(ctx, e);
   T('bg'); drawBrook(ctx, e); T('brook');
-  if (V.queue.length > 80) V.queue.sort((a, b) => b.pos.ds - a.pos.ds); // 手前の株から先に描く
+  if (V.queue.length > 80) V.queue.sort((a, b) => (a.body ? 1 : 0) - (b.body ? 1 : 0) || (a.pos.ds < LOD_DS ? 0 : 1) - (b.pos.ds < LOD_DS ? 0 : 1) || b.pos.ds - a.pos.ds); // 使い回せる奥の株を先に（画面の大半を一気に埋める）、そのあと手前から
   serviceQueue(V.queue.length > 60 ? (V.fast > 0.5 ? 14 : 9) : 4); T('queue');
   drawPlants(ctx, sim, dt, e); T('plants');
   drawLight(ctx, e);
@@ -3127,7 +3144,7 @@ function fastForward(years, greet) {
   sim.quiet = true; const target = sim.year + years; let ext = [];
   while (sim.year < target) { sim.step(); for (const e of sim.out) if (e.type === 'extinct' && e.name !== '旅の種') ext.push(e.name); handleEvents(false); }
   sim.quiet = false;
-  for (const v of V.views.values()) { freeCanvas(v.body && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); } V.views.clear(); V.order = []; V.queue.length = 0; V.bugs.clear(); V.parts.length = 0;
+  for (const v of V.views.values()) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); } V.views.clear(); V.order = []; V.queue.length = 0; V.bugs.clear(); V.parts.length = 0;
   saveAll();
   if (!greet) return;
   const after = sim.hist[sim.hist.length - 1]; let msg = `おかえりなさい。留守のあいだに${sim.year - y0}年たちました。`;
