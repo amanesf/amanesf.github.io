@@ -1807,8 +1807,10 @@ function drawPlants(ctx, sim, dt, e) {
         ctx.restore();
       } else if ((budOn || (blooming && r < nO)) && v.gr > 0.3) { // つぼみ
         const br = Math.max(1.2, v.geo.R * 0.3 * pos.ds * V.unit * hk * h.r);
-        ctx.fillStyle = toneCss(g, 0.9); ctx.beginPath(); ctx.ellipse(X, Y, br * 0.75, br * 1.15, h.ang * 0.4, 0, TAU); ctx.fill();
-        ctx.fillStyle = 'hsla(105,34%,44%,0.85)'; ctx.beginPath(); ctx.ellipse(X, Y + br * 0.45, br * 0.7, br * 0.7, 0, 0, Math.PI); ctx.fill();
+        const swell = clamp((tk - p.bs + 12) / 12); ctx.save(); ctx.translate(X, Y); ctx.rotate(h.ang * 0.4);
+        ctx.fillStyle = 'hsla(104,34%,46%,0.92)'; ctx.beginPath(); ctx.moveTo(0, -br * 1.3); ctx.quadraticCurveTo(br * 0.7, -br * 0.2, 0, br * 0.6); ctx.quadraticCurveTo(-br * 0.7, -br * 0.2, 0, -br * 1.3); ctx.fill(); // がくに包まれたつぼみ
+        if (swell > 0.3) { ctx.fillStyle = toneCss(g, 0.85 * swell); ctx.beginPath(); ctx.moveTo(0, -br * 1.35); ctx.quadraticCurveTo(br * 0.32, -br * 0.8, 0, -br * 0.3); ctx.quadraticCurveTo(-br * 0.32, -br * 0.8, 0, -br * 1.35); ctx.fill(); } // ほころびはじめた花びらの色
+        ctx.restore();
       } else if (p.state >= 2 && p.bloomed && r < nO && !p.frost) { // 実
         const br = Math.max(1, v.geo.R * 0.22 * pos.ds * V.unit * hk * h.r);
         ctx.fillStyle = v.look === 'green' ? 'hsla(80,35%,50%,0.9)' : 'hsla(34,38%,48%,0.9)'; ctx.beginPath(); ctx.arc(X, Y, br, 0, TAU); ctx.fill();
@@ -2151,13 +2153,15 @@ function paintBG(x, e) {
     x.fillStyle = g; x.fill();
     x.save(); x.clip();
     // 稜線から下へ、かすれた筆あと（尾根と谷）
-    for (let i = 0; i < (o.streaks || 70); i++) { const u = hash2(i, seed + 20), px = u * W, py = ridgeY(u, base, amp, f, seed), len = amp * (0.15 + 0.35 * hash2(i, seed + 21)), dk = i % 2; x.strokeStyle = rgb(dk ? mix(col, [44, 58, 120], 0.5) : mix(col, [255, 255, 255], 0.6), dk ? 0.09 : 0.12); x.lineWidth = 1.5 + 5 * hash2(i, seed + 22); x.beginPath(); x.moveTo(px, py + 1); x.quadraticCurveTo(px + (hash2(i, seed + 23) - 0.3) * len * 0.5, py + len * 0.5, px + (hash2(i, seed + 24) - 0.3) * len * 0.9, py + len); x.stroke(); }
+    for (let i = 0; i < 0; i++) { const u = hash2(i, seed + 20), px = u * W, py = ridgeY(u, base, amp, f, seed), len = amp * (0.15 + 0.35 * hash2(i, seed + 21)), dk = i % 2; x.strokeStyle = rgb(dk ? mix(col, [44, 58, 120], 0.5) : mix(col, [255, 255, 255], 0.6), dk ? 0.09 : 0.12); x.lineWidth = 1.5 + 5 * hash2(i, seed + 22); x.beginPath(); x.moveTo(px, py + 1); x.quadraticCurveTo(px + (hash2(i, seed + 23) - 0.3) * len * 0.5, py + len * 0.5, px + (hash2(i, seed + 24) - 0.3) * len * 0.9, py + len); x.stroke(); }
+    for (let i = 1; i < 89; i++) { const u0 = (i - 1) / 90, u1 = i / 90, u2 = (i + 1) / 90, y0 = ridgeY(u0, base, amp, f, seed), y1 = ridgeY(u1, base, amp, f, seed), y2 = ridgeY(u2, base, amp, f, seed); if (!(y1 < y0 && y1 <= y2)) continue; // 峰ごとに、日かげの斜面へ影をひと刷け
+      const px = u1 * W, sh = mix(col, [48, 62, 124], 0.42); blob(x, px + W * 0.035, y1 + amp * 0.32, W * 0.045, amp * 0.34, sh, 0.22, i + seed, 0.35); blob(x, px - W * 0.03, y1 + amp * 0.22, W * 0.03, amp * 0.22, mix(col, [255, 255, 250], 0.5), 0.2, i + seed + 50, 0.35); }
     for (let i = 0; i < 7; i++) { const u = hash2(i, seed + 30); blob(x, u * W, ridgeY(u, base, amp, f, seed) + amp * (0.2 + 0.3 * hash2(i, seed + 31)), W * (0.08 + 0.08 * hash2(i, seed + 32)), amp * 0.2, i % 2 ? mix(col, [50, 64, 128], 0.45) : mix(col, hazeC, 0.6), 0.28, i + seed, 0.3); }
     if (o.snow > 0.02) { const sgd = x.createLinearGradient(0, base - amp * 0.7, 0, base - amp * 0.25); sgd.addColorStop(0, `rgba(253,254,255,${0.95 * o.snow})`); sgd.addColorStop(0.6, `rgba(253,254,255,${0.5 * o.snow})`); sgd.addColorStop(1, 'rgba(253,254,255,0)'); x.fillStyle = sgd; x.fillRect(0, base - amp * 0.9, W, amp); }
     if (o.trees) for (let i = 0; i < 220; i++) { const u = hash2(i, seed + 40), py = ridgeY(u, base, amp, f, seed) + amp * (0.02 + 0.5 * Math.pow(hash2(i, seed + 41), 1.5)); dab(x, u * W, py, 1.3 + hash2(i, seed + 42), 1.6 + 1.4 * hash2(i, seed + 43), -Math.PI / 2, mix(o.trees, [30, 50, 70], 0.3 * hash2(i, seed + 44)), 0.5); }
     const ec = mix(col, [40, 52, 110], 0.5); x.lineJoin = 'round';
     x.beginPath(); topL.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])));
-    x.strokeStyle = rgb(ec, 0.1); x.lineWidth = 7; x.stroke(); x.strokeStyle = rgb(ec, 0.22); x.lineWidth = 2.6; x.stroke(); x.strokeStyle = rgb(ec, 0.42); x.lineWidth = 0.8; x.stroke();
+    x.strokeStyle = rgb(ec, 0.08); x.lineWidth = 9; x.stroke(); x.strokeStyle = rgb(ec, 0.12); x.lineWidth = 3.4; x.stroke(); // 稜線は線で描かず、絵の具のたまりで見せる
     // すその霧
     const mg = x.createLinearGradient(0, base - amp * 0.25, 0, base + amp * 0.4); mg.addColorStop(0, rgb(hazeC, 0)); mg.addColorStop(1, rgb(mix(hazeC, [255, 255, 255], 0.45), o.mist == null ? 0.75 : o.mist)); x.fillStyle = mg; x.fillRect(0, base - amp * 0.3, W, amp * 1.2);
     x.restore();
@@ -2390,13 +2394,13 @@ function paintFG(x, e, gens) {
   }
   // 前ぼけの花：いま花畑にいちばん多く咲いている花を、目の前の一輪として大きく描く（ピントの外）
   if (gens && gens.length && e.snow < 0.5) {
-    const spots = [[1.0, 0.9, 0.15, -0.35], [0.66, 1.0, 0.11, 0.2], [-0.02, 0.8, 0.1, 0.5]];
-    gens.slice(0, 3).forEach((g, i) => {
+    const spots = [[1.0, 0.92, 0.13, -0.35], [0.7, 1.02, 0.1, 0.2]];
+    gens.slice(0, spots.length).forEach((g, i) => {
       const [px, py, rr, lean] = spots[i], R = W * rr, cx = px * W, cy = py * H, fl = paintFlower(g, R * 2, 900 + i);
       x.save(); if ('filter' in x) x.filter = `blur(${(1.6 + i * 0.6).toFixed(1)}px)`;
       x.strokeStyle = rgb(mix(near, [40, 90, 60], 0.4), 0.55); x.lineWidth = R * 0.12; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx + lean * R * 2, H + 10); x.quadraticCurveTo(cx + lean * R, cy + R * 1.4, cx, cy + R * 0.2); x.stroke();
       for (const sg of [-1, 1]) { x.fillStyle = rgb(mix(near, [50, 100, 70], 0.3), 0.4); x.beginPath(); x.ellipse(cx + lean * R * 1.4 + sg * R * 0.5, cy + R * 1.8, R * 0.7, R * 0.2, sg * 0.6 + lean, 0, TAU); x.fill(); }
-      x.globalAlpha = 0.9; x.translate(cx, cy); x.rotate(lean * 0.4); const sc = 0.5, th = fl.kind === 'face' ? 0.72 : 1; x.scale(sc, sc * th); x.drawImage(fl.c, -fl.ax, fl.kind === 'face' ? -fl.ay : -fl.ay - (fl.kind === 'top' ? R * 1.6 : -R * 1.6));
+      x.globalAlpha = 0.72; x.translate(cx, cy); x.rotate(lean * 0.4); const sc = 0.5, th = fl.kind === 'face' ? 0.72 : 1; x.scale(sc, sc * th); x.drawImage(fl.c, -fl.ax, fl.kind === 'face' ? -fl.ay : -fl.ay - (fl.kind === 'top' ? R * 1.6 : -R * 1.6));
       x.restore(); freeCanvas(fl.c);
     });
   }
