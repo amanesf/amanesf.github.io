@@ -1799,7 +1799,7 @@ function drawPlants(main, sim, dt, e) {
   const upTo = (z) => { // この奥行きまでの草と、空気の色
     while (true) {
       const vz = veil < NL ? VEIL_Z[veil] : 9;
-      while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); ctx.setTransform(dpr, 0, dpr * sh, dpr, dpr * -sh * (bd.y0 + bd.h), -dpr * oy); ctx.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); ctx.drawImage(bd.c, 0, bd.y0, V.W, bd.h); } }
+      while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); const md = V.dpr; main.setTransform(md, 0, md * sh, md, md * -sh * (bd.y0 + bd.h), 0); main.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); main.drawImage(bd.c, 0, bd.y0, V.W, bd.h); main.globalAlpha = 1; } } // 地面の草の帯は層に入れず、毎フレームじかに描く（層ごと傾けると、地面までずれて揺れて見える）
       while (ti < nt && tufts[ti].z <= Math.min(z, vz)) { if (!V.noTuft) drawTuft(ctx, tufts[ti], e); ti++; }
       if (vz > z) break;
       const L = lay[veil], z0 = veil ? VEIL_Z[veil - 1] : 0, zm = (z0 + VEIL_Z[veil]) / 2, dsm = depthScale(zm), yp = proj(0.5, zm).sy;
@@ -2010,10 +2010,12 @@ function drawParts(ctx, dt, e) {
     V.parts[w++] = q; if (q.kind === 'seed' && q.wait > 0) q.life = 0;
     const u = q.life / q.max, fade = Math.min(1, u * 6) * (1 - smooth(0.7, 1, u));
     if (q.kind === 'rain') {
-      q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; if (Math.random() < 0.35 && V.parts.length < 460) V.parts.push({ kind: 'ring', x: q.x, y: q.gy, life: 0, max: 0.55, s: 0.6 + 0.8 * (q.gy - V.yH) / (V.H - V.yH), vx: 0, vy: 0, gy: V.H + 99 }); continue; }
+      q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; // 雨つぶの波紋は、小川の水面だけ。草や雪の上に白い輪をちらつかせると、地面がガクガクして見える
+        const fy = (q.gy - V.yH) / (V.H * 1.05 - V.yH), dz = fy * (1 - S_FAR) + S_FAR, z = clamp(1 - (1 / dz - 1) / PK), xx = (q.x / V.W - 0.5) / 1.06 + 0.5;
+        if (SITE.inBrook(clamp(xx), z) && Math.random() < 0.5 && V.parts.length < 460) V.parts.push({ kind: 'ring', x: q.x, y: q.gy, life: 0, max: 0.6, s: 0.6 + 0.8 * (q.gy - V.yH) / (V.H - V.yH), vx: 0, vy: 0, gy: V.H + 99 }); continue; }
       ctx.strokeStyle = `rgba(214,228,246,${0.5 * q.s})`; ctx.lineWidth = 1.1 * q.s; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - q.vx * 0.022, q.y - q.vy * 0.022); ctx.stroke();
     } else if (q.kind === 'ring') { // 雨つぶの波紋・しぶき
-      const u2 = q.life / q.max; ctx.strokeStyle = `rgba(232,240,252,${0.6 * (1 - u2)})`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(q.x, q.y, (1 + 5 * u2) * q.s, (0.4 + 1.6 * u2) * q.s, 0, 0, TAU); ctx.stroke();
+      const u2 = q.life / q.max; ctx.strokeStyle = `rgba(232,240,252,${0.55 * Math.min(1, u2 * 6) * (1 - u2)})`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(q.x, q.y, (1 + 5 * u2) * q.s, (0.4 + 1.6 * u2) * q.s, 0, 0, TAU); ctx.stroke();
     } else if (q.kind === 'snow') {
       q.x += (q.vx + Math.sin(q.life * 1.6 + q.ph) * 14) * dt; q.y += q.vy * dt;
       ctx.fillStyle = `rgba(255,255,255,${0.85 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.5 * q.s, 0, TAU); ctx.fill();
@@ -2097,6 +2099,9 @@ function drawScene(sim, frac, dt) {
   if (V.ftT > 2500) V.ftT = 0;
   V.storm = Math.max(0, V.storm - dt); V.flash = Math.max(0, V.flash - dt * 2.5); V.frost = Math.max(0, V.frost - dt * 0.25);
   const e = (V.env = computeEnv(sim, frac));
+  // 雨・雲・雪の降りかたは、なめらかに変える（にわか雨の入り切りで、画面全体の明るさが一瞬で切りかわると、ガクッと見える）
+  { const S = V.wx || (V.wx = { rain: e.rain, cloud: e.cloud, snowing: e.snowing }), k = V.fast > 0.5 ? 1 : Math.min(1, dt * 0.6);
+    S.rain += (e.rain - S.rain) * k; S.cloud += (e.cloud - S.cloud) * k; S.snowing += (e.snowing - S.snowing) * k; e.rain = S.rain; e.cloud = S.cloud; e.snowing = S.snowing; }
   const gust = vnoise(V.time * 0.23, 3) * vnoise(V.time * 0.71, 9);
   const tw = 0.12 + 0.9 * gust + (V.storm > 0 ? 2.6 : 0) + e.rain * 0.25 + Math.abs(sim.w.wx) * 0.15;
   V.wind += (tw - V.wind) * Math.min(1, dt * 1.5);
