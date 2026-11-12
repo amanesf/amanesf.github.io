@@ -1741,19 +1741,25 @@ function serviceQueue(budgetMs) {
         if (wb) bakeFlowers(v, sp, k, dsb);
         cache.set(key, sp); }
       else if (v.geo.gr !== STAGES[v.wantStage]) v.geo = plantGeom(v.p, STAGES[v.wantStage]);
-      const old = v.body; v.body = sp; v.stage = v.wantStage; v.look = v.wantLook; if (old && !old.shared && old !== sp) freeCanvas(old.c);
+      const old = v.body; v.body = sp; v.stage = v.wantStage; v.look = v.wantLook; if (old !== sp) fadeBody(v, old);
       if (coarse) { v.coarse = 1; v.queued = 1; V.queue.push(v); }
       continue;
     }
     if (!v.fl && (!lod || wb)) { const dp = lod ? Math.min(V.dpr, 1.5) : Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; if (!lod && v.fl.form === 'open' && v.face.some((f) => f.back)) v.flB = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id, true); }
     if (!v.body || v.coarse || v.body.look !== v.wantLook || v.body.stage !== v.wantStage || (v.body.baked || 0) !== wb) {
       const old = v.body; v.coarse = 0; v.geo = plantGeom(v.p, STAGES[v.wantStage]);
-      v.body = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); v.body.stage = v.wantStage; v.stage = v.wantStage; v.look = v.wantLook; v.body.baked = wb; if (old && !old.shared) freeCanvas(old.c);
+      v.body = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); v.body.stage = v.wantStage; v.stage = v.wantStage; v.look = v.wantLook; v.body.baked = wb; if (old !== v.body) fadeBody(v, old);
     }
     if (false) { const dp = Math.min(V.dpr, 2); v.fl = paintFlower(v.p.g, v.geo.R * v.pos.ds * V.unit * dp, v.p.id); v.fl.dp = dp; }
   }
 }
 
+// 株の絵を描きかえたら、前の絵から 0.6 秒かけて溶かす（育ちの段や、花の開き、紅葉が、ぱっと切りかわらないように）
+function fadeBody(v, old) {
+  if (v.bodyOld && v.bodyOld !== old && !v.bodyOld.shared) freeCanvas(v.bodyOld.c);
+  if (!old || v.alpha < 0.05 || V.fast > 0.5) { if (old && !old.shared) freeCanvas(old.c); v.bodyOld = null; return; }
+  v.bodyOld = old; v.bodyFade = 0;
+}
 function bakeFlowers(v, sp, k, dsb) { // 遠くの株は、花ごと 1 枚の絵にしてしまうしまう
         const x = sp.c.getContext('2d'), fl = v.fl, n = Math.min(v.p.nOpen || 0, v.geo.heads.length), hk = (0.45 + 0.55 * smooth(0.25, 0.9, STAGES[v.wantStage])) * (k / (dsb * V.unit * fl.dp));
         const soft = dsb < 0.5, fc = toneRgb(v.p.g);
@@ -1782,7 +1788,9 @@ function drawPlants(main, sim, dt, e) {
   paintTuftSprites(e); serviceBands(e);
   // どの層を描き直すか：待たせた分（頻度の比 × 経過）がいちばん溜まった層から。余裕のある端末では 2 層、苦しければ 1 層
   const lay = farLayers(), nowMs = performance.now(), fresh = new Array(NL).fill(0);
-  { let left = V.ft < 21 ? 2 : 1; for (let i = 0; i < NL; i++) { const L = lay[i]; L.debt += LAYER_W[i]; if (L.t < 0 || V.noLayer) { fresh[i] = 1; L.debt = 0; } }
+  V.fc = (V.fc || 0) + 1;
+  // 揺れは層ごとの傾きで出すので、描き直しは育ちや花の開き具合を追うだけでよい
+  { let left = V.fc % 3 === 0 ? 1 : 0; for (let i = 0; i < NL; i++) { const L = lay[i]; L.debt += LAYER_W[i]; if (L.t < 0 || V.noLayer) { fresh[i] = 1; L.debt = 0; } }
     if (V.layerFreeze) left = 0;
     while (left-- > 0) { let b = -1; for (let i = 0; i < NL; i++) if (!fresh[i] && (b < 0 || lay[i].debt > lay[b].debt)) b = i; if (b < 0) break; fresh[b] = 1; lay[b].debt = 0; } }
   let ctx = main, oy = 0;
@@ -1794,7 +1802,9 @@ function drawPlants(main, sim, dt, e) {
       while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); ctx.setTransform(dpr, 0, dpr * sh, dpr, dpr * -sh * (bd.y0 + bd.h), -dpr * oy); ctx.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); ctx.drawImage(bd.c, 0, bd.y0, V.W, bd.h); } }
       while (ti < nt && tufts[ti].z <= Math.min(z, vz)) { if (!V.noTuft) drawTuft(ctx, tufts[ti], e); ti++; }
       if (vz > z) break;
-      const L = lay[veil]; main.setTransform(dpr, 0, 0, dpr, 0, 0); main.globalAlpha = 1; main.drawImage(L.c, 0, L.y0, V.W, L.h); // まとめておいた層を置く
+      const L = lay[veil], z0 = veil ? VEIL_Z[veil - 1] : 0, zm = (z0 + VEIL_Z[veil]) / 2, dsm = depthScale(zm), yp = proj(0.5, zm).sy;
+      const sh = -(windAt(V.W * 0.5, dsm) * 0.75 * 0.085 + Math.sin(V.time * 1.3 + veil * 1.7) * 0.012 * (0.4 + V.wind)); // 層ごとの揺れ：毎フレームなめらかに傾ける（層の描き直しを待たない）
+      main.setTransform(dpr, 0, dpr * sh, dpr, -dpr * sh * yp, 0); main.globalAlpha = 1; main.drawImage(L.c, 0, L.y0, V.W, L.h); main.setTransform(dpr, 0, 0, dpr, 0, 0); // まとめておいた層を置く
       if (veil < 2) { const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb);
         gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.13, 0.06][veil])); gr.addColorStop(1, rgb(hz, 0)); main.fillStyle = gr; main.fillRect(0, y0, V.W, yb - y0); }
       veil++; openLayer(veil);
@@ -1828,13 +1838,14 @@ function drawPlants(main, sim, dt, e) {
     v.gs = clamp(sizeOf(v.gr) / sizeOf(STAGES[v.body.stage]), 0.8, 1.2) * Math.min(1, v.alpha * 1.6);
     const s = pos.ds * V.unit * v.gs, hk = 0.45 + 0.55 * smooth(0.25, 0.9, v.gr);
     const wl = windAt(pos.sx, pos.ds); v.sw = (v.sw || 0) + (wl - (v.sw || 0)) * Math.min(1, dt * (5 - 2.5 * g.ht)); // 背の高い株ほど遅れてしなる
-    const sway = v.sw * v.flex * 0.085 + Math.sin(time * (1.1 + 0.6 * hash1(p.id * 5)) + v.ph) * 0.014 * (0.4 + wind);
+    const sway = ctx !== main ? 0 : v.sw * v.flex * 0.085 + Math.sin(time * (1.1 + 0.6 * hash1(p.id * 5)) + v.ph) * 0.014 * (0.4 + wind); // 層に描く株は止めて描き、層ごと傾けて揺らす
     const shear = -(sway + v.lodge * (hash1(p.id * 7) < 0.8 ? 1.25 : -1.25)), ys = 1 - 0.52 * v.lodge - (p.aphid ? 0.06 : 0) - clamp(p.stress) * 0.12 - (v.look === 'autumn' ? 0.14 : 0);
     if (pos.ds >= LOD_DS) { ctx.globalAlpha = v.alpha * 0.16; ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.setTransform(dpr, 0, 0, dpr, 0, -dpr * oy); ctx.beginPath(); ctx.ellipse(pos.sx + 2 * s, pos.sy + 1, 12 * s, 3.4 * s, 0, 0, TAU); ctx.fill(); }
     ctx.globalAlpha = v.alpha * (v.look === 'autumn' ? 0.8 : 1);
-    const bs = s / v.body.k;
+    const bs = s / v.body.k, a0 = ctx.globalAlpha;
+    if (v.bodyOld) { v.bodyFade += dt / 0.6; const ob = v.bodyOld; if (v.bodyFade >= 1) { if (!ob.shared) freeCanvas(ob.c); v.bodyOld = null; } else { const os = pos.ds * V.unit * clamp(sizeOf(v.gr) / sizeOf(STAGES[ob.stage ?? v.body.stage]), 0.8, 1.2) * Math.min(1, v.alpha * 1.6) / ob.k; ctx.setTransform(dpr * os, 0, dpr * os * shear, dpr * os * ys, dpr * pos.sx, dpr * (pos.sy - oy)); ctx.drawImage(ob.c, -ob.ox, -ob.oy); ctx.globalAlpha = a0 * smooth(0, 1, v.bodyFade); } } // 前の絵は下にそのまま、新しい絵を上から出す
     ctx.setTransform(dpr * bs, 0, dpr * bs * shear, dpr * bs * ys, dpr * pos.sx, dpr * (pos.sy - oy));
-    ctx.drawImage(v.body.c, -v.body.ox, -v.body.oy);
+    ctx.drawImage(v.body.c, -v.body.ox, -v.body.oy); ctx.globalAlpha = a0;
     if (!lod && V.tuftSpr && v.gr > 0.2 && !V.noRoot) { const c = V.tuftSpr[v.p.id % 2 ? 3 : 0], ks = (pos.ds * V.unit * 0.3) / V.tuftPx; ctx.setTransform(dpr * ks, 0, 0, dpr * ks, dpr * pos.sx, dpr * (pos.sy + 2 - oy)); ctx.globalAlpha = v.alpha * 0.9; ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); ctx.globalAlpha = v.alpha; } // 根もとを草でなじませる
     // 花
     if (v.bumpT > 0) v.bumpT -= dt * 1.4;
@@ -2090,7 +2101,7 @@ function drawScene(sim, frac, dt) {
   const tw = 0.12 + 0.9 * gust + (V.storm > 0 ? 2.6 : 0) + e.rain * 0.25 + Math.abs(sim.w.wx) * 0.15;
   V.wind += (tw - V.wind) * Math.min(1, dt * 1.5);
   // 背景は少しずつ描き替えて、前の絵と溶け合わせる
-  V.bgMix = Math.min(1, V.bgMix + dt / 0.5);
+  V.bgMix = Math.min(1, V.bgMix + dt / 1.8); // 季節と時刻の色は、2 秒近くかけて溶かす（段が見えないように）
   const key = [(e.t * 48) | 0, (e.d * 20) | 0, (e.cloud * 6) | 0, (e.snow * 8) | 0, e.storm, (e.dry * 5) | 0].join(','); // 描き直しの間隔：時刻と季節の色のこまかい変化は、毎フレームの色かけと、0.5 秒の溶かしで足りる
   // 新しい背景は、見えていないほうの絵（A）に何フレームかに分けて描き、描きあがったら入れかえて溶かす
   if (V.bgJob) { const t0 = performance.now(); let r; do r = V.bgJob.next(); while (!r.done && performance.now() - t0 < (V.bgInit ? 3 : 1e9)); if (r.done) { V.bgJob = null; let tmp = V.bgA; V.bgA = V.bgB; V.bgB = tmp; tmp = V.skA; V.skA = V.skB; V.skB = tmp; V.bgMix = V.bgInit ? 0 : 1; V.bgInit = 1; } }
@@ -2638,7 +2649,7 @@ function serviceBands(e) {
   }
 }
 function paintTuftSprites(e) {
-  const k = [(e.t * 12) | 0, (e.snow * 3) | 0, (e.dry * 3) | 0].join(',');
+  const k = [(e.t * 30) | 0, (e.snow * 5) | 0, (e.dry * 4) | 0].join(','); // 草の色は細かい段で（段が大きいと、草がぱっと変わって見える）
   if (k === V.tuftKey && V.tuftSpr) return; V.tuftKey = k;
   const px = Math.min(V.dpr, 2) * V.unit * S_NEAR * 0.75, t = e.t;
   const ground = mix(mix(mix(ramp(GR_N, t), hex('#c9b266'), e.dry * 0.55), [236, 242, 200], 0.24), hex('#b9ad8c'), e.snow * 0.8);
@@ -2863,7 +2874,8 @@ function drawErikaScene(ctx, e, dt, talking) {
   const sway = Math.sin(EK.bob * 0.8) * 0.012 + windAt(cx, 1.3) * 0.006;
   ctx.save(); ctx.setTransform(d, 0, 0, d, d * cx, d * by); ctx.rotate(sway); const sq = 1 + (breath + talkBob - hop * 0.5) * 0.004; ctx.scale(1, sq); // 息や話すときは、下端を支点にわずかに伸び縮み
   ctx.globalAlpha = 0.16 * (1 - 0.7 * e.snow); ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.beginPath(); ctx.ellipse(bw * 0.06, -bh * 0.35, bw * 0.48, bh * 0.42, 0, 0, TAU); ctx.fill(); // うしろの花に落ちるかげ
-  if (EK.prev && EK.fade < 1) { const p = EK.img[EK.prev]; if (p && p.complete && p.naturalWidth) { ctx.globalAlpha = 1 - EK.fade; ctx.drawImage(p, -bw / 2, -bh, bw, bh); } }
+  // 表情の切りかえ：前の絵は不透明のまま下に置き、次の絵を上から出す（両方を半透明にすると、切りかわる一瞬だけ体が透けて点滅して見える）
+  if (EK.prev && EK.fade < 1) { const p = EK.img[EK.prev]; if (p && p.complete && p.naturalWidth) { ctx.globalAlpha = 1; ctx.drawImage(p, -bw / 2, -bh, bw, bh); } }
   ctx.globalAlpha = EK.prev ? EK.fade : 1; ctx.drawImage(im, -bw / 2, -bh, bw, bh);
   ctx.restore(); ctx.globalAlpha = 1;
   EK.head = [cx, by - bh]; EK.box = [cx - bw / 2, by - bh, cx + bw / 2, H];
@@ -2937,7 +2949,7 @@ function cumulusSprite(stage, glow, night, seed) {
   const s = { c, CW, CH }; C.set(key, s); return s;
 }
 function drawCumulus(ctx, e, dt) {
-  const ci = dayIdx(e), f = szForce('cumulus'), summer = e.t > 0.28 && e.t < 0.62;
+  const ci = dayIdx(e), f = szForce('cumulus'), summer = e.t > 0.3 && e.t < 0.58; // 画面の季節が「夏」のあいだだけ
   if (!f && (!summer || hash2(e.year, 600 + ci) > 0.8 || e.rain > 0.6 || e.snow > 0.3)) return;
   const d = f ? 0.55 : e.d, grow = smooth(0.08, 0.66, d), fade = 1 - smooth(0.94, 0.99, d), stage = Math.round(grow * 10);
   if (grow < 0.02 || fade < 0.01) return;
@@ -2950,7 +2962,7 @@ function drawCumulus(ctx, e, dt) {
     SZ.cuFl = Math.max(0, (SZ.cuFl || 0) - dt * 5); if (Math.random() < dt * 0.5) { SZ.cuFl = 1; SZ.cuFx = px + (Math.random() - 0.5) * 90 * sc; SZ.cuFy = by - (60 + Math.random() * 160) * sc; }
     if (SZ.cuFl > 0) { const fl = SZ.cuFl * (0.6 + 0.4 * Math.sin(V.time * 60)); const g = ctx.createRadialGradient(SZ.cuFx, SZ.cuFy, 0, SZ.cuFx, SZ.cuFy, 70 * sc); g.addColorStop(0, `rgba(255,246,236,${0.55 * fl})`); g.addColorStop(1, 'rgba(255,246,236,0)'); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(SZ.cuFx - 70 * sc, SZ.cuFy - 70 * sc, 140 * sc, 140 * sc); ctx.globalCompositeOperation = 'source-over'; }
   }
-  if (grow > 0.6 && e.dusk < 0.2) szSay('cumulus', '山の向こうに、もこもこの大きな雲が育っています。夏の雲は、背が高いんですね', 'happy');
+  if (grow > 0.6 && e.dusk < 0.2 && seasonKey(e.t) === 'summer') szSay('cumulus', '山の向こうに、もこもこの大きな雲が育っています。夏の雲は、背が高いんですね', 'happy');
 }
 
 // ── 渡り鳥：秋の空を、V の字で ──
