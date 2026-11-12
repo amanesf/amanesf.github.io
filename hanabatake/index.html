@@ -2543,10 +2543,9 @@ function* paintTreeJob(e) {
       const ac = f < 0.18 ? mix([168, 170, 84], [224, 190, 86], f / 0.18) /* 内がわの低いところには、まだ黄緑が残る */ : f < 0.5 ? mix([224, 190, 86], [226, 146, 58], f * 2) : mix([226, 146, 58], [200, 92, 56], (f - 0.5) * 2); // 黄 → 橙 → 朱
       c = mix(c, ac, autumn * 0.75);
     }
-    c = mix(c, [118, 128, 58], 0.22 * (1 - autumn) * (1 - blossom)); // 夏の緑はオリーブ寄りに（ミントの緑は、上にかかる光で白っぽく浮く）
     if (blossom > 0.05) c = mix(c, hash2(i, 82) < 0.7 ? [250, 214, 224] : [196, 222, 150], blossom * 0.55);
-    const shade = mix(c, blossom > 0.3 ? [150, 96, 128] : autumn > 0.3 ? [150, 80, 40] : [34, 56, 40], blossom > 0.3 ? 0.38 : autumn > 0.3 ? 0.4 : 0.66); // 陰は、その色を暗くしたもの（桜の陰を緑にすると濁る） // 陰は、その色のまま暗く（紅葉の陰は灰色にしない）
-    return tone < 0 ? shade : tone > 0 ? mix(c, [240, 236, 150], 0.34) : mix(c, [96, 118, 48], 0.16);
+    const shade = mix(c, blossom > 0.3 ? [150, 96, 128] : autumn > 0.3 ? [150, 80, 40] : [22, 64, 48], blossom > 0.3 ? 0.38 : autumn > 0.3 ? 0.4 : 0.58); // 陰は、その色を暗くしたもの（桜の陰を緑にすると濁る） // 陰は、その色のまま暗く（紅葉の陰は灰色にしない）
+    return tone < 0 ? shade : tone > 0 ? mix(c, [246, 244, 168], 0.3) : mix(c, [40, 90, 50], 0.1);
   };
   const jit = (c, q, k = 30) => { const d = (hash2(q, 91) - 0.5) * k; return [c[0] + d, c[1] + d * 0.9, c[2] + d * 0.6]; };
   // 葉のかたまり：縁取りはせず、にじみの濃淡とバックランで量感を出す
@@ -2592,41 +2591,21 @@ function* paintTreeJob(e) {
   { const s0 = segs[0], bw = s0.w; // 根張り
     wash(x, [[s0.x0 - bw * 1.1, s0.y0 + 3], [s0.x0 - bw * 0.56, s0.y0 - th * 0.03], [s0.x0 - bw * 0.48, s0.y0 - th * 0.1], [s0.x0 + bw * 0.48, s0.y0 - th * 0.1], [s0.x0 + bw * 0.6, s0.y0 - th * 0.03], [s0.x0 + bw * 1.15, s0.y0 + 3]], bark, 1, { edge: 0.6, ew: 0.6, light: [255, 238, 214], lightA: 0.4, shade: [50, 40, 60], shadeA: 0.3 }); }
   if (leafA > 0.02) {
-    // 樹冠は「ひとつの大きな葉のかさ」。小さな水彩の筆あと（葉の群れ）を何百も重ねる：陰の色から先に、日の当たる黄緑をあとに。
-    // 房を丸く積むとブロッコリーに見えた（2026-11-12）。筆あとは小さく角ばらせ、縁はまばらにして空をのぞかせ、内がわに枝を見せる
-    let bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9; for (const m of ms) { m.R = m.r * 1.12; bx0 = Math.min(bx0, m.x - m.R); bx1 = Math.max(bx1, m.x + m.R); by0 = Math.min(by0, m.y - m.R * 0.86); by1 = Math.max(by1, m.y + m.R * 0.86); }
-    const cx0 = (bx0 + bx1) / 2, cy0 = (by0 + by1) / 2, hw0 = (bx1 - bx0) / 2 + 1, hh0 = (by1 - by0) / 2 + 1;
-    const field = (px, py) => { let f = -1, mm = ms[0]; for (const m of ms) { const dx = (px - m.x) / m.R, dy = (py - m.y) / (m.R * 0.86), v = 1 - dx * dx - dy * dy; if (v > f) { f = v; mm = m; } } return [f, mm]; };
-    const lightOf = (px, py, m, q) => { const gu = (px - cx0) / hw0, gv = (py - cy0) / hh0, lu = (px - m.x) / m.R, lv = (py - m.y) / (m.R * 0.86);
-      return -(gu * 0.45 + gv * 0.85) * 0.55 - (lu * 0.55 + lv * 0.8) * 0.45 + (vnoise2(px * 0.035, py * 0.035, 31) - 0.5) * 0.9 + (hash2(q, 143) - 0.5) * 0.35 - 0.3; }; // 木全体の左上と、かたまりごとの左上から光。むらは低い周波数で
-    const pal = new Map(); const colAt = (m, lit) => { let p3 = pal.get(m); if (!p3) pal.set(m, (p3 = [clumpCol(m.i, -1, m), clumpCol(m.i, 0, m), clumpCol(m.i, 1, m)])); return lit < 0 ? mix(p3[1], p3[0], clamp(-lit * 1.4)) : mix(p3[1], p3[2], clamp(lit * 1.3)); };
-    // 1) 下塗り：かたまりを薄い中間色の一枚の水でつなぐ（ここがないと、筆あとの間が抜けて点描に見える）
-    for (const m of ms) { tracePts(x, noisyBlob(m.x, m.y + m.R * 0.04, m.R * 0.86, m.R * 0.7, m.i * 13 + 5, 0.22, 26, 5, 0.25)); x.fillStyle = rgb(colAt(m, -0.45), 0.85 * leafA); x.fill(); }
-    yield;
-    // 2) 筆あと：かさの中に点を撒き、縁の近くはまばらにする
-    const dabs = [], N = Math.round(1500 * (hw0 * hh0) / (W * W * 0.09));
-    for (let j = 0; j < N; j++) { const q = 7001 + j, px = bx0 + hash2(q, 141) * (bx1 - bx0), py = by0 + hash2(q, 142) * (by1 - by0), [f, m] = field(px, py); if (f < 0) continue;
-      const nz = vnoise2(px * 0.05, py * 0.05, 9); if (f < 0.22 && nz < 0.6 - f * 1.8) continue; // 縁は葉の群れがまばら：空がのぞき、輪郭がぎざぎざにほどける
-      const lit = lightOf(px, py, m, q), edge = clamp(f / 0.4);
-      dabs.push({ px, py, lit, m, q, rc: W * (0.007 + 0.013 * hash2(q, 144)) * (0.6 + 0.5 * edge) }); }
-    dabs.sort((a, b) => a.lit - b.lit);
-    const paintDab = (d, a0) => { const c = colAt(d.m, d.lit), hue = hash2(d.q, 146); // 色は1つずつ少し揺らす（黄みと青みに）
-      const cc = hue < 0.33 ? mix(c, [230, 222, 120], 0.12) : hue < 0.66 ? mix(c, [60, 120, 130], 0.1) : c;
-      tracePts(x, noisyBlob(d.px, d.py, d.rc, d.rc * (0.6 + 0.25 * hash2(d.q, 147)), d.q, 0.5, 9, 3, 0.45)); x.fillStyle = rgb(cc, (0.8 + 0.18 * hash2(d.q, 148)) * leafA); x.fill();
-      if (d.rc > W * 0.012 && hash2(d.q, 149) < 0.5) { tracePts(x, noisyBlob(d.px + d.rc * 0.5, d.py + d.rc * 0.35, d.rc * 0.55, d.rc * 0.4, d.q + 3, 0.5, 8, 2, 0.4)); x.fill(); } }; // ひとかたまりに2筆
-    let n2 = 0; for (const d of dabs) { if (d.lit > -0.05) break; paintDab(d, 1); if (++n2 % 150 === 0) yield; }
-    // 3) かさの内がわの枝：陰の上に細い枝を引き、そのあと明るい葉で一部を隠す
-    for (const s of segs) { if (s.d < 2 || s.d > 4) continue; const [f0] = field(s.x1, s.y1); if (f0 < 0.05) continue;
-      x.strokeStyle = rgb(mix(bark, [46, 40, 50], 0.55), 0.7 * leafA); x.lineWidth = Math.max(0.6, s.w1 * 0.6); x.beginPath(); x.moveTo(lerp(s.x0, s.x1, 0.15), lerp(s.y0, s.y1, 0.15)); x.quadraticCurveTo(s.cx, s.cy, s.x1, s.y1); x.stroke(); }
-    for (const d of dabs) { if (d.lit <= -0.05) continue; paintDab(d, 1); if (++n2 % 150 === 0) yield; }
-    // 4) 日の当たる面のいちばん明るい葉：小さく、紙の白に近い黄緑で
-    for (let k = 0; k < dabs.length; k++) { const d = dabs[k]; if (d.lit < 0.62 || hash2(d.q, 150) < 0.45) continue; const c = colAt(d.m, 1);
-      tracePts(x, noisyBlob(d.px - d.rc * 0.2, d.py - d.rc * 0.25, d.rc * 0.5, d.rc * 0.34, d.q + 9, 0.5, 7, 2, 0.4)); x.fillStyle = rgb(mix(c, [255, 252, 214], 0.4), 0.75 * leafA); x.fill(); }
-    // 5) 空のすき間：かさの内がわにも小さな穴をあける（水彩の塗り残し）
-    x.globalCompositeOperation = 'destination-out';
-    for (let j = 0; j < 90; j++) { const q = 9001 + j, px = bx0 + hash2(q, 151) * (bx1 - bx0), py = by0 + hash2(q, 152) * (by1 - by0) * 0.85, [f] = field(px, py); if (f < 0.04 || f > 0.55 || vnoise2(px * 0.05, py * 0.05, 9) < 0.55) continue;
-      tracePts(x, noisyBlob(px, py, W * (0.004 + 0.007 * hash2(q, 153)), W * (0.003 + 0.005 * hash2(q, 154)), q, 0.5, 8, 2, 0.4)); x.fillStyle = 'rgba(0,0,0,0.85)'; x.fill(); }
-    x.globalCompositeOperation = 'source-over';
+    // 葉の房：かたまりの中に小さな葉の房を何十も置く。房の明るさは、かたまりの中の位置（左上ほど光が当たる）と、木全体の高さで決める。
+    // 暗い房から先に、明るい房をあとに描くので、光の当たる房が手前に浮き、陰の房が奥に沈む（なめらかな面を重ねると、段を積んだケーキに見えた）
+    // 房の縁に細い葉の先を何本も立てると、トゲトゲの毛に見えて汚かった（2026-11-12）。縁のぎざぎざは房の形だけで出す
+    const cl = []; let ty0 = 1e9, ty1 = -1e9; for (const m of ms) { ty0 = Math.min(ty0, m.y - m.r); ty1 = Math.max(ty1, m.y + m.r); }
+    for (const m of ms) { const cM = clumpCol(m.i, 0, m), cL = clumpCol(m.i, 1, m), cS = clumpCol(m.i, -1, m), n = Math.round(26 * Math.pow(m.r / (W * 0.08), 2)) + 10;
+      tracePts(x, noisyBlob(m.x + m.r * 0.05, m.y + m.r * 0.05, m.r * 0.78, m.r * 0.66, m.i * 13 + 5, 0.2, 30, 6, 0.2)); x.fillStyle = rgb(cS, 0.95 * leafA); x.fill(); // 奥の暗い葉（すき間を埋める）
+      for (let j = 0; j < n * 3 && cl.length < 2000; j++) { const q = m.i * 997 + j, u = hash2(q, 141) * 2 - 1, v = hash2(q, 142) * 2 - 1; if (u * u + v * v > 1) continue;
+        const px = m.x + u * m.r * 0.92, py = m.y + v * m.r * 0.78, lit = -(u * 0.62 + v * 0.78) * 0.75 + (0.5 - (py - ty0) / (ty1 - ty0 + 1)) * 0.5 + (hash2(q, 143) - 0.5) * 0.45;
+        cl.push({ px, py, lit, rc: W * (0.017 + 0.012 * hash2(q, 144)) * (0.85 + 0.3 * (m.r / (W * 0.09))), col: lit > 0.5 ? mix(cL, [255, 250, 200], 0.12 * hash2(q, 145)) : lit > 0.05 ? cM : cS, q }); } }
+    cl.sort((a, b) => a.lit - b.lit);
+    for (let k = 0; k < cl.length; k++) { const c = cl[k];
+      tracePts(x, noisyBlob(c.px, c.py, c.rc, c.rc * 0.82, c.q, 0.3, 14, 4, 0.3)); x.fillStyle = rgb(c.col, 0.96 * leafA); x.fill(); // 房：ふちが葉の形でぎざぎざ
+      if (c.lit > 0.62) { tracePts(x, noisyBlob(c.px - c.rc * 0.25, c.py - c.rc * 0.28, c.rc * 0.5, c.rc * 0.38, c.q + 7, 0.3, 10, 3, 0.3)); x.fillStyle = rgb(mix(c.col, [255, 252, 214], 0.35), 0.8 * leafA); x.fill(); } // 房の頭の照り
+      else if (c.lit < -0.25) { x.strokeStyle = rgb(mix(c.col, [20, 40, 30], 0.4), 0.35 * leafA); x.lineWidth = 0.6; tracePts(x, noisyBlob(c.px, c.py, c.rc, c.rc * 0.82, c.q, 0.3, 14, 4, 0.3)); x.stroke(); } // 陰の房は、ふちだけ少し締める
+      if (k % 120 === 119) yield; }
     if (blossom > 0.3) for (let i = 0; i < 120; i++) { const tp = tips[(hash2(i, 85) * tips.length) | 0]; x.fillStyle = `rgba(255,${232 + ((hash2(i, 86) * 20) | 0)},240,${0.85 * blossom})`; x.beginPath(); x.arc(tp.x + (hash2(i, 87) - 0.5) * W * 0.13, tp.y + (hash2(i, 88) - 0.5) * W * 0.1, 0.9 + hash2(i, 89) * 1.4, 0, TAU); x.fill(); }
   }
   // 雪は枝の上にのせる（limb の中）。枝先に白いかたまりを浮かべると、円盤のように見える
