@@ -2342,7 +2342,8 @@ function drawCloudsInto(ctx, e, dt) {
     const ta = i < want ? Math.min(1, want - i) : 0; c.a += (ta - c.a) * Math.min(1, dt * 0.5);
     if (c.a < 0.01) return;
     const sp = V.clouds[c.sp], sc = (0.22 + 0.75 * c.lay) * c.sz * (W / 390) * (1 + e.cloud * 0.3), fl = 0.5 + 0.5 * c.lay, yy = yH * (0.64 - 0.5 * Math.pow(c.lay, 0.8)); // いちばん遠い雲も、山の頭のすぐ上（山より下だと隠れる） // 遠い雲ほど小さく、平たく、地平の近くに（空の奥行き）
-    ctx.globalAlpha = c.a * (0.7 + 0.3 * c.lay); ctx.drawImage(sp.c, c.x * W - sp.CW * 0.5 * sc, yy - sp.CH * 0.72 * sc * fl, sp.CW * sc, sp.CH * sc * fl);
+    const cb = SZ.cuBox, cxp = c.x * W, cu = cb && yy > cb[2] ? cb[3] * 0.85 * (1 - smooth(0, sp.CW * 0.4 * sc + 1, Math.max(cb[0] - cxp, cxp - cb[1], 0))) : 0; // 入道雲から離れるにつれて、なめらかに元の濃さへ
+    ctx.globalAlpha = c.a * (0.7 + 0.3 * c.lay) * (1 - cu); if (ctx.globalAlpha > 0.01) ctx.drawImage(sp.c, c.x * W - sp.CW * 0.5 * sc, yy - sp.CH * 0.72 * sc * fl, sp.CW * sc, sp.CH * sc * fl);
   });
   ctx.globalAlpha = 1;
 }
@@ -3103,44 +3104,50 @@ function cumulusSprite(stage, glow, night, seed) {
   const key = [stage, glow, night, seed].join(','), C = SZ.cuC || (SZ.cuC = new Map());
   if (C.has(key)) return C.get(key);
   if (C.size > 24) { for (const v of C.values()) freeCanvas(v.c); C.clear(); }
-  const CW = 320, CH = 360, k = Math.min(V.dpr, 1.5), c = mkCanvas(CW * k, CH * k), x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0);
-  const g = stage / 10, dusk = glow / 4, nt = night / 3, B = CH - 24, cx = CW * 0.5, rnd = (a, b) => hash2(a + seed * 131, b);
-  const white = mix(mix([255, 254, 250], [255, 222, 196], dusk * 0.85), [190, 198, 232], nt * 0.8), shade = mix(mix([168, 182, 214], [190, 140, 170], dusk * 0.8), [96, 108, 160], nt * 0.7), rim = mix([255, 252, 240], [255, 196, 150], dusk);
-  // 入道雲の形：平らな底から、太い柱がもくもく積み上がる。柱は上ほど細く、頭はカリフラワーのように丸いこぶの集まり。育つほど背が高くなり、最後に頭が横へ広がる（かなとこ）
-  const hgt = (CH - 70) * (0.22 + 0.78 * g), L = [];
-  // 段ごとに、横にこぶを並べる：すそは広く、上へ行くほど狭く、少し右へかしぐ。上の段ほどこぶは小さく、縁がもこもこ
-  const rows = 3 + Math.round(4 * g), baseW = 190 * (0.6 + 0.4 * g);
-  for (let rI = 0; rI < rows; rI++) { const u = rI / Math.max(1, rows - 1), y = B - 22 - hgt * u * 0.92, w = baseW * (1 - 0.62 * Math.pow(u, 0.8)) * (0.9 + 0.2 * rnd(rI, 30)), mx = cx - 10 + u * 22 + (rnd(rI, 31) - 0.5) * 16;
-    const r0 = (38 - 16 * u) * (0.85 + 0.3 * g), k = Math.max(2, Math.round(w / (r0 * 1.35)));
-    for (let q = 0; q < k; q++) { const v = k === 1 ? 0 : q / (k - 1) - 0.5; L.push([mx + v * w + (rnd(rI * 13 + q, 32) - 0.5) * r0 * 0.5, y + (rnd(rI * 13 + q, 33) - 0.5) * r0 * 0.5 - (1 - Math.abs(v) * 2) * r0 * 0.35, r0 * (0.7 + 0.6 * rnd(rI * 13 + q, 34))]); } }
-  const cols = [[0, 1]];
-  for (let q = 0; q < 6; q++) { const a = -Math.PI * (0.12 + 0.76 * rnd(q, 35)), r = 12 + 12 * rnd(q, 36); L.push([cx + 12 + Math.cos(a) * baseW * 0.2, B - 22 - hgt * 0.92 + Math.sin(a) * 22, r]); } // 頭のこぶ
-  const top0 = cx + 12, anv = smooth(0.85, 1, g); if (anv > 0) { const ty = B - 20 - hgt * 1.0; for (let j = 0; j < 11; j++) { const u = (j + 0.5) / 11 - 0.5; L.push([top0 + 20 + u * (110 + 170 * anv), ty - 4 + Math.abs(u) * 18 + (rnd(j, 22) - 0.5) * 6, 18 + 10 * rnd(j, 21) - Math.abs(u) * 10]); } } // かなとこ：いちばん高い柱の頭が、横へ流れる
-  // 1. 雲の形を、うすい陰の色で一度に塗る（外の輪郭はくっきり）
-  for (const [lx, ly, lr] of L) { tracePts(x, noisyBlob(lx, ly, lr, lr * 0.92, (lx * 7 + ly) | 0, 0.07, 22)); x.fillStyle = rgb(mix(white, shade, 0.72)); x.fill(); }
-  // 2. 下のこぶから順に、左上が明るく縁が透明に消える白を重ねる（中に輪郭は出さず、こんもりした明暗だけ）
-  L.sort((a, b) => b[1] - a[1]);
+  const CW = 340, CH = 400, k = Math.min(V.dpr, 1.5), c = mkCanvas(CW * k, CH * k), x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0);
+  const g = stage / 10, dusk = glow / 4, nt = night / 3, sx = 1 - 2 * smooth(0.2, 0.7, dusk) /* 夕方は日が右の低いところにある：光の向きを左右入れかえる */, B = CH - 24, cx = CW * 0.5, rnd = (a, b) => hash2(a + seed * 131, b);
+  // 色：日の当たる頭はまっ白（夕方は桃と橙）、陰は青みの灰、底はもう一段暗い
+  const hi = mix(mix([255, 255, 252], [255, 228, 192], dusk * 0.9), [196, 202, 236], nt * 0.85), mid = mix(mix([224, 230, 246], [226, 180, 192], dusk * 0.8), [150, 160, 206], nt * 0.8),
+    sh = mix(mix([160, 174, 210], [112, 98, 148], dusk * 0.85), [96, 106, 158], nt * 0.7), base = mix(mix([146, 158, 194], [96, 86, 132], dusk * 0.85), [70, 80, 130], nt * 0.7);
+  // 形：平らな底から立ちあがる塔。すそは広く、上へ行くほど細く、頭はこぶの集まり（カリフラワー）。育つほど背が伸び、最後に頭が横へ流れる（かなとこ）
+  // 2026-11-12 まで：同じ大きさの玉を段に並べて白く重ねていたので、綿を積んだように平たく見えた。こぶごとに「上が白・下が陰」を付け、下のこぶを手前に重ねて切れ目を出す
+  // 形：高さのちがう柱（塔）がいくつも寄りあい、まん中がいちばん高い。柱の頭は大きなこぶに小さなこぶがのった、カリフラワーの丸屋根。
+  // 2026-11-12：縁に同じ大きさの玉を並べた形は、壺か石けんの泡に見えた。板をのせた「かなとこ」も円盤に見えたのでやめ、育ちきった雲は頭が横にふくらむだけにする
+  const hgt = (CH - 130) * (0.32 + 0.68 * g), spread = smooth(0.75, 1, g);
+  const towers = [[0, 1, 1], [-0.62, 0.56, 0.92], [0.55, 0.74, 0.8], [-1.08, 0.3, 0.7], [1.02, 0.4, 0.62]].map(([dx, hh, ww], i) => ({ x: cx + dx * 100 * (0.8 + 0.2 * g) + (rnd(i, 60) - 0.5) * 12, h: hgt * hh * (0.9 + 0.2 * rnd(i, 61)) * (i ? 1 : 1), w: 96 * ww * (0.85 + 0.15 * g) * (i === 0 ? 1 + 0.25 * spread : 1), i }));
+  towers.sort((p, q) => q.h - p.h); // 高い柱を奥に、低い柱を手前に
+  const lobe = (lx, ly, lr) => { // 光は左上の上から：こぶの上の縁は白いまま、下だけ陰
+    const gr = x.createRadialGradient(lx - lr * 0.25 * sx, ly - lr * 0.7, lr * 0.1, lx - lr * 0.15 * sx, ly - lr * 0.5, lr * 1.55);
+    gr.addColorStop(0, rgb(hi)); gr.addColorStop(0.5, rgb(hi)); gr.addColorStop(0.72, rgb(mix(hi, mid, 0.6))); gr.addColorStop(0.9, rgb(mid)); gr.addColorStop(1, rgb(sh));
+    tracePts(x, noisyBlob(lx, ly, lr, lr * 0.92, (lx * 7 + ly) | 0, 0.06, 26)); x.fillStyle = gr; x.fill(); };
+  for (const t of towers) { const top = B - 20 - t.h, R = t.w * 0.58, L = [];
+    // 頭：大きなこぶ1つと、その肩と上に小さなこぶ
+    L.push([t.x, top + R * 0.95, R]);
+    for (let j = 0; j < 5; j++) { const a = -Math.PI * (0.15 + 0.7 * (j / 4)) + (rnd(t.i * 9 + j, 62) - 0.5) * 0.3, r = R * (0.38 + 0.2 * rnd(t.i * 9 + j, 63)); L.push([t.x + Math.cos(a) * R * 0.78, top + R * 0.95 + Math.sin(a) * R * 0.72, r]); }
+    // 胴：頭の下へ、左右の縁にこぶを並べ、すそほど広く
+    for (let y = top + R * 1.7, j = 0; y < B - 10; y += R * 0.62, j++) { const f = (y - top) / (t.h + 1), wy = t.w * (0.36 + 0.3 * f);
+      for (const sd of [-1, 1]) L.push([t.x + sd * wy * (0.62 + 0.15 * rnd(t.i * 31 + j * 2 + sd, 64)), y + (rnd(t.i * 31 + j, 65) - 0.5) * 8, R * (0.62 + 0.18 * rnd(t.i * 31 + j * 2 + sd, 66))]);
+      L.push([t.x + (rnd(t.i * 31 + j, 67) - 0.5) * wy * 0.5, y + R * 0.2, R * 0.7]); }
+    L.sort((p, q) => p[1] - q[1]); for (const [lx, ly, lr] of L) lobe(lx, ly, lr); }
+  for (let i = 0; i < 7; i++) { const v = (i + 0.5) / 7 - 0.5; lobe(cx + v * 250 * (0.75 + 0.25 * g), B - 22 - rnd(i, 48) * 6, 22 + 10 * rnd(i, 49)); } // すそ：横に長い低いこぶ
   x.globalCompositeOperation = 'source-atop';
-  for (const [lx, ly, lr] of L) { const gr = x.createRadialGradient(lx - lr * 0.32, ly - lr * 0.38, 0, lx - lr * 0.15, ly - lr * 0.15, lr * 1.05);
-    gr.addColorStop(0, rgb(mix(white, rim, 0.5), 1)); gr.addColorStop(0.5, rgb(white, 0.95)); gr.addColorStop(0.8, rgb(white, 0.4)); gr.addColorStop(1, rgb(white, 0));
-    x.fillStyle = gr; x.fillRect(lx - lr * 1.3, ly - lr * 1.3, lr * 2.6, lr * 2.6); }
-  let tY = 1e9; for (const p of L) tY = Math.min(tY, p[1] - p[2]);
-  // 雲全体の陰：右と底ほど暗い
-  { const gg = x.createLinearGradient(cx - 120, tY, cx + 150, B); gg.addColorStop(0, rgb(shade, 0)); gg.addColorStop(0.55, rgb(shade, 0.12)); gg.addColorStop(1, rgb(shade, 0.45)); x.fillStyle = gg; x.fillRect(0, 0, CW, CH); }
-  { const ug = x.createLinearGradient(0, B - 60, 0, B); ug.addColorStop(0, rgb(shade, 0)); ug.addColorStop(1, rgb(mix(shade, [120, 130, 170], 0.3), 0.7)); x.fillStyle = ug; x.fillRect(0, 0, CW, CH); }
-  x.globalCompositeOperation = 'destination-out'; { const fg = x.createLinearGradient(0, B - 10, 0, B + 6); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = fg; x.fillRect(0, B - 10, CW, 40); }
+  { const gg = x.createLinearGradient(cx - 135 * sx, 0, cx + 135 * sx, 0); gg.addColorStop(0, rgb(sh, 0)); gg.addColorStop(0.5, rgb(sh, 0.1)); gg.addColorStop(1, rgb(sh, 0.55)); x.fillStyle = gg; x.fillRect(0, 0, CW, CH); } // 日と反対の右がわは陰
+  { const ug = x.createLinearGradient(0, B - hgt * 0.45, 0, B); ug.addColorStop(0, rgb(base, 0)); ug.addColorStop(0.6, rgb(base, 0.3)); ug.addColorStop(1, rgb(base, 0.75)); x.fillStyle = ug; x.fillRect(0, 0, CW, CH); } // 底は雨を含んで暗い
+  x.globalCompositeOperation = 'destination-out'; { const fg = x.createLinearGradient(0, B - 14, 0, B + 2); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = fg; x.fillRect(0, B - 14, CW, 40); } // 底は平らに、かすんで消える
   x.globalCompositeOperation = 'source-over';
   grainOver(x, c.width, c.height, 0.15);
   const sp = { c, CW, CH }; C.set(key, sp); return sp;
 }
 function drawCumulus(ctx, e, dt) {
+  SZ.cuBox = null;
   const ci = dayIdx(e), f = szForce('cumulus'), summer = e.t > 0.3 && e.t < 0.58; // 画面の季節が「夏」のあいだだけ
   if (!f && (!summer || hash2(e.year, 600 + ci) > 0.8 || e.rain > 0.6 || e.snow > 0.3)) return;
   const d = f ? 0.55 : e.d, grow = smooth(0.08, 0.66, d), fade = 1 - smooth(0.94, 0.99, d), stage = Math.round(grow * 10);
   if (grow < 0.02 || fade < 0.01) return;
   const seed = (e.year * 4 + ci) % 5, sp = cumulusSprite(stage, Math.round(e.dusk * 4), Math.round(e.night * 3), seed);
-  const sc = Math.min((V.W / 390) * 0.66, (V.yH * 0.82) / 340), px = V.W * (0.2 + 0.1 * hash2(e.year, 610 + ci)), by = V.yH - V.H * 0.02; /* 木にかからない左の空、山の向こうから */
+  const sc = Math.min((V.W / 390) * 0.66, (V.yH * 0.82) / 340), px = V.W * (0.17 + 0.06 * hash2(e.year, 610 + ci)), by = V.yH - V.H * 0.02; /* 木にかからない左の空、山の向こうから */
   ctx.globalAlpha = 0.95 * Math.min(1, grow * 4) * fade * (1 - e.cloud * 0.4);
+  SZ.cuBox = [px - 140 * sc, px + 140 * sc, by - (sp.CH - 20) * sc, ctx.globalAlpha]; // 手前を横切る小さな雲は、ここでは薄くする（白い入道雲の上の灰色の染みに見えた）
   ctx.drawImage(sp.c, px - sp.CW * 0.5 * sc, by - (sp.CH - 20) * sc, sp.CW * sc, sp.CH * sc); ctx.globalAlpha = 1;
   // 夕立の雲：遠くで音のない稲光が、雲の中をてらす
   if ((hash2(e.year, 620 + ci) < 0.45 || f) && (e.dusk > 0.3 || e.night > 0.1) && grow > 0.7) {
@@ -3961,7 +3968,7 @@ function boot() {
   if (HASH.storm) setTimeout(() => { V.storm = 6; }, 300);
   if (HASH.say) setTimeout(() => say(decodeURIComponent(HASH.say), { pri: 9, force: true, mood: HASH.mood || 'calm' }), 400);
   if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.nolayer) V.noLayer = 1; if (HASH.layerfreeze) V.layerFreeze = 1; if (HASH.bandall) V.bandAll = 1; if (HASH.nomat) V.noMat = 1; if (HASH.nomid) V.noMid = 1; if (HASH.nosky) V.noSky = 1; if (HASH.notree) V.noTree = 1; if (HASH.nolight) V.noLight = 1; if (HASH.nofg) V.noFg = 1; if (HASH.novig) V.noVig = 1; if (HASH.zmin) V.zMin = +HASH.zmin; if (HASH.zmax) V.zMax = +HASH.zmax; if (HASH.noflower) V.noFlower = 1; if (HASH.noroot) V.noRoot = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
-  window.__hana = { get sim() { return sim; }, V, Talk, say, SZ };
+  window.__hana = { get sim() { return sim; }, V, Talk, say, SZ, cumulusSprite };
   requestAnimationFrame(frame);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
