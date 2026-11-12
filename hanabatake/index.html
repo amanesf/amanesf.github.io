@@ -48,6 +48,9 @@ body{font-family:'Klee One','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;c
 @keyframes bob{50%{transform:translateY(-3px) rotate(-1.2deg)}}
 #bubble{position:absolute;left:min(22%,96px);width:min(62vw,250px);bottom:calc(env(safe-area-inset-bottom) + min(27vw,118px) + 22px);z-index:21;opacity:0;transform:translateY(8px) scale(.94);transform-origin:8% 100%;transition:opacity .45s,transform .55s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
 #bubble.show{opacity:1;transform:none;pointer-events:auto}
+#bubble.side{transform:translate(-6px,-50%) scale(.94);transform-origin:0 50%}
+#bubble.side.show{transform:translate(0,-50%)}
+#bubble.side p::after{left:-9px;top:calc(50% - 8px);bottom:auto;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);border-top:0;transform:rotate(45deg) skew(8deg,8deg);border-radius:0 0 0 4px}
 #bubble p{font-size:14.5px;line-height:1.72;font-weight:600;letter-spacing:.02em;padding:11px 15px 12px;background:#fffdf5;border:1.5px solid var(--line);border-radius:var(--hand2);box-shadow:2px 3px 0 rgba(120,90,70,.1),0 6px 18px rgba(90,70,50,.14);position:relative}
 #bubble p::after{content:'';position:absolute;left:30px;bottom:-9px;width:15px;height:15px;background:#fffdf5;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line);transform:skewX(28deg) rotate(-38deg);border-radius:0 0 0 5px}
 
@@ -1945,16 +1948,28 @@ function drawBugs(ctx, sim, dt, e) {
       if (hp) { b.tx = hp[0]; b.ty = hp[1] - 2; b.tds = tv.pos.ds; b.arrive = 0; b.hi = hp[2]; }
       else { b.tx = !a ? (b.x < V.W / 2 ? -60 : V.W + 60) : Math.random() * V.W; b.ty = V.yH + V.H * (0.05 + 0.5 * Math.random()); b.tds = 0.5 + 0.4 * Math.random(); b.arrive = 1; b.tv = tv; }
     }
+    if (b.sit > 0 && b.tv !== tv) b.sit = 0; // とまっている花の行き先が変わったら、飛び立つ（すべって移らない）
     const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
-    const spd = (sp === 'butterfly' ? 70 : sp === 'fly' ? 150 : sp === 'moth' ? 120 : 110) * V.unit;
+    const near = 0.35 + 0.65 * clamp(b.ds / 0.9); // 遠くの虫は、画面の上ではゆっくり動いて見える
+    const spd = (sp === 'butterfly' ? 62 : sp === 'fly' ? 170 : sp === 'moth' ? 120 : 105) * V.unit * near;
     if (b.sit <= 0) {
-      if (dist < 5 && !b.arrive && b.tv) { b.sit = sp === 'fly' ? 0.5 + Math.random() : 0.9 + Math.random() * 1.3; b.arrive = 1; b.tv.bumpI = b.hi; b.tv.bumpT = 1; if (Math.random() < 0.5) spawn('pollen', b.x, b.y, { n: 2 }); } // とまると花がたわむ
-      const ax = (dx / (dist + 1)) * spd, ay = (dy / (dist + 1)) * spd, k = sp === 'butterfly' ? 1.6 : 3.2;
+      if (dist < 4 * near + 1 && !b.arrive && b.tv) { b.sit = sp === 'fly' ? 0.5 + Math.random() : sp === 'moth' ? 1.2 + Math.random() : 0.9 + Math.random() * 1.6; b.arrive = 1; b.tv.bumpI = b.hi; b.tv.bumpT = sp === 'moth' ? 0 : 1; if (Math.random() < 0.5) spawn('pollen', b.x, b.y, { n: 2 }); } // とまると花がたわむ（ホウジャクはとまらず、花の前で止まって吸う）
+      const slow = b.arrive ? 1 : clamp(dist / (40 * near), 0.25, 1); // 花に近づくと速さを落とす
+      let ax = (dx / (dist + 1)) * spd * slow, ay = (dy / (dist + 1)) * spd * slow, k = sp === 'butterfly' ? 1.4 : 3.2;
+      if (sp === 'fly') { // ハナアブ：空中でぴたりと止まって、ぱっと移る
+        b.hov = (b.hov ?? 0) - dt; if (b.hov > 0) { ax = 0; ay = 0; k = 9; } else if (b.hov < -0.35 - Math.random() * 0.4) b.hov = 0.3 + Math.random() * 0.7;
+      }
       b.vx += (ax - b.vx) * Math.min(1, dt * k); b.vy += (ay - b.vy) * Math.min(1, dt * k);
-      const wob = sp === 'butterfly' ? 46 : sp === 'fly' ? 8 : 18;
-      b.x += (b.vx + Math.sin(time * (sp === 'butterfly' ? 3.1 : 7) + b.ph) * wob + V.wind * 6) * dt; b.y += (b.vy + Math.cos(time * (sp === 'butterfly' ? 4.3 : 9) + b.ph * 2) * wob * 0.8) * dt;
-      if (Math.abs(b.vx) > 4) b.face = b.vx > 0 ? 1 : -1;
-    } else { b.x += (b.tx - b.x) * Math.min(1, dt * 6); b.y += (b.ty - b.y) * Math.min(1, dt * 6); }
+      let jx = 0, jy = 0;
+      if (sp === 'butterfly') { // 蝶：ひと打ちごとに浮いて沈み、行き先へ向かいながら、ふらふら向きを変える
+        b.wa = (b.wa ?? Math.random() * TAU) + (Math.random() - 0.5) * dt * 9; const flap = Math.sin(time * 9.5 + b.ph);
+        jx = Math.cos(b.wa) * 26 * near; jy = Math.sin(b.wa) * 16 * near - (flap > 0 ? 34 : -20) * near * Math.abs(flap);
+      } else if (sp === 'bee') { jx = (vnoise(time * 3 + b.ph, 7) - 0.5) * 22 * near; jy = (vnoise(time * 3.4 + b.ph, 9) - 0.5) * 16 * near; } // ハチ：ぶんぶん小さくぶれる
+      else if (sp === 'fly') { jx = (Math.random() - 0.5) * 6 * near; jy = (Math.random() - 0.5) * 6 * near; }
+      else { jx = Math.sin(time * 7 + b.ph) * 10 * near; jy = Math.cos(time * 9 + b.ph * 2) * 8 * near; }
+      b.x += (b.vx + jx + V.wind * 6 * near) * dt; b.y += (b.vy + jy) * dt;
+      if (Math.abs(b.vx) > 6) b.face = b.vx > 0 ? 1 : -1;
+    } else { b.x += (b.tx - b.x) * Math.min(1, dt * 6); b.y += (b.ty - b.y) * Math.min(1, dt * 6); if (sp === 'moth') { b.x += Math.sin(time * 11 + b.ph) * 0.3; b.y += Math.cos(time * 13 + b.ph) * 0.3; } } // とまっているあいだは、ゆれる花といっしょに
     b.ds += ((b.tds || 0.6) - b.ds) * Math.min(1, dt * 2);
     if (b.alpha < 0.02) continue;
     const sitting = b.sit > 0, kind = b.kind === undefined ? (b.kind = (hash1((b.ph * 1e4) | 0) * 5) | 0) : b.kind;
@@ -2786,36 +2801,45 @@ function drawBee(ctx, time, ph, sitting, pollen) {
   ctx.strokeStyle = INK + '0.85)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(9.4, -2.6); ctx.quadraticCurveTo(11.4, -4.6, 12.6, -3.8); ctx.moveTo(8.6, -2.9); ctx.quadraticCurveTo(10, -5.6, 11.4, -5.4); ctx.stroke();
 }
 // チョウ 5 種：モンシロ／モンキ／ベニシジミ／アゲハ／ルリシジミ
+// 蝶は背中から見た形で、頭を上にして右半分を描く（原点は胸のまんなか）。
+// 前羽は胸の前のほうから外へ出る三角（前縁はまっすぐ、先はとがる）、後ろ羽は胸のうしろから出て丸く、腹にそう。腹は後ろ羽の内がわを下へのびる
 const BFLY = [
-  { fore: [252, 251, 244], hind: [250, 248, 238], tip: [118, 122, 130], vein: 0.25, spots: [[9.6, -6.4, 1.2, [118, 122, 130]], [8.4, -2.6, 0.9, [118, 122, 130]]] },
-  { fore: [248, 222, 104], hind: [250, 230, 130], tip: [130, 96, 70], vein: 0.2, spots: [[8.4, -5, 0.9, [130, 96, 70]], [6.2, 5.4, 1.1, [240, 160, 120]]] },
-  { fore: [242, 148, 62], hind: [150, 110, 88], tip: [110, 80, 66], vein: 0.25, band: [240, 150, 70], spots: [[7, -6.4, 0.9, [90, 64, 54]], [9.6, -4.4, 0.8, [90, 64, 54]], [6.4, -3, 0.8, [90, 64, 54]]] },
-  { fore: [246, 234, 170], hind: [246, 236, 180], tip: [60, 52, 56], vein: 0.75, tail: 1, spots: [[7.4, 8, 1.2, [112, 150, 220]], [4.6, 9.6, 1.1, [226, 110, 90]]] },
-  { fore: [176, 200, 240], hind: [186, 208, 244], tip: [96, 104, 140], vein: 0.18, spots: [] },
+  { fore: [252, 251, 244], hind: [250, 248, 238], tip: [96, 100, 112], vein: 0.22, spots: [[7.6, -3.8, 1.15, [96, 100, 112]], [9.2, -1.2, 0.9, [96, 100, 112]]] }, // モンシロチョウ：前羽の先が黒く、黒い点が 2 つ
+  { fore: [248, 222, 104], hind: [250, 230, 130], tip: [130, 96, 70], vein: 0.2, spots: [[7.2, -4.4, 0.9, [130, 96, 70]], [6.4, 4.6, 1.0, [240, 160, 120]]] }, // モンキチョウ
+  { fore: [242, 148, 62], hind: [130, 96, 80], tip: [96, 70, 60], vein: 0.25, band: [240, 150, 70], spots: [[5.4, -4.2, 0.8, [80, 56, 48]], [8.6, -5.2, 0.8, [80, 56, 48]], [7.6, -1.6, 0.8, [80, 56, 48]]] }, // ベニシジミ：前羽は橙に黒い点、後ろ羽は茶色に橙の帯
+  { fore: [246, 234, 170], hind: [246, 236, 180], tip: [52, 46, 50], vein: 0.75, tail: 1, spots: [[7.6, 8.0, 1.0, [112, 150, 220]], [4.6, 9.2, 1.0, [226, 110, 90]]] }, // アゲハ：黒い筋、後ろ羽に尾と青い紋・赤い目玉
+  { fore: [176, 200, 240], hind: [186, 208, 244], tip: [96, 104, 140], vein: 0.18, spots: [] }, // ルリシジミ
 ];
-function bflyWing(ctx, sp, hind, a) {
-  ctx.beginPath();
-  if (!hind) { ctx.moveTo(0, 0); ctx.bezierCurveTo(3.4, -11.6, 13.6, -14.2, 14.4, -5.4); ctx.bezierCurveTo(14.2, -1.8, 6, 0.6, 0, 0.6); }
-  else if (sp.tail) { ctx.moveTo(0, 0.4); ctx.bezierCurveTo(5.6, 0.6, 12, 3, 10.6, 8.6); ctx.bezierCurveTo(10, 10.6, 8.6, 12.6, 9, 15.4); ctx.bezierCurveTo(7.4, 13.6, 6.6, 12, 5.4, 11.4); ctx.bezierCurveTo(2.6, 10, 0.6, 5.6, 0, 0.4); }
-  else { ctx.moveTo(0, 0.4); ctx.bezierCurveTo(5.6, 0.6, 12.4, 3.6, 10, 9.4); ctx.bezierCurveTo(6.4, 12.6, 1, 7.6, 0, 0.4); }
-  ctx.closePath();
-  const base = hind ? sp.hind : sp.fore, g = ctx.createRadialGradient(1, hind ? 2 : -2, 0.5, 5, hind ? 5 : -5, 14);
-  g.addColorStop(0, rgb(mix(base, [255, 255, 255], 0.45), 0.96 * a)); g.addColorStop(0.55, rgb(base, 0.94 * a)); g.addColorStop(1, rgb(mix(base, sp.tip, 0.3), 0.94 * a)); ctx.fillStyle = g; ctx.fill();
-  ctx.save(); ctx.clip();
-  ctx.strokeStyle = rgb(sp.tip, 0.55 * a); ctx.lineWidth = sp.vein > 0.5 ? 2 : hind ? 0.9 : 1.3; ctx.stroke(); // 縁の色
-  if (sp.band && hind) { ctx.strokeStyle = rgb(sp.band, 0.9 * a); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(4, 9.6); ctx.quadraticCurveTo(9, 8.6, 10.6, 5); ctx.stroke(); }
-  if (!hind && !sp.band) { const tg = ctx.createRadialGradient(13.6, -10, 0, 13.6, -10, 4.6); tg.addColorStop(0, rgb(sp.tip, 0.6 * a)); tg.addColorStop(1, rgb(sp.tip, 0)); ctx.fillStyle = tg; ctx.fillRect(8, -15, 8, 9); } // 羽の先の色
-  ctx.strokeStyle = rgb(sp.tip, sp.vein * a); ctx.lineWidth = sp.vein > 0.5 ? 0.7 : 0.4; ctx.beginPath();
-  for (let i = 0; i < 5; i++) { const t = i / 4; ctx.moveTo(0.6, hind ? 0.8 : -0.2); if (hind) ctx.quadraticCurveTo(4 + t * 3, 3 + t * 3, 10.6 - t * 8, 5 + t * 6.5); else ctx.quadraticCurveTo(5 + t * 2, -6 + t * 5, 13.6 - t * 1.6, -11 + t * 9.6); }
-  ctx.stroke();
-  ctx.restore();
-  for (const [sx, sy, sr, sc] of sp.spots) if ((sy > 0.5) === !!hind) { ctx.fillStyle = rgb(sc, 0.85 * a); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill(); }
+const BWING = {};
+function bflyPath(hind, tail) {
+  const k = (hind ? 'h' : 'f') + (tail ? 't' : ''); if (BWING[k]) return BWING[k];
+  const ctx = (BWING[k] = new Path2D());
+  if (!hind) { ctx.moveTo(0.9, -2.4); ctx.bezierCurveTo(4, -5.4, 9, -7.8, 12.6, -8.8); ctx.bezierCurveTo(13.7, -6, 13.3, -2.4, 11.2, 0.6); ctx.bezierCurveTo(8, 0.9, 3.5, 0.5, 1.0, -0.4); } // 前羽：前縁 → 先 → 外縁 → 内縁
+  else if (tail) { ctx.moveTo(1.0, -0.6); ctx.bezierCurveTo(4.5, -0.8, 9, 0, 10.4, 2.2); ctx.bezierCurveTo(11.4, 5, 9.6, 8.6, 7, 9.6); ctx.quadraticCurveTo(7.4, 12.2, 6.6, 15); ctx.quadraticCurveTo(5.8, 12.6, 5, 10.4); ctx.bezierCurveTo(3.2, 10.4, 1.6, 7, 1.1, 2.4); } // 後ろ羽と尾
+  else { ctx.moveTo(1.0, -0.6); ctx.bezierCurveTo(4.5, -0.8, 9, 0, 10.4, 2.2); ctx.bezierCurveTo(11.4, 5, 9.4, 9.2, 6, 10.2); ctx.bezierCurveTo(3.4, 10.6, 1.6, 7, 1.1, 2.4); } // 後ろ羽：丸く、腹にそう
+  ctx.closePath(); return ctx;
 }
-function bflyBody(ctx, len) {
-  ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.ellipse(0, 1.2, 1.3, len, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0, -len + 0.4, 1.6, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(214,196,176,0.7)'; ctx.beginPath(); ctx.ellipse(0, -1.4, 1.5, 2.4, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#5e4a44'; ctx.lineWidth = 0.45; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-0.4, -len); ctx.quadraticCurveTo(-2, -len - 4, -3.2, -len - 4.6); ctx.moveTo(0.4, -len); ctx.quadraticCurveTo(2, -len - 4, 3.2, -len - 4.6); ctx.stroke();
-  ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.arc(-3.2, -len - 4.6, 0.5, 0, TAU); ctx.arc(3.2, -len - 4.6, 0.5, 0, TAU); ctx.fill();
+function bflyWing(ctx, sp, hind, a) {
+  const P = bflyPath(hind, sp.tail);
+  const base = hind ? sp.hind : sp.fore, g = ctx.createRadialGradient(1.5, hind ? 1.5 : -1.5, 0.5, 6, hind ? 5 : -4, 13);
+  g.addColorStop(0, rgb(mix(base, sp.tip, 0.25), 0.96 * a)); g.addColorStop(0.35, rgb(base, 0.96 * a)); g.addColorStop(1, rgb(mix(base, [255, 255, 255], 0.2), 0.96 * a)); ctx.fillStyle = g; ctx.fill(P); // 付け根は少し濃く
+  ctx.save(); ctx.clip(P);
+  if (sp.band && hind) { ctx.strokeStyle = rgb(sp.band, 0.9 * a); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(3.4, 9.6); ctx.quadraticCurveTo(9, 8.8, 10.6, 3.6); ctx.stroke(); }
+  if (!hind && !sp.band) { const tg = ctx.createRadialGradient(12.6, -7.8, 0, 12.6, -7.8, 4.4); tg.addColorStop(0, rgb(sp.tip, 0.75 * a)); tg.addColorStop(0.6, rgb(sp.tip, 0.35 * a)); tg.addColorStop(1, rgb(sp.tip, 0)); ctx.fillStyle = tg; ctx.fillRect(7, -13, 9, 9); } // 前羽の先の色
+  ctx.strokeStyle = rgb(sp.tip, Math.max(0.25, sp.vein) * a); ctx.lineWidth = sp.vein > 0.5 ? 0.7 : 0.35; ctx.beginPath(); // 翅脈：付け根から外縁へ
+  const vs = hind ? [[10.4, 2.2], [10.8, 5], [8.8, 8.4], [5.8, 10]] : [[12.4, -8.6], [13, -5.6], [12.6, -2.6], [11.2, 0.2]], r0 = hind ? [1.3, 0.2] : [1.3, -1.4];
+  for (const [vx, vy] of vs) { ctx.moveTo(r0[0], r0[1]); ctx.quadraticCurveTo((r0[0] + vx) * 0.5, (r0[1] + vy) * 0.5 + (hind ? -0.6 : 0.6), vx, vy); }
+  ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = rgb(mix(sp.tip, [60, 50, 54], 0.4), 0.7 * a); ctx.lineWidth = 0.45; ctx.stroke(P); // 細い輪郭（ほかの絵と同じ墨の線）
+  for (const [sx, sy, sr, sc] of sp.spots) if ((sy > 0.5) === !!hind) { ctx.fillStyle = rgb(sc, 0.88 * a); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill(); }
+}
+function bflyBody(ctx) { // 頭・胸・腹。触角は先がふくらむ
+  ctx.fillStyle = '#4e3e3a'; ctx.beginPath(); ctx.ellipse(0, 4.2, 1.0, 4.6, 0, 0, TAU); ctx.fill(); // 腹
+  ctx.beginPath(); ctx.ellipse(0, -1.6, 1.5, 2.4, 0, 0, TAU); ctx.fill(); // 胸
+  ctx.fillStyle = 'rgba(200,184,168,0.55)'; ctx.beginPath(); ctx.ellipse(0, -1.8, 1.1, 1.9, 0, 0, TAU); ctx.fill(); // 胸の毛
+  ctx.fillStyle = '#4e3e3a'; ctx.beginPath(); ctx.arc(0, -4.5, 1.2, 0, TAU); ctx.fill(); // 頭
+  ctx.strokeStyle = '#4e3e3a'; ctx.lineWidth = 0.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-0.4, -5.4); ctx.quadraticCurveTo(-1.4, -8.6, -3.2, -10.8); ctx.moveTo(0.4, -5.4); ctx.quadraticCurveTo(1.4, -8.6, 3.2, -10.8); ctx.stroke();
+  ctx.fillStyle = '#4e3e3a'; ctx.beginPath(); ctx.ellipse(-3.3, -11, 0.45, 0.75, -0.5, 0, TAU); ctx.ellipse(3.3, -11, 0.45, 0.75, 0.5, 0, TAU); ctx.fill();
 }
 function drawButterfly(ctx, time, ph, sitting, kind) {
   const sp = BFLY[kind];
@@ -2823,13 +2847,14 @@ function drawButterfly(ctx, time, ph, sitting, kind) {
     const op = 0.5 + 0.5 * Math.sin(time * 1.6 + ph);
     ctx.fillStyle = '#5e4a44'; ctx.beginPath(); ctx.ellipse(0, 0, 5.2, 1.15, 0.06, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(5.2, -0.5, 1.5, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#5e4a44'; ctx.lineWidth = 0.45; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(5.8, -1.6); ctx.quadraticCurveTo(8.6, -4.6, 10.2, -4.2); ctx.moveTo(5.9, 0.4); ctx.quadraticCurveTo(7.4, 2.4, 6.8, 4.2); ctx.moveTo(1, 1); ctx.lineTo(0.2, 3.4); ctx.moveTo(-1.6, 1); ctx.lineTo(-2.6, 3.4); ctx.stroke();
-    for (const [rot, al] of [[-1.36 - 0.42 * op, 0.7], [-1.5 + 0.06 * op, 1]]) { ctx.save(); ctx.translate(1.4, -0.9); ctx.rotate(rot); ctx.scale(0.96, 0.9); bflyWing(ctx, sp, true, al); bflyWing(ctx, sp, false, al); ctx.restore(); } // 向こうの羽、手前の羽
+    // 閉じた羽：前羽のまっすぐな前縁が頭のがわ、羽の先は上の前方。羽の「外へ」を上へ、「前へ」を頭の向きへ写す（回すと前後が逆になる）
+    for (const [tilt, al] of [[-0.12 - 0.3 * op, 0.7], [0.02 * op, 1]]) { ctx.save(); ctx.translate(1.4, -0.9); ctx.rotate(tilt); ctx.transform(0, -0.92, -0.96, 0, 0, 0); bflyWing(ctx, sp, true, al); bflyWing(ctx, sp, false, al); ctx.restore(); } // 向こうの羽（少しひらく）、手前の羽
     return;
   }
   const f = Math.sin(time * 9.5 + ph), w = 0.16 + 0.84 * Math.abs(f), lift = f * 0.22;
-  ctx.rotate(-0.3 + Math.sin(time * 2.3 + ph) * 0.16);
+  ctx.rotate(0.55 + Math.sin(time * 2.3 + ph) * 0.14); // 頭を進む向き（右）へ少し傾ける
   for (const sgn of [-1, 1]) { ctx.save(); ctx.scale(sgn * w, 1); ctx.rotate(-lift * 0.5); bflyWing(ctx, sp, true, 1); bflyWing(ctx, sp, false, 1); ctx.restore(); }
-  bflyBody(ctx, 5.6);
+  bflyBody(ctx);
 }
 function drawHoverfly(ctx, time, ph, sitting) {
   ctx.rotate(0.05); ctx.lineCap = 'round';
@@ -2858,7 +2883,7 @@ function drawHawkmoth(ctx, time, ph, sitting) {
   ctx.fillStyle = '#8e7e66'; ctx.beginPath(); ctx.ellipse(5.4, -0.2, 3, 2.9, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = '#2f2826'; ctx.beginPath(); ctx.ellipse(6.6, -0.6, 1.5, 1.7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(7, -1.2, 0.5, 0, TAU); ctx.fill();
   ctx.strokeStyle = '#5a4c44'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(6.4, -2.6); ctx.quadraticCurveTo(8.4, -5.4, 10.4, -5); ctx.stroke();
-  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(8.2, 0.6); if (sitting) ctx.quadraticCurveTo(13, 2, 13.6, 8.6); else ctx.bezierCurveTo(10.4, 1, 11.4, 3, 10, 3.4); ctx.stroke(); // 口吻
+  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(8.2, 0.6); if (sitting) ctx.quadraticCurveTo(12, 1.2, 15.4, 2.6); else ctx.bezierCurveTo(10.4, 1, 11.4, 3, 10, 3.4); ctx.stroke(); // 口吻：蜜を吸うときは、花へまっすぐのばす（ふだんは巻いている）
 }
 function drawDragonfly(ctx, time, ph, red) {
   ctx.lineCap = 'round';
@@ -3271,7 +3296,8 @@ function say(text, o = {}) {
   if (o.diary !== false && o.year) { Talk.diary.push([o.year, text]); if (Talk.diary.length > 160) Talk.diary.shift(); }
   if (o.quiet) return; // 日記にだけ書く（吹き出しは出さない）
   if (!Talk.on && !o.force) return;
-  Talk.q.push({ text, pri, mood: o.mood || 'calm', exp: now() + (o.ttl || 14), force: o.force });
+  const S = typeof sim !== 'undefined' && sim ? sim : null; // 言ったときの花畑の時刻と季節。花畑の時間で遅れたら、もう言わない
+  Talk.q.push({ text, pri, mood: o.mood || 'calm', exp: now() + Math.min(o.ttl || 14, 14), force: o.force, at: S ? S.year * TICKS + S.tick : 0, sk: S ? seasonKey(S.tick / TICKS) : '' });
   if (Talk.q.length > 4) { Talk.q.sort((a, b) => b.pri - a.pri); Talk.q.length = 4; }
 }
 function talkTick(dt) {
@@ -3279,13 +3305,14 @@ function talkTick(dt) {
   E.nextBlink -= dt; E.blink -= dt; if (E.nextBlink < 0) { E.blink = 0.13; E.nextBlink = 2 + Math.random() * 4; }
   E.lookT -= dt; if (E.lookT < 0) { E.look = Math.random() < 0.3 ? 0 : Math.random() * 2 - 0.6; E.lookT = 2 + Math.random() * 4; }
   E.moodT -= dt; if (E.moodT < 0) E.mood = 'calm'; E.hop -= dt * 2.4;
-  if (Talk.cur && t > Talk.endAt) { Talk.el.classList.remove('show'); Talk.cur = null; Talk.gapUntil = t + 2.2; }
+  if (Talk.cur && t > Talk.endAt) { Talk.el.classList.remove('show'); Talk.cur = null; Talk.gapUntil = t + 0.9; }
   if (!Talk.cur && t > Talk.gapUntil && Talk.q.length) {
-    Talk.q = Talk.q.filter((m) => m.exp > t); if (!Talk.q.length) return;
+    const S = typeof sim !== 'undefined' && sim ? sim : null, nowAt = S ? S.year * TICKS + S.tick : 0, nowSk = S ? seasonKey(S.tick / TICKS) : '';
+    Talk.q = Talk.q.filter((m) => m.exp > t && (m.force || m.pri >= 8 || !S || (nowAt - m.at <= 6 && m.sk === nowSk))); if (!Talk.q.length) return; // 花畑の時間で 6 tick（ふつうの速さで 4 秒）より前のこと、季節が変わったことは言わない
     Talk.q.sort((a, b) => b.pri - a.pri); const m = Talk.q.shift();
-    Talk.cur = m; Talk.endAt = t + 3.4 + m.text.length * 0.115;
+    Talk.cur = m; Talk.endAt = t + 2.8 + m.text.length * 0.1;
     Talk.el.firstElementChild.textContent = m.text; Talk.el.classList.add('show');
-    if (EK.head) { Talk.el.style.bottom = Math.round(V.H - EK.head[1] - 6) + 'px'; Talk.el.style.left = Math.round(Math.max(12, EK.head[0] - 30)) + 'px'; } // 吹き出しはエリカの頭の上から
+    if (EK.box) { const top = EK.box[1], bh = V.H - top, left = Math.round(EK.box[2] - (EK.box[2] - EK.box[0]) * 0.1); Talk.el.style.left = left + 'px'; Talk.el.style.top = Math.round(top + bh * 0.42) + 'px'; Talk.el.style.bottom = 'auto'; Talk.el.style.width = Math.round(Math.min(250, V.W - left - 62)) + 'px'; Talk.el.classList.add('side'); } // 吹き出しはエリカの右がわ、顔の高さに
     E.mood = m.mood; E.moodT = Talk.endAt - t; if (m.mood === 'wow' || m.mood === 'happy') E.hop = 1;
   }
 }
