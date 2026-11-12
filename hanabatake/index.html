@@ -121,7 +121,14 @@ button.ink.quiet{display:block;margin:30px auto 0;background:none;border-color:v
 .diary b{font-family:'Kaisei Decol',serif;color:#d0708e;margin-right:8px;font-size:12px}
 
 /* 扉 */
-#title{position:absolute;inset:0;z-index:55;background:var(--paper) url(title.jpg) center/cover no-repeat;display:flex;justify-content:center;transition:opacity 1.7s ease,transform 2.4s ease;cursor:pointer}
+#title{position:absolute;inset:0;z-index:55;background:var(--paper) url(title.jpg) center/cover no-repeat;display:flex;justify-content:center;transition:opacity 1.7s ease,transform 2.4s ease}
+.go{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 7.5vh);display:grid;justify-items:center;gap:9px;animation:ttIn 1.4s 1s both}
+#start{font:inherit;font-family:'Kaisei Decol',serif;font-size:19px;font-weight:700;letter-spacing:.3em;text-indent:.3em;color:#6a4650;padding:13px 40px 15px;cursor:pointer;border:1.6px solid rgba(150,90,108,.55);border-radius:var(--hand);background:radial-gradient(ellipse at 34% 22%,#fffefa,#fdeef0 58%,#f8d6df);box-shadow:0 0 0 5px rgba(255,253,246,.62),2px 3px 0 rgba(140,80,100,.16),0 10px 26px rgba(90,60,50,.24);animation:breathe 3.2s ease-in-out 2.4s infinite;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+#start:active{transform:scale(.93) rotate(-1.5deg);animation:none}
+#start:focus-visible{outline:2px solid #c8688a;outline-offset:5px}
+#startNote{font-size:12px;font-weight:600;letter-spacing:.08em;color:#5a4650;text-shadow:0 0 10px #fffdf4,0 0 5px #fffdf4,0 0 2px #fffdf4;min-height:1.4em}
+@keyframes breathe{50%{box-shadow:0 0 0 9px rgba(255,253,246,.38),2px 3px 0 rgba(140,80,100,.16),0 10px 26px rgba(90,60,50,.24);transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){#start{animation:none}}
 #title.gone{opacity:0;transform:scale(1.06);pointer-events:none}
 .tt{margin-top:calc(env(safe-area-inset-top) + 11vh);text-align:center;color:#5a4650;text-shadow:0 0 18px #fffdf4,0 0 8px #fffdf4,0 0 3px #fffdf4;animation:ttIn 1.6s .2s both}
 .tt p{font-size:13.5px;font-weight:600;letter-spacing:.34em;margin-bottom:10px;color:#c8688a}
@@ -148,7 +155,7 @@ button.ink.quiet{display:block;margin:30px auto 0;background:none;border-color:v
     <button id="bSpeed" data-i="1" aria-label="速さ"><svg viewBox="0 0 32 32"><circle cx="16" cy="17" r="9.6"/><path d="M16 17l4.6-5.4M16 5v2.6M13.4 4.6h5.2"/></svg><small>ふつう</small></button>
   </nav>
   <section id="sheet"><button id="close" aria-label="とじる">とじる</button><div id="sheetBody"></div></section>
-  <div id="title"><div class="tt"><p>エリカの観察日記</p><h1>うつろいの<br>花畑</h1><span>だれも手を入れない花畑が、<br>虫と風と天気にまかせて変わっていきます</span></div></div>
+  <div id="title"><div class="tt"><p>エリカの観察日記</p><h1>うつろいの<br>花畑</h1><span>だれも手を入れない花畑が、<br>虫と風と天気にまかせて変わっていきます</span></div><div class="go"><button id="start" type="button">はじめる</button><small id="startNote"></small></div></div>
   <div id="paper"></div>
 </div>
 <script>
@@ -1627,10 +1634,10 @@ function resizeView() {
   V.cv.width = V.W * V.dpr; V.cv.height = V.H * V.dpr;
   V.yH = Math.round(V.H * 0.335);
   V.unit = clamp(V.H / 844, 0.7, 1.35) * clamp(V.W / 390, 0.85, 1.25) * 0.95;
-  for (const c of [V.bgA, V.bgB, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); if (V.farSpr) { for (const q of V.farSpr.values()) freeCanvas(q.c); V.farSpr.clear(); } V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
-  V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1;
+  for (const c of [V.bgA, V.bgB, V.bgC, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); if (V.farSpr) { for (const q of V.farSpr.values()) freeCanvas(q.c); V.farSpr.clear(); } V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
+  V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.bgC = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1;
   for (const v of V.views.values()) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); v.body = null; v.fl = null; v.flB = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
-  V.queue.length = 0; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
+  V.queue.length = 0; V.lay && V.lay.forEach((l) => freeCanvas(l.c)); V.lay = null; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
 }
 
 // ── 環境（季節・時刻・天気）から色を決める ──
@@ -1683,6 +1690,7 @@ function serviceQueue(budgetMs) {
   while (V.queue.length && (performance.now() - t0 < budgetMs || (hit && free < 400))) { hit = false;
     const v = V.queue.shift(); v.queued = 0;
     if (!V.views.has(v.p.id)) continue;
+    if (V.qstat) { const k = (v.pos.ds < LOD_DS ? 'far' : 'near') + (!v.body ? ':new' : v.coarse ? ':coarse' : v.body.look !== v.wantLook ? ':look' : v.body.stage !== v.wantStage ? ':stage' : ':other'); V.qstat[k] = (V.qstat[k] || 0) + 1; }
     const coarse = v.pos.ds >= LOD_DS && !v.body; // 手前の株も、まずは使い回しの絵で場所をうめ、あとで描きこむ
     const lod = v.pos.ds < LOD_DS || coarse, wb = lod && (coarse ? v.p.state === 1 && v.p.open > 0.45 : v.wantBaked) ? 1 : 0;
     // 遠くの株は、同じ種類・同じ育ちの絵を何株ぶんも使い回す（遠目には見分けがつかない。読みこみ直後に奥がからっぽにならないように）
@@ -1690,7 +1698,7 @@ function serviceQueue(budgetMs) {
     if (lod) {
       const key = [v.p.line, v.wantLook, v.wantStage, wb, dsb, wb ? G.hueBin(v.p.g) : 0, (hash1(v.p.id) * 2) | 0].join('|'), cache = V.farSpr || (V.farSpr = new Map());
       let sp = cache.get(key); if (sp) { free++; hit = true; }
-      if (!sp) { if (cache.size > 900) { for (const w of V.views.values()) if (w.body && w.body.shared) { w.body = null; if (!w.queued) { w.queued = 1; V.queue.push(w); } } for (const q of cache.values()) freeCanvas(q.c); cache.clear(); }
+      if (!sp) { if (cache.size > 1400) { const used = new Set(); for (const w of V.views.values()) if (w.body && w.body.shared) used.add(w.body); for (const [ck, q] of cache) if (!used.has(q)) { freeCanvas(q.c); cache.delete(ck); } } // 満杯になったら、いまどの株も使っていない絵だけを捨てる
         if (wb && !v.fl) { const dp = Math.min(V.dpr, 1.5); v.fl = paintFlower(v.p.g, v.geo.R * dsb * V.unit * dp, v.p.id); v.fl.dp = dp; }
         v.geo = plantGeom(v.p, STAGES[v.wantStage]); sp = paintBody(v.p, v.geo, k, v.wantLook, wb ? Math.ceil(v.geo.R * k * 1.4) : 0); sp.stage = v.wantStage; sp.baked = wb; sp.shared = 1;
         if (wb) bakeFlowers(v, sp, k, dsb);
@@ -1722,30 +1730,41 @@ const sizeOf = (gr) => 0.35 + 0.65 * gr;
 const LOD_DS = 0.75; // これより小さく見える株は簡略に描く
 const easeBack = (t) => { const c = 1.6; t = clamp(t) - 1; return 1 + (c + 1) * t * t * t + c * t * t; };
 
-function drawPlants(ctx, sim, dt, e) {
+// 株と草は、奥行きごとの層の絵にまとめておき、1 フレームに 1〜2 層ずつ描き直す。
+// 遠くの揺れは画面の上では小さいので、奥の層ほど間をあける（LAYER_W が描き直しの頻度の比）。いちばん手前だけは毎フレームじかに描く
+const VEIL_Z = [0.3, 0.56, 0.74, 0.87, 0.955], NL = VEIL_Z.length, LAYER_W = [1, 1.5, 2.2, 3.4, 5];
+const NOCTX = (() => { const o = {}; for (const k of ['setTransform', 'drawImage', 'beginPath', 'ellipse', 'fill', 'stroke', 'save', 'restore', 'translate', 'rotate', 'scale', 'moveTo', 'lineTo', 'quadraticCurveTo', 'arc', 'closePath', 'fillRect', 'clearRect']) o[k] = () => {}; return o; })();
+function farLayers() {
+  if (!V.lay) V.lay = VEIL_Z.map((z1, i) => { const z0 = i ? VEIL_Z[i - 1] : 0, y0 = Math.max(0, Math.floor(proj(0.5, z0).sy - (175 * V.unit + V.H * 0.03) * depthScale(z1) - 8)), y1 = Math.min(V.H, Math.ceil(proj(0.5, z1).sy + 14)), c = mkCanvas(V.W * V.dpr, (y1 - y0) * V.dpr); return { c, x: c.getContext('2d'), y0, h: y1 - y0, t: -1, debt: 0 }; });
+  return V.lay;
+}
+function drawPlants(main, sim, dt, e) {
   const tk = sim.tick, onset = sim.w.onset, dpr = V.dpr, time = V.time;
   const wind = V.wind;
   let veil = 0, ti = 0, bi = 0; const hz = e.hazeC || [235, 240, 240], tufts = V.tufts, nt = tufts.length;
   paintTuftSprites(e); serviceBands(e);
+  // どの層を描き直すか：待たせた分（頻度の比 × 経過）がいちばん溜まった層から。余裕のある端末では 2 層、苦しければ 1 層
+  const lay = farLayers(), nowMs = performance.now(), fresh = new Array(NL).fill(0);
+  { let left = V.ft < 21 ? 2 : 1; for (let i = 0; i < NL; i++) { const L = lay[i]; L.debt += LAYER_W[i]; if (L.t < 0 || V.noLayer) { fresh[i] = 1; L.debt = 0; } }
+    while (left-- > 0) { let b = -1; for (let i = 0; i < NL; i++) if (!fresh[i] && (b < 0 || lay[i].debt > lay[b].debt)) b = i; if (b < 0) break; fresh[b] = 1; lay[b].debt = 0; } }
+  let ctx = main, oy = 0;
+  const openLayer = (i) => { if (i >= NL) { ctx = main; oy = 0; return; } const L = lay[i]; oy = L.y0; if (!fresh[i]) { ctx = NOCTX; return; } ctx = L.x; L.t = nowMs; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, L.c.width, L.c.height); };
+  openLayer(0);
   const upTo = (z) => { // この奥行きまでの草と、空気の色
     while (true) {
-      while (bi < V.bands.length && BAND_Z[bi] <= z) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); ctx.setTransform(dpr, 0, dpr * sh, dpr, dpr * -sh * (bd.y0 + bd.h), 0); ctx.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); ctx.drawImage(bd.c, 0, bd.y0, V.W, bd.h); } }
-      const vz = veil < 3 ? [0.3, 0.55, 0.75][veil] : 9;
+      const vz = veil < NL ? VEIL_Z[veil] : 9;
+      while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); ctx.setTransform(dpr, 0, dpr * sh, dpr, dpr * -sh * (bd.y0 + bd.h), -dpr * oy); ctx.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); ctx.drawImage(bd.c, 0, bd.y0, V.W, bd.h); } }
       while (ti < nt && tufts[ti].z <= Math.min(z, vz)) { if (!V.noTuft) drawTuft(ctx, tufts[ti], e); ti++; }
       if (vz > z) break;
-      const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = ctx.createLinearGradient(0, y0, 0, yb);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
-      gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.13, 0.06, 0][veil])); gr.addColorStop(1, rgb(hz, 0)); ctx.fillStyle = gr; ctx.fillRect(0, y0, V.W, yb - y0); veil++;
+      const L = lay[veil]; main.setTransform(dpr, 0, 0, dpr, 0, 0); main.globalAlpha = 1; main.drawImage(L.c, 0, L.y0, V.W, L.h); // まとめておいた層を置く
+      if (veil < 2) { const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb);
+        gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.13, 0.06][veil])); gr.addColorStop(1, rgb(hz, 0)); main.fillStyle = gr; main.fillRect(0, y0, V.W, yb - y0); }
+      veil++; openLayer(veil);
     }
   };
   for (const v of V.order) {
     const p = v.p, g = p.g, pos = v.pos;
-    upTo(p.z); if (V.noPlant) continue;
-    while (false) {
-      const yb = proj(0.5, [0.3, 0.55, 0.75][veil]).sy + 6, y0 = V.yH - 46, gr = ctx.createLinearGradient(0, y0, 0, yb);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
-      gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop((V.yH - y0) / (yb - y0), rgb(hz, [0.13, 0.06, 0][veil])); gr.addColorStop(1, rgb(hz, 0)); ctx.fillStyle = gr; ctx.fillRect(0, y0, V.W, yb - y0); veil++;
-    }
+    upTo(p.z); if (V.noPlant || p.z < V.zMin || p.z > V.zMax) continue;
     const up = !v.gone && tk >= p.sprout;
     // 目標の姿
     let ta = up ? 1 : 0; const grT = clamp(p.bio / 0.9);
@@ -1754,6 +1773,7 @@ function drawPlants(ctx, sim, dt, e) {
     let st = 0; while (st < STAGES.length - 1 && STAGES[st] < v.gr - 0.02) st++;
     if (V.fast > 0.5 && pos.ds < LOD_DS) st = v.gr > 0.3 ? STAGES.length - 1 : 3; // 早送り中の遠くの株は、芽と大人の 2 段だけ
     else if (V.fast > 0.5 || pos.ds < 0.5) st = Math.min(STAGES.length - 1, Math.ceil((st + 1) / 3) * 3); // 早送り中と遠くの株は描き直しを減らす
+    else if (p.z < VEIL_Z[NL - 1]) st = Math.min(STAGES.length - 1, Math.ceil((st + 1) / 2) * 2 - 1); // 中ほどの株は 1 段おき
     v.wantStage = st;
     const wOff = hash1(p.id * 3) * 9;
     if (tk >= onset + wOff * 0.6) { ta = clamp(1 - (tk - onset - wOff * 0.6) / 8); if (g.pe > 0.5 && !p.dead) { ta = Math.max(ta, 0.0); } }
@@ -1772,17 +1792,17 @@ function drawPlants(ctx, sim, dt, e) {
     const wl = windAt(pos.sx, pos.ds); v.sw = (v.sw || 0) + (wl - (v.sw || 0)) * Math.min(1, dt * (5 - 2.5 * g.ht)); // 背の高い株ほど遅れてしなる
     const sway = v.sw * v.flex * 0.085 + Math.sin(time * (1.1 + 0.6 * hash1(p.id * 5)) + v.ph) * 0.014 * (0.4 + wind);
     const shear = -(sway + v.lodge * (hash1(p.id * 7) < 0.8 ? 1.25 : -1.25)), ys = 1 - 0.52 * v.lodge - (p.aphid ? 0.06 : 0) - clamp(p.stress) * 0.12 - (v.look === 'autumn' ? 0.14 : 0);
-    if (pos.ds >= LOD_DS) { ctx.globalAlpha = v.alpha * 0.16; ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.beginPath(); ctx.ellipse(pos.sx + 2 * s, pos.sy + 1, 12 * s, 3.4 * s, 0, 0, TAU); ctx.fill(); }
+    if (pos.ds >= LOD_DS) { ctx.globalAlpha = v.alpha * 0.16; ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.setTransform(dpr, 0, 0, dpr, 0, -dpr * oy); ctx.beginPath(); ctx.ellipse(pos.sx + 2 * s, pos.sy + 1, 12 * s, 3.4 * s, 0, 0, TAU); ctx.fill(); }
     ctx.globalAlpha = v.alpha * (v.look === 'autumn' ? 0.8 : 1);
     const bs = s / v.body.k;
-    ctx.setTransform(dpr * bs, 0, dpr * bs * shear, dpr * bs * ys, dpr * pos.sx, dpr * pos.sy);
+    ctx.setTransform(dpr * bs, 0, dpr * bs * shear, dpr * bs * ys, dpr * pos.sx, dpr * (pos.sy - oy));
     ctx.drawImage(v.body.c, -v.body.ox, -v.body.oy);
-    if (!lod && V.tuftSpr && v.gr > 0.2) { const c = V.tuftSpr[v.p.id % 2 ? 3 : 0], ks = (pos.ds * V.unit * 0.3) / V.tuftPx; ctx.setTransform(dpr * ks, 0, 0, dpr * ks, dpr * pos.sx, dpr * (pos.sy + 2)); ctx.globalAlpha = v.alpha * 0.9; ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); ctx.globalAlpha = v.alpha; } // 根もとを草でなじませる
+    if (!lod && V.tuftSpr && v.gr > 0.2 && !V.noRoot) { const c = V.tuftSpr[v.p.id % 2 ? 3 : 0], ks = (pos.ds * V.unit * 0.3) / V.tuftPx; ctx.setTransform(dpr * ks, 0, 0, dpr * ks, dpr * pos.sx, dpr * (pos.sy + 2 - oy)); ctx.globalAlpha = v.alpha * 0.9; ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); ctx.globalAlpha = v.alpha; } // 根もとを草でなじませる
     // 花
     if (v.bumpT > 0) v.bumpT -= dt * 1.4;
     const heads = v.geo.heads, n = heads.length, fl = v.fl;
     const blooming = p.state === 1, nO = p.nOpen || 0;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, -dpr * oy);
     const sunLean = V.sun ? clamp((V.sun[0] - pos.sx) / V.W, -0.6, 0.6) * 0.35 * (1 - e.night) : 0; // 花は少しだけ、お日さまのほうへ傾く
     const budOn = p.state === 0 && tk > p.bs - 12 && p.bio > 0.28 && !p.frost;
     for (let i = 0; i < n; i++) {
@@ -1793,7 +1813,7 @@ function drawPlants(ctx, sim, dt, e) {
       const dipv = v.bumpT > 0 && v.bumpI === i ? Math.sin(v.bumpT * Math.PI) * Math.exp(-(1 - v.bumpT) * 2) * 5 * pos.ds : 0;
       const X = pos.sx + s * (h.x + shear * h.y * ys) + bob, Y = pos.sy + s * h.y * ys + dipv;
       v.hp[i] = X; v.hp[i + n] = Y;
-      if (lod || v.coarse) continue;
+      if (lod || v.coarse || V.noFlower) continue;
       if (o > 0.02 && fl) {
         const sc = (easeBack(o) * h.r * hk) / fl.dp;
         ctx.save(); ctx.translate(X, Y);
@@ -1813,12 +1833,12 @@ function drawPlants(ctx, sim, dt, e) {
         if (swell > 0.3) { ctx.fillStyle = toneCss(g, 0.85 * swell); ctx.beginPath(); ctx.moveTo(0, -br * 1.35); ctx.quadraticCurveTo(br * 0.32, -br * 0.8, 0, -br * 0.3); ctx.quadraticCurveTo(-br * 0.32, -br * 0.8, 0, -br * 1.35); ctx.fill(); } // ほころびはじめた花びらの色
         ctx.restore();
       } else if (p.state >= 2 && p.bloomed && r < nO && !p.frost) { // 実
-        const br = Math.max(1, v.geo.R * 0.22 * pos.ds * V.unit * hk * h.r);
-        ctx.fillStyle = v.look === 'green' ? 'hsla(80,35%,50%,0.9)' : 'hsla(34,38%,48%,0.9)'; ctx.beginPath(); ctx.arc(X, Y, br, 0, TAU); ctx.fill();
+        const br = Math.max(1, v.geo.R * 0.16 * pos.ds * V.unit * hk * h.r);
+        ctx.fillStyle = v.look === 'green' ? 'hsla(84,30%,47%,0.8)' : 'hsla(32,32%,44%,0.78)'; ctx.beginPath(); ctx.arc(X, Y, br, 0, TAU); ctx.fill();
       }
     }
   }
-  upTo(2);
+  upTo(2); ctx = main;
   ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 function headPos(v, onlyOpen) {
@@ -1907,7 +1927,10 @@ function spawn(kind, x, y, o = {}) {
   for (let i = 0; i < n; i++) {
     if (V.parts.length > 420) return;
     const q = { kind, x: x + (Math.random() - 0.5) * 6, y: y + (Math.random() - 0.5) * 6, vx: 0, vy: 0, life: 0, max: 2, s: 1, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 4, col: o.col, gy: o.gy || V.H };
-    if (kind === 'seed') { q.vx = 8 + Math.random() * 16; q.vy = -14 - Math.random() * 22; q.max = 4 + Math.random() * 4; q.s = (o.s || 1) * (0.7 + Math.random() * 0.6); q.gy = y + 30 + Math.random() * 120; }
+    if (kind === 'seed') { // 綿毛：花にとまったまま風を待ち、風が来たら離れる
+      if (V.seedN >= 28) return;
+      q.x = x; q.y = y; q.ds = o.s || 1; q.s = q.ds * (0.8 + Math.random() * 0.45); q.wait = Math.random() * 7; q.hold = 0; q.max = 9 + Math.random() * 6; q.gy = (o.gy || y) + (8 + Math.random() * 60) * q.ds; q.ph = Math.random() * 97; q.tilt = 0; q.lift = 0.5 + Math.random() * 0.9; }
+    else if (kind === 'grain') { q.ds = o.s || 1; q.vx = (Math.random() - 0.5) * 26 * q.ds; q.vy = -(10 + Math.random() * 26) * q.ds; q.max = 2.2; q.gy = o.gy || y + 40; q.s = q.ds * (0.7 + Math.random() * 0.5); }
     else if (kind === 'petal') { q.vx = (Math.random() - 0.5) * 16; q.vy = 6 + Math.random() * 12; q.max = 2.6 + Math.random() * 2; q.s = (o.s || 1) * (0.7 + Math.random() * 0.6); }
     else if (kind === 'pollen') { q.vx = (Math.random() - 0.5) * 14; q.vy = -4 - Math.random() * 10; q.max = 1 + Math.random(); }
     else if (kind === 'spark') { const a = Math.random() * TAU, sp = 10 + Math.random() * 22; q.vx = Math.cos(a) * sp; q.vy = Math.sin(a) * sp - 8; q.max = 0.7 + Math.random() * 0.7; q.s = o.s || 1; }
@@ -1924,11 +1947,11 @@ function drawParts(ctx, dt, e) {
   if (e.night > 0.4 && e.t > 0.3 && e.t < 0.62 && Math.random() < dt * 9) { const z = 0.2 + Math.random() * 0.75, p = proj(SITE.brookX(z) + (Math.random() - 0.5) * 0.3, z); spawn('fire', p.sx, p.sy - 10 - Math.random() * 50 * p.ds); }
   if (e.t > 0.64 && e.t < 0.84 && Math.random() < dt * 0.9) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: hsl(18 + Math.random() * 30, 0.7, 0.55, 0.85) }); }
   if (e.t > 0.14 && e.t < 0.27 && Math.random() < dt * 1.1) { const p = proj(0.93, 0.1); spawn('leaf', p.sx - W * (0.02 + Math.random() * 0.3), p.sy - H * (0.14 + Math.random() * 0.14), { col: 'rgba(250,214,224,0.9)' }); }
-  let w = 0;
+  let w = 0, seedN = 0;
   for (let i = 0; i < V.parts.length; i++) {
     const q = V.parts[i]; q.life += dt;
     if (q.life > q.max || q.y > H + 10 || q.x > W + 60 || q.x < -60) continue;
-    V.parts[w++] = q;
+    V.parts[w++] = q; if (q.kind === 'seed' && q.wait > 0) q.life = 0;
     const u = q.life / q.max, fade = Math.min(1, u * 6) * (1 - smooth(0.7, 1, u));
     if (q.kind === 'rain') {
       q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; if (Math.random() < 0.35 && V.parts.length < 460) V.parts.push({ kind: 'ring', x: q.x, y: q.gy, life: 0, max: 0.55, s: 0.6 + 0.8 * (q.gy - V.yH) / (V.H - V.yH), vx: 0, vy: 0, gy: V.H + 99 }); continue; }
@@ -1939,14 +1962,25 @@ function drawParts(ctx, dt, e) {
       q.x += (q.vx + Math.sin(q.life * 1.6 + q.ph) * 14) * dt; q.y += q.vy * dt;
       ctx.fillStyle = `rgba(255,255,255,${0.85 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.5 * q.s, 0, TAU); ctx.fill();
     } else if (q.kind === 'seed') {
-      const landed = q.y >= q.gy;
-      if (!landed) { q.vx += (wind * 46 + 6 - q.vx) * dt * 0.9; q.vy += (9 - q.vy) * dt * 0.8; q.x += (q.vx + Math.sin(q.life * 2.4 + q.rot) * 9) * dt; q.y += q.vy * dt; } else q.life += dt * 2;
-      const s = q.s * 3.2; ctx.strokeStyle = `rgba(255,255,255,${0.9 * fade})`; ctx.lineWidth = 0.7;
-      ctx.beginPath(); for (let k = 0; k < 7; k++) { const a = -Math.PI / 2 + (k - 3) * 0.36 + Math.sin(q.life * 3 + q.rot) * 0.15; ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + Math.cos(a) * s, q.y + Math.sin(a) * s); } ctx.stroke();
-      ctx.fillStyle = `rgba(150,112,78,${fade})`; ctx.beginPath(); ctx.ellipse(q.x, q.y + s * 0.42, 0.9 * q.s, 1.7 * q.s, 0, 0, TAU); ctx.fill();
+      seedN++;
+      // 風は場所ごとに違う（windAt）。綿毛は軽いので、ほぼ風の速さで流れ、ゆっくり沈む。奥の綿毛ほど画面の上では遅い
+      const wl = windAt(q.x, q.ds);
+      if (q.wait > 0) { q.life = 0; q.wait -= dt * (0.25 + 2.2 * wl); if (q.wait <= 0) { q.vx = wl * 20 * q.ds; q.vy = -(7 + 9 * Math.random()) * q.ds; } continue; } // まだ花の上。風が強いほど早く離れる
+      if (q.y < q.gy) {
+        const k = q.ds, tx = (10 + 150 * wl) * k, eddy = vnoise2(q.x * 0.011 + V.time * 0.13, q.y * 0.011 + q.ph, 5) - 0.5, up = vnoise2(q.x * 0.008 - V.time * 0.09, q.y * 0.012 + q.ph, 8) - 0.42;
+        q.vx += (tx + eddy * 46 * k - q.vx) * Math.min(1, dt * 1.7);
+        q.vy += ((7 - up * 62 * q.lift - wl * 13) * k - q.vy) * Math.min(1, dt * 1.1); // 風のかたまりに乗ると浮き、切れ目で沈む
+        q.x += q.vx * dt; q.y += q.vy * dt;
+        q.tilt += (clamp((q.vx - tx * 0.6) / (60 * k + 1), -1, 1) * 0.5 + clamp(q.vx / (220 * k), 0, 1) * 0.5 + eddy * 0.5 - q.tilt) * Math.min(1, dt * 3); // 進むほうへ傘がかしぐ
+      } else { q.hold += dt; q.tilt += (1.25 - q.tilt) * Math.min(1, dt * 2.5); if (q.hold > 1.6) q.life = Math.max(q.life, q.max * 0.82); } // 草にひっかかって、ねる
+      const c = seedSprite(), sc = (q.s * 17) / c.width;
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.tilt); ctx.scale(sc, sc); ctx.globalAlpha = fade * (0.7 + 0.3 * clamp(q.ds)); ctx.drawImage(c, -c.width / 2, -c.height * 0.3); ctx.restore(); ctx.globalAlpha = 1;
+    } else if (q.kind === 'grain') { // こぼれる種：小さな粒が弧をえがいて草に落ちる
+      q.vy += 150 * q.ds * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.y > q.gy) { q.life = q.max; continue; }
+      ctx.fillStyle = `rgba(122,92,64,${0.85 * fade})`; ctx.beginPath(); ctx.ellipse(q.x, q.y, 1.1 * q.s, 0.75 * q.s, Math.atan2(q.vy, q.vx), 0, TAU); ctx.fill();
     } else if (q.kind === 'petal' || q.kind === 'leaf') {
       q.vx += (wind * 40 - q.vx) * dt * 0.6; q.x += (q.vx + Math.sin(q.life * 3 + q.rot) * 16) * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
-      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.globalAlpha = fade; ctx.fillStyle = q.col; ctx.beginPath(); ctx.ellipse(0, 0, 3.4 * q.s, 1.9 * q.s * Math.abs(Math.cos(q.life * 4 + q.rot)) + 0.5, 0, 0, TAU); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.globalAlpha = fade; ctx.fillStyle = q.col; const pl = (q.kind === 'leaf' ? 3.4 : 2.7) * q.s, pw = pl * 0.56 * Math.abs(Math.cos(q.life * 2.6 + q.rot)) + 0.4; ctx.beginPath(); ctx.moveTo(-pl, 0); ctx.bezierCurveTo(-pl * 0.3, -pw * 1.25, pl * 0.75, -pw, pl, 0); ctx.bezierCurveTo(pl * 0.75, pw, -pl * 0.3, pw * 1.25, -pl, 0); ctx.fill(); ctx.restore(); // 付け根のとがった、花びらの形 ctx.globalAlpha = 1;
     } else if (q.kind === 'pollen') {
       q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 10 * dt; ctx.fillStyle = `rgba(250,214,96,${0.9 * fade})`; ctx.beginPath(); ctx.arc(q.x, q.y, 1.2, 0, TAU); ctx.fill();
     } else if (q.kind === 'spark') {
@@ -1957,7 +1991,23 @@ function drawParts(ctx, dt, e) {
       const a = fade * (0.55 + 0.45 * Math.sin(q.life * 5 + q.rot)); const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 9); g.addColorStop(0, `rgba(240,255,150,${a})`); g.addColorStop(0.3, `rgba(220,250,120,${a * 0.4})`); g.addColorStop(1, 'rgba(220,250,120,0)'); ctx.fillStyle = g; ctx.fillRect(q.x - 9, q.y - 9, 18, 18);
     }
   }
-  V.parts.length = w;
+  V.parts.length = w; V.seedN = seedN;
+}
+// 綿毛の絵：細い毛が浅い傘になって開き、その下に柄と小さな種がさがる（横から見た姿）
+function seedSprite() {
+  if (V.seedSpr) return V.seedSpr;
+  const S = 96, c = (V.seedSpr = mkCanvas(S, S)), x = c.getContext('2d'), cx = S / 2, cy = S * 0.3;
+  const g = x.createRadialGradient(cx, cy - 4, 1, cx, cy - 4, S * 0.4); g.addColorStop(0, 'rgba(255,255,252,0.7)'); g.addColorStop(0.55, 'rgba(255,255,250,0.26)'); g.addColorStop(1, 'rgba(255,255,250,0)');
+  x.save(); x.translate(cx, cy - 4); x.scale(1, 0.5); x.translate(-cx, -cy + 4); x.fillStyle = g; x.fillRect(0, 0, S, S); x.restore(); // 毛のあつまりは、うすい光のかたまりに見える
+  x.lineCap = 'round';
+  for (let i = 0; i < 26; i++) { // 毛：中心から上へ広がり、先がすこし垂れる
+    const u = (i + 0.5) / 26 - 0.5, a = -Math.PI / 2 + u * 2.7 + (hash2(i, 71) - 0.5) * 0.12, l = S * (0.3 + 0.1 * hash2(i, 72)), ex = cx + Math.cos(a) * l, ey = cy + Math.sin(a) * l * 0.62;
+    x.strokeStyle = `rgba(255,255,253,${0.5 + 0.4 * hash2(i, 73)})`; x.lineWidth = 2.6; x.beginPath(); x.moveTo(cx, cy); x.quadraticCurveTo(cx + Math.cos(a) * l * 0.6, cy + Math.sin(a) * l * 0.62 - 3, ex, ey + 2.5); x.stroke();
+    x.fillStyle = 'rgba(255,255,255,0.8)'; x.beginPath(); x.arc(ex, ey + 2.5, 2.3, 0, TAU); x.fill();
+  }
+  x.strokeStyle = 'rgba(232,226,210,0.95)'; x.lineWidth = 3.4; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx, S * 0.8); x.stroke(); // 柄
+  x.fillStyle = 'rgba(132,98,66,0.95)'; x.beginPath(); x.ellipse(cx, S * 0.86, 4.6, 10, 0, 0, TAU); x.fill(); // 種
+  return c;
 }
 
 // ── 絵の縁：画面の端で、絵の具が紙に溶けていく ──
@@ -2003,8 +2053,9 @@ function drawScene(sim, frac, dt) {
   const P = V.prof || (V.prof = {}), T = (k) => { const n = performance.now(); P[k] = (P[k] || 0) * 0.95 + (n - P._l) * 0.05; P._l = n; }; P._l = performance.now();
   ctx.drawImage(V.skA, 0, 0); if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.skB, 0, 0); ctx.globalAlpha = 1; }
   drawSkyLife(ctx, e, dt);
-  if (V.bgMix < 1) ctx.drawImage(V.bgA, 0, 0, W, H);
-  if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.bgB, 0, 0, W, H); ctx.globalAlpha = 1; }
+  // 前の絵と次の絵は、足して 1 になるように混ぜる。重ねるだけだと、木の葉のような半透明のところが、混ぜている間だけ濃くなって点滅して見える
+  if (V.bgMix >= 1) ctx.drawImage(V.bgB, 0, 0, W, H);
+  else { const m = V.bgC.getContext('2d'); m.globalCompositeOperation = 'source-over'; m.clearRect(0, 0, V.bgC.width, V.bgC.height); m.globalAlpha = 1 - V.bgMix; m.drawImage(V.bgA, 0, 0); m.globalCompositeOperation = 'lighter'; m.globalAlpha = V.bgMix; m.drawImage(V.bgB, 0, 0); ctx.drawImage(V.bgC, 0, 0, W, H); }
   drawSmoke(ctx, e);
   T('bg'); drawBrook(ctx, e); T('brook');
   if (V.queue.length > 80) V.queue.sort((a, b) => (a.body ? 1 : 0) - (b.body ? 1 : 0) || (a.pos.ds < LOD_DS ? 0 : 1) - (b.pos.ds < LOD_DS ? 0 : 1) || b.pos.ds - a.pos.ds); // 使い回せる奥の株を先に（画面の大半を一気に埋める）、そのあと手前から
@@ -3082,7 +3133,13 @@ function handleEvents(live) {
       if (V.fast < 0.5 || Math.random() < 0.12) chime(ev.plant.g.h, ev.plant.g.sz > 0.6);
     } else if (ev.type === 'seed') {
       const v = V.views.get(ev.plant.id);
-      if (v && v.hp.length) { const n = Math.min(V.fast > 0.5 ? 1 : 4, ev.n); for (let k = 0; k < n; k++) { const hp = headPos(v, false); if (hp) spawn('seed', hp[0], hp[1], { s: v.pos.ds }); } const hp = headPos(v, false); if (hp && V.fast < 0.5) spawn('petal', hp[0], hp[1], { n: 3, s: v.pos.ds, col: toneCss(ev.plant.g, 0.85) }); }
+      if (v && v.hp.length) {
+        // 綿毛で飛ぶのは、蒲公英や野菊のなかまだけ。ほかの花の種は、足もとにこぼれる
+        const ds = v.pos.ds, fluff = G.comp(ev.plant.g) > 0.35, near = ds >= LOD_DS, calm = V.fast < 0.5;
+        if (fluff) { const n = near ? (calm ? 1 + ((Math.random() * 2.4) | 0) : 1) : Math.random() < (calm ? 0.3 : 0.12) ? 1 : 0; for (let k = 0; k < n; k++) { const hp = headPos(v, false); if (hp) spawn('seed', hp[0], hp[1], { s: ds, gy: v.pos.sy }); } }
+        else if (near && calm) { const hp = headPos(v, false); if (hp) spawn('grain', hp[0], hp[1], { n: 2, s: ds, gy: v.pos.sy }); }
+        const hp = headPos(v, false); if (hp && calm && near && Math.random() < 0.4) spawn('petal', hp[0], hp[1], { n: 1 + ((Math.random() * 2) | 0), s: ds, col: rgb(mix(toneRgb(ev.plant.g), [255, 252, 244], 0.35), 0.72) }); // 散る花びらは、ときどき、うすい色で
+      }
     } else if (ev.type === 'event') {
       if (ev.kind === 'storm') { V.storm = 5; V.flash = 1; setTimeout(() => (V.flash = 0.8), 900); }
       else if (ev.kind === 'frost') V.frost = 1;
@@ -3143,7 +3200,7 @@ function boot() {
   const isNew = !sim;
   if (!sim) { sim = Sim.fresh(+HASH.seed || (Date.now() % 1e9)); snap = sim.save(); sim.out.length = 0; }
   if (HASH.y) fastForward(+HASH.y - sim.year, false);
-  else if (!isNew && saved.ts) { const yrs = Math.min(400, Math.floor((Date.now() - saved.ts) / 1000 / YEAR_SEC)); if (yrs >= 1) fastForward(yrs, true); }
+  // 閉じているあいだ・画面を離れているあいだは、花畑の時間を進めない（開いたら、保存したところから）
   if (isNew && !HASH.tk && !HASH.y) { sim.quiet = true; while (sim.tick < 40) sim.step(); sim.quiet = false; sim.out.length = 0; } // はじめての人は、花のそろいはじめる初夏から
   if (HASH.tk) { sim.quiet = true; while (sim.tick < Math.floor(+HASH.tk)) sim.step(); sim.quiet = false; sim.out.length = 0; acc = +HASH.tk % 1; }
   if (HASH.speed) speedIdx = +HASH.speed;
@@ -3172,17 +3229,18 @@ function boot() {
   });
   const endTitle = () => { if (!titleOn) return; titleOn = false; $('title').classList.add('gone'); setTimeout(() => $('title').remove(), 1800);
     if (isNew) { say('こんにちは。エリカです。この花畑を観察しています', { pri: 9, mood: 'happy', diary: false, ttl: 40 }); say('誰も手を入れません。虫と風と天気にまかせて、花がどう変わるか見ています', { pri: 8, diary: false, ttl: 60 }); say('わたしの星では、花は毎年おなじです。ここは違うみたいなんです', { pri: 7, diary: false, ttl: 90 }); } };
-  $('title').onclick = endTitle;
-  if (HASH.notitle) { titleOn = false; $('title').remove(); } else setTimeout(endTitle, 4200);
+  // 扉は「はじめる」を押すまで開かない（つづきの人には、何年目の花畑かを添える）
+  if (HASH.notitle) { titleOn = false; $('title').remove(); }
+  else { if (!isNew) { $('start').textContent = 'つづきから'; $('startNote').textContent = `${sim.year}年目の花畑`; } $('start').onclick = endTitle; }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = Date.now(); saveAll(); }
-    else if (hiddenAt) { const yrs = Math.min(400, Math.floor(((Date.now() - hiddenAt) / 1000 / YEAR_SEC) * SPEEDS[speedIdx][0])); hiddenAt = 0; lastT = performance.now(); if (yrs >= 2) fastForward(yrs, true); }
+    else if (hiddenAt) { hiddenAt = 0; lastT = performance.now(); }
   });
   addEventListener('pagehide', saveAll);
   if (HASH.panel === 'hist') showHistory(sim); else if (HASH.panel === 'zukan') showZukan(); else if (HASH.panel === 'plant') setTimeout(() => { const p = sim.plants.find((q) => q.state === 1) || sim.plants[0]; if (p) showPlant(p, sim); }, 600);
   if (HASH.storm) setTimeout(() => { V.storm = 6; }, 300);
   if (HASH.say) setTimeout(() => say(decodeURIComponent(HASH.say), { pri: 9, force: true, mood: HASH.mood || 'calm' }), 400);
-  if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
+  if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.nolayer) V.noLayer = 1; if (HASH.zmin) V.zMin = +HASH.zmin; if (HASH.zmax) V.zMax = +HASH.zmax; if (HASH.noflower) V.noFlower = 1; if (HASH.noroot) V.noRoot = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
   window.__hana = { get sim() { return sim; }, V, Talk, say };
   requestAnimationFrame(frame);
 }
