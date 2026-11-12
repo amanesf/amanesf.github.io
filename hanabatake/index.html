@@ -70,6 +70,18 @@ body{font-family:'Klee One','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;c
 #bSpeed[data-i="2"] svg path:first-of-type{animation:spin 2.4s linear infinite;transform-origin:16px 17px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #bZukan.ping::before{animation:ping 1.3s}
+/* 図鑑ボタンの札：まだ見ていないスケッチの数 */
+#bZukan .badge{position:absolute;right:-3px;top:-5px;z-index:2;min-width:19px;height:19px;padding:0 5px;border-radius:10px 9px 10px 9px;background:radial-gradient(circle at 35% 30%,#f39ab2,#d9688a);color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;box-shadow:0 0 0 2px #fffaf0,1px 2px 4px rgba(120,60,80,.3);display:none}
+#bZukan .badge.on{display:block}
+#bZukan .badge.bump{animation:bump .6s cubic-bezier(.3,1.8,.5,1)}
+@keyframes bump{from{transform:scale(.3)}}
+#bZukan .ztip{position:absolute;right:50px;top:6px;z-index:2;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:#c25a7c;background:#fffdf5;border:1.3px solid rgba(194,90,124,.5);border-radius:var(--hand);padding:2px 9px 3px;white-space:nowrap;opacity:0;transform:translateX(6px);transition:opacity .4s,transform .5s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
+#bZukan .ztip::after{content:'';position:absolute;right:-6px;top:7px;border:4px solid transparent;border-left:6px solid rgba(194,90,124,.5)}
+#bZukan .ztip.show{opacity:1;transform:none}
+#btns.idle #bZukan .badge{transform:scale(1.25)}
+.zcard{position:relative}
+.zcard.fresh{border-color:rgba(214,104,138,.6);box-shadow:2px 3px 0 rgba(200,100,130,.12),0 0 0 3px rgba(243,154,178,.18)}
+.znew{position:absolute;left:-4px;top:-6px;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:#fff;background:#e0789a;border-radius:8px 7px 9px 6px;padding:1px 7px 2px;transform:rotate(-8deg);box-shadow:1px 1px 0 rgba(120,60,80,.2)}
 @keyframes ping{30%{box-shadow:0 0 0 9px rgba(234,163,184,.5);background:#fde3ea}}
 
 /* めくる紙 */
@@ -1936,12 +1948,12 @@ function drawBugs(ctx, sim, dt, e) {
   ctx.globalAlpha = 1;
   // 小川のトンボ（受粉には関わらない、ただの住人）
   const season = hump(0.36, 0.84, e.t) * (1 - e.night) * (e.rain > 0.5 ? 0 : 1);
-  if (!V.dragons) V.dragons = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ z: 0.5 + 0.06 * i, x: 0, y: 0, tx: 0, ty: 0, t: 0, face: 1, a: 0, ph: i * 2.3 }));
+  if (!V.dragons) V.dragons = Array.from({ length: 12 }, (_, i) => i).map((i) => ({ z: 0.5 + 0.06 * i, x: 0, y: 0, tx: 0, ty: 0, t: 0, face: 1, a: 0, ph: i * 2.3 }));
   const akane = hump(0.6, 0.84, e.t) > 0.3 && e.night < 0.3 && e.rain < 0.5; // 秋は赤とんぼの群れが、野原じゅうに
   if (akane) szSay('akane', '赤いトンボが、たくさん飛んでいます。秋が来たんですね', 'happy');
   V.dragons.forEach((d, di) => {
     d.a += ((season > 0.3 && (di < 2 || akane) ? 1 : 0) - d.a) * Math.min(1, dt); d.t -= dt;
-    if (d.t <= 0 && di >= 2) { const z = 0.3 + Math.random() * 0.65, p = proj(0.05 + Math.random() * 0.9, z); d.tx = p.sx; d.ty = p.sy - (40 + Math.random() * 70) * p.ds; d.ds = p.ds; d.t = 0.6 + Math.random() * 2; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
+    if (d.t <= 0 && di >= 2) { const z = 0.45 + Math.random() * 0.53, p = proj(0.05 + Math.random() * 0.9, z); d.tx = p.sx; d.ty = p.sy - (40 + Math.random() * 70) * p.ds; d.ds = p.ds; d.t = 0.6 + Math.random() * 2; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
     if (d.t <= 0) { d.z = clamp(d.z + (Math.random() - 0.5) * 0.3, 0.3, 0.97); const c = brookAt(d.z, e.dry); d.tx = c.x + (Math.random() - 0.5) * c.hw * 5; d.ty = c.y - (14 + Math.random() * 30) * c.ds; d.ds = c.ds; d.t = 0.8 + Math.random() * 2.6; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
     const dx = d.tx - d.x, dy = d.ty - d.y; d.x += dx * Math.min(1, dt * 4.5); d.y += dy * Math.min(1, dt * 4.5); if (Math.abs(dx) > 3) d.face = dx > 0 ? 1 : -1;
     if (d.a < 0.03) return;
@@ -2125,7 +2137,8 @@ function skyCols(e) {
   top = mix(top, hex('#b9c4e8'), e.dawn * 0.5); bot = mix(bot, hex('#fbd8c6'), e.dawn * 0.75);
   top = mix(top, hex('#cfd8e2'), e.cloud * 0.5); bot = mix(bot, hex('#eceeec'), e.cloud * 0.45);
   top = mix(top, hex('#7c8698'), e.storm * 0.7); bot = mix(bot, hex('#b4bac2'), e.storm * 0.6);
-  top = mix(top, hex('#8792cc'), e.night * 0.85); bot = mix(bot, hex('#cfd0ee'), e.night * 0.85);
+  const clr = 1 - e.cloud * 0.6; // 晴れた夜ほど、空は深い藍に（花火や月や星が映える）
+  top = mix(top, mix(hex('#8792cc'), hex('#4c5596'), clr), e.night * 0.88); bot = mix(bot, mix(hex('#cfd0ee'), hex('#9da2d2'), clr), e.night * 0.85);
   return [top, bot];
 }
 
@@ -2133,7 +2146,7 @@ function skyCols(e) {
 function paintSky(x, e) {
   const W = V.W, yH = V.yH, hS = yH + 40;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-  const [top, bot] = skyCols(e), zen = mix(top, [58, 112, 198], 0.36 * (1 - e.cloud * 0.7) * (1 - e.night * 0.4));
+  const [top, bot] = skyCols(e), zen = mix(mix(top, [58, 112, 198], 0.36 * (1 - e.cloud * 0.7) * (1 - e.night * 0.4)), [34, 40, 92], 0.45 * e.night * (1 - e.cloud * 0.6));
   const sg = x.createLinearGradient(0, 0, 0, hS);
   sg.addColorStop(0, rgb(zen)); sg.addColorStop(0.42, rgb(top)); sg.addColorStop(0.8, rgb(mix(top, bot, 0.75))); sg.addColorStop(1, rgb(bot));
   x.fillStyle = sg; x.fillRect(0, 0, W, hS);
@@ -2209,7 +2222,9 @@ function drawSkyLife(ctx, e, dt) {
     { const sg = ctx.createRadialGradient(cx, cy, r0 * 0.5, cx, cy, r0 * 0.93); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(1, `rgba(255,255,255,${a * 0.35})`); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, r0 * 0.93, Math.PI, TAU); ctx.fill(); } // 虹の内がわは、少し明るい
   }
   if (!V.cl) { V.cl = []; for (let i = 0; i < 11; i++) V.cl.push({ x: hash2(i, 931) * 1.6 - 0.3, y: 0.1 + 0.7 * hash2(i, 932), lay: hash2(i, 933), a: 0, sp: i % 8 }); V.cl.sort((a, b) => a.lay - b.lay); }
-  const want = 2.6 + e.cloud * 8.4;
+  const pf = 0.45 + 0.55 * hump(0.2, 0.66, e.t); // 綿雲は夏の雲。秋と冬は、うろこ雲や筋雲や雪雲にゆずる
+  const yukiG = Math.max(smooth(0.82, 0.9, e.t), 1 - smooth(0.04, 0.1, e.t)) * smooth(0.3, 0.7, Math.max(e.cloud, e.snowing ? 0.8 : 0)); // 冬の雪雲の日は、綿雲は出ない
+  const want = (2.6 * pf + e.cloud * 8.4 * (0.6 + 0.4 * pf)) * (1 - 0.75 * yukiG);
   V.cl.forEach((c, i) => {
     c.x += dt * (0.003 + 0.011 * c.lay) * (0.6 + V.wind * 0.9); if (c.x > 1.4) { c.x = -0.5; c.y = 0.1 + 0.7 * Math.random(); }
     const ta = i < want ? Math.min(1, want - i) : 0; c.a += (ta - c.a) * Math.min(1, dt * 0.5);
@@ -2238,15 +2253,16 @@ function paintBG(x, e) {
   const W = V.W, H = V.H, yH = V.yH, t = e.t;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, W, H);
   const [top, bot] = skyCols(e), hazeC = mix(bot, top, 0.25), snowy = e.snow;
-  // 山の形：峰をいくつか決め、それぞれから尾根がすそへ下りる。なだらかな波（ノイズの丘）だけだと、毛布のように見える
-  const peaks = (seed, n) => { const P = []; for (let i = 0; i < n; i++) { const c = -0.08 + (i + 0.2 + 0.6 * hash2(i, seed + 60)) * 1.16 / n; P.push({ c, h: 0.42 + 0.42 * hash2(i, seed + 61), wl: 0.17 + 0.17 * hash2(i, seed + 62), wr: 0.2 + 0.2 * hash2(i, seed + 63) }); } P.sort((a, b) => b.h - a.h); P[0].h = 1; return P; };
-  const PK_CACHE = {};
-  const PK_EXP = { 3: 1.05, 11: 0.85, 17: 0.6 }; // 奥の山ほど鋭く、手前の山ほど丸い
-  const ridgeY = (u, base, amp, f, seed) => { const P = PK_CACHE[seed] || (PK_CACHE[seed] = peaks(seed, Math.round(f))), ex = PK_EXP[seed] || 1; let hgt = 0;
-    for (const p of P) { const d = u - p.c, w = d < 0 ? p.wl : p.wr, q = 1 - Math.abs(d) / w; if (q > 0) hgt = Math.max(hgt, p.h * Math.pow(q, ex)); }
-    const rough = 0.5 - Math.abs(vnoise(u * 38 + seed, seed + 4) - 0.5), fine = vnoise(u * 90 + seed, seed + 8); // 稜線のごつごつ（尖ったノイズ）
-    const shoulder = vnoise(u * 9 + seed * 0.3, seed + 5); // 肩と鞍部：大きな峰の途中にも、こぶとくぼみがある
-    return base + amp * 0.3 - amp * (0.1 + 0.9 * hgt) * (0.84 + 0.2 * shoulder + 0.09 * rough + 0.03 * fine); };
+  // 山の形は立山連峰を手本に：一つの円錐ではなく、ぎざぎざの峰が地平いっぱいに屏風のように連なる。
+  // 高さはそろい気味で、ところどころ大きな山塊（立山・薬師のような）が盛りあがり、左には剱のような尖った岩峰が続く。手前の前山は低く丸い
+  const ridged = (v) => 1 - Math.abs(2 * v - 1); // 折れ線のノイズ：峰も谷も、とがって折れる（2 乗すると谷が丸くえぐれて、カーテンのすそに見える）
+  const MT = { 3: 'wall', 11: 'foot', 17: 'hill' };
+  const ridgeY = (u, base, amp, f, seed) => { const kind = MT[seed]; let h;
+    if (kind === 'wall') { const mass = 0.42 + 0.26 * vnoise(u * 2.3 + 0.4, seed) + 0.1 * vnoise(u * 5.1, seed + 9), jag = 1 + 0.9 * smooth(0.32, 0.12, u); // 左ほど岩峰がとがる
+      h = mass + 0.2 * jag * ridged(vnoise(u * 9 + 1.7, seed + 2)) + 0.09 * jag * ridged(vnoise(u * 24, seed + 4)) + 0.04 * ridged(vnoise(u * 60, seed + 6)); }
+    else if (kind === 'foot') h = 0.18 + 0.4 * Math.pow(vnoise(u * 3.4 + 2, seed), 1.4) + 0.16 * vnoise(u * 9, seed + 3) + 0.04 * vnoise(u * 30, seed + 5); // 前山：森におおわれた、まるい尾根
+    else h = 0.2 + 0.5 * vnoise(u * 4.2, seed) + 0.15 * vnoise(u * 11, seed + 3);
+    return base + amp * 0.3 - amp * h; };
   // 山は奥から 3 枚。重ねるたびに濃く、すそは霧に溶かす
   const ridge = (base, amp, f, seed, col, o = {}) => {
     const N = 90, topL = []; for (let i = 0; i <= N; i++) { const u = i / N; topL.push([u * W, ridgeY(u, base, amp, f, seed)]); }
@@ -2257,16 +2273,26 @@ function paintBG(x, e) {
     // 稜線から下へ、かすれた筆あと（尾根と谷）
     for (let i = 0; i < 0; i++) { const u = hash2(i, seed + 20), px = u * W, py = ridgeY(u, base, amp, f, seed), len = amp * (0.15 + 0.35 * hash2(i, seed + 21)), dk = i % 2; x.strokeStyle = rgb(dk ? mix(col, [44, 58, 120], 0.5) : mix(col, [255, 255, 255], 0.6), dk ? 0.09 : 0.12); x.lineWidth = 1.5 + 5 * hash2(i, seed + 22); x.beginPath(); x.moveTo(px, py + 1); x.quadraticCurveTo(px + (hash2(i, seed + 23) - 0.3) * len * 0.5, py + len * 0.5, px + (hash2(i, seed + 24) - 0.3) * len * 0.9, py + len); x.stroke(); }
     if (o.snow > 0.02) { // 雪帽子：雪線より上を、稜線の形のまま白く残す。谷すじには雪が長く下りる
-      const SL = []; for (let i = 0; i <= N; i++) { const u = i / N, gul = Math.pow(Math.max(0, Math.sin(u * 47 + seed) * 0.5 + 0.5), 6); SL.push([u * W, base - amp * (0.42 - 0.6 * (1 - o.snow) * 0.5) + amp * (0.1 * (vnoise(u * 16, seed + 70) - 0.5) + 0.22 * gul)]); }
+      const SL = []; for (let i = 0; i <= N; i++) { const u = i / N, ry = ridgeY(u, base, amp, f, seed), d = amp * (0.12 + 0.5 * o.snow) * (0.7 + 0.6 * vnoise(u * 13, seed + 70)); SL.push([u * W, ry + d]); } // 雪は稜線の形をなぞって、上から同じくらいの深さまで
       tracePoly(x, topL.concat(SL.slice().reverse())); x.fillStyle = rgb(mix([253, 254, 255], col, 0.12), 0.9 * Math.min(1, o.snow * 1.3)); x.fill(); }
     if (e.dusk > 0.05 || e.dawn > 0.05) { const gl = Math.max(e.dusk, e.dawn * 0.8), ag = x.createLinearGradient(0, base - amp, 0, base - amp * 0.1); ag.addColorStop(0, rgb([255, 168, 150], 0.5 * gl)); ag.addColorStop(1, rgb([255, 168, 150], 0)); x.fillStyle = ag; x.fillRect(0, base - amp * 1.2, W, amp * 1.2); } // 夕日と朝日は、山の頭だけを赤く染める
-    { const P = PK_CACHE[seed], sh = mix(col, [52, 64, 126], 0.38), lt = mix(col, [255, 252, 244], 0.35); // 峰ごとに、日かげの斜面（右）を面で塗り、日なたの斜面（左）を少し明るく
-      for (const p of P) { const sx = p.c * W, sy = ridgeY(p.c, base, amp, f, seed), foot = base + amp * 0.35;
-        const R = []; for (let k = 0; k <= 16; k++) { const u = p.c + (p.wr * k) / 16; R.push([u * W, ridgeY(u, base, amp, f, seed)]); }
-        const gully = []; for (let k = 16; k >= 0; k--) { const v = k / 16; gully.push([sx + W * p.wr * (0.12 + 0.3 * v) + W * 0.012 * Math.sin(v * 9 + seed), sy + (foot - sy) * v]); } // 尾根から下りる谷の線
-        tracePoly(x, R.concat(gully)); x.fillStyle = rgb(sh, 0.3); x.fill();
-        const L = []; for (let k = 0; k <= 12; k++) { const u = p.c - (p.wl * k) / 12; L.push([u * W, ridgeY(u, base, amp, f, seed) + 1.5]); }
-        tracePoly(x, L.concat([[sx - W * p.wl * 0.25, sy + (foot - sy) * 0.6], [sx, sy + 2]])); x.fillStyle = rgb(lt, 0.18); x.fill(); } }
+    { const M = 160, ys = [], sh = mix(col, [52, 64, 126], 0.4), lt = mix(col, [255, 252, 244], 0.35), foot = base + amp * 0.4, wall = MT[seed] === 'wall';
+      for (let i = 0; i <= M; i++) ys.push(ridgeY(i / M, base, amp, f, seed));
+      const ext = [], RW = 5; for (let i = RW; i <= M - RW; i++) { let mx = 1, mn = 1; for (let k = -RW; k <= RW; k++) { if (ys[i + k] < ys[i]) mx = 0; if (ys[i + k] > ys[i]) mn = 0; } if (mx && (!ext.length || ext[ext.length - 1][1] !== 1)) ext.push([i, 1]); else if (mn && ext.length && ext[ext.length - 1][1] !== -1) ext.push([i, -1]); } // 主な峰（1）と鞍部（-1）を交互に
+      for (let k = 0; k < ext.length - 1; k++) { const [i, t] = ext[k], [j] = ext[k + 1]; if (t !== 1) continue; // 峰 i から鞍部 j までが、日かげの斜面
+        const xi = (i / M) * W, xj = (j / M) * W, P = []; for (let q = i; q <= j; q++) P.push([(q / M) * W, ys[q]]);
+        const dh = ys[j] - ys[i]; P.push([xj + (xj - xi) * 0.08, Math.min(foot, ys[j] + (xj - xi) * 1.1 + dh * 0.8)]); const by = P[P.length - 1][1], fg = x.createLinearGradient(0, ys[i], 0, by); fg.addColorStop(0, rgb(sh, wall ? 0.36 : 0.22)); fg.addColorStop(1, rgb(sh, 0.04)); tracePoly(x, P); x.fillStyle = fg; x.fill(); // 峰から斜めに下りる尾根と、鞍部から下りる谷にはさまれた、下へとがる面
+        if (k > 0) { const [h0] = ext[k - 1], xh = (h0 / M) * W, L = []; for (let q = h0; q <= i; q++) L.push([(q / M) * W, ys[q] + 1]); L.push([xh + (xi - xh) * 0.1, Math.min(foot, ys[h0] + (xi - xh) * 0.9)]); const lg = x.createLinearGradient(0, ys[i], 0, L[L.length - 1][1]); lg.addColorStop(0, rgb(lt, 0.16)); lg.addColorStop(1, rgb(lt, 0)); tracePoly(x, L); x.fillStyle = lg; x.fill(); } // 日なたの斜面（下へ消える）
+      }
+      if (wall) for (const [j, t] of ext) { if (t !== -1) continue; // 鞍部から下りる谷すじ：雪のある季節は白い雪渓（細く、途中でとぎれ、枝分かれする）、ない季節は暗いすじ
+        const sek = Math.max(o.snow || 0, o.sekkei || 0), hj = hash2(j, seed + 50); if (hj > 0.35 + 0.6 * sek) continue;
+        const xj = (j / M) * W, len = amp * (0.1 + 0.25 * hash2(j, seed + 52)) * (0.5 + 0.9 * (o.snow || 0)), dr = (hash2(j, seed + 51) - 0.5) * len * 0.25, uu = W / 390;
+        const stroke = (x0, y0, x1, y1, w, a) => { x.fillStyle = sek > 0.05 ? rgb([250, 252, 255], a) : rgb(mix(col, [40, 50, 100], 0.5), a * 0.25); const mx = (x0 + x1) / 2 + dr, my = (y0 + y1) / 2; x.beginPath(); x.moveTo(x0 - w, y0); x.quadraticCurveTo(mx - w * 0.6, my, x1, y1); x.quadraticCurveTo(mx + w * 0.6, my, x0 + w, y0); x.fill(); }; // 上が太く、下へ細くとがる
+        const a0 = 0.35 + 0.45 * Math.min(1, sek);
+        stroke(xj, ys[j] + 1, xj + dr * 2, ys[j] + len, 1.6 * uu, a0); stroke(xj + dr * 2, ys[j] + len * 0.55, xj + dr * 2 + (hash2(j, seed + 53) - 0.5) * 8 * uu, ys[j] + len * 0.95, 1 * uu, a0 * 0.8); // 本すじと、枝
+        if (sek > 0.3) stroke(xj - 3 * uu, ys[j] + len * 0.15, xj - 4 * uu + dr, ys[j] + len * 0.6, 0.9 * uu, a0 * 0.6);
+      }
+    }
     for (let i = 0; i < 4; i++) { const u = hash2(i, seed + 30); blob(x, u * W, ridgeY(u, base, amp, f, seed) + amp * (0.35 + 0.3 * hash2(i, seed + 31)), W * (0.1 + 0.08 * hash2(i, seed + 32)), amp * 0.14, mix(col, hazeC, 0.6), 0.16, i + seed, 0.3); } // 中腹にかかるうすい雲
     // （雪は、日かげの面より先に塗る）
     if (o.trees) for (let i = 0; i < 220; i++) { const u = hash2(i, seed + 40), py = ridgeY(u, base, amp, f, seed) + amp * (0.02 + 0.5 * Math.pow(hash2(i, seed + 41), 1.5)); dab(x, u * W, py, 1.3 + hash2(i, seed + 42), 1.6 + 1.4 * hash2(i, seed + 43), -Math.PI / 2, mix(o.trees, [30, 50, 70], 0.3 * hash2(i, seed + 44)), 0.5); }
@@ -2278,8 +2304,8 @@ function paintBG(x, e) {
     x.restore();
   };
   const mt = mix(mix(mix(mix(hex('#8ea6d4'), hex('#dfe6f2'), snowy * 0.6), hex('#a892c0'), e.dusk * 0.5), hex('#b4a8cc'), e.dawn * 0.35), hex('#56619c'), e.night * 0.6), cap = Math.max(snowy, 1 - smooth(0.1, 0.3, t), smooth(0.74, 0.86, t) * 0.7); // 山の色は時刻で：昼は青、夕方は藤色
-  ridge(yH - H * 0.04, H * 0.15, 3, 3, mix(mt, hazeC, 0.62), { snow: cap, streaks: 60 }); // いちばん奥：高い峰の連なり（白くかすむ）
-  ridge(yH - H * 0.018, H * 0.085, 4, 11, mix(mt, hazeC, 0.34), { snow: cap * 0.6 });
+  ridge(yH - H * 0.045, H * 0.085, 3, 3, mix(mix(mt, [92, 104, 160], 0.25), hazeC, 0.4), { snow: cap, sekkei: 0.45 * (1 - smooth(0.45, 0.66, t)) + 0.15, streaks: 60 }); // いちばん奥：立山のような峰の屏風。夏も谷すじに雪渓が残る
+  ridge(yH - H * 0.016, H * 0.06, 4, 11, mix(mix(mt, [70, 104, 120], 0.3), hazeC, 0.3), { snow: snowy * 0.7, trees: mix(mix(ramp(TREE_C, t), [60, 96, 110], 0.55), [236, 240, 248], snowy * 0.6) }); // 前山：森の色
   ridge(yH - H * 0.002, H * 0.045, 6, 17, mix(mix(mt, [86, 128, 140], 0.45), hazeC, 0.12), { snow: snowy * 0.5, trees: mix(mix(ramp(TREE_C, t), [70, 110, 130], 0.6), [240, 244, 250], snowy * 0.6), mist: 0.5 });
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
@@ -2832,8 +2858,9 @@ function moonPath(ctx, mx, my, r, p) { // 光っている側の形（明るい�
 function drawMoon(ctx, e, mx, my, mr, ma) {
   const ci = dayIdx(e), p = moonPhase(e), lit = (1 - Math.cos(TAU * p)) / 2, W = V.W;
   const harvest = ci === 2, hazy = ci === 0; // 秋は大きく低い黄みの満月、春はかすんだ朧月
+  const eclipse = (harvest && hash2(e.year, 505) < 0.07) || szForce('eclipse'); // 皆既月食：まれに、名月が赤銅色になる
   if (harvest) { mr *= 1.4; my += V.yH * 0.1; }
-  const col = harvest ? [255, 236, 190] : [255, 252, 236], halo = W * (hazy ? 0.42 : 0.3);
+  const col = eclipse ? [176, 86, 64] : harvest ? [255, 236, 190] : [255, 252, 236], halo = W * (hazy ? 0.42 : eclipse ? 0.12 : 0.3);
   const g = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, halo); g.addColorStop(0, rgb(harvest ? [255, 226, 170] : [236, 238, 255], (hazy ? 0.6 : 0.45) * ma * (0.3 + 0.7 * lit))); g.addColorStop(0.3, rgb([200, 210, 250], (hazy ? 0.24 : 0.14) * ma * lit)); g.addColorStop(1, 'rgba(200,210,250,0)');
   ctx.fillStyle = g; ctx.fillRect(mx - halo, my - halo, halo * 2, halo * 2);
   if (hazy) { ctx.strokeStyle = rgb([236, 226, 250], 0.12 * ma); ctx.lineWidth = mr * 0.6; ctx.beginPath(); ctx.arc(mx, my, mr * 3.2, 0, TAU); ctx.stroke(); } // 朧月の暈（かさ）
@@ -2841,7 +2868,8 @@ function drawMoon(ctx, e, mx, my, mr, ma) {
   ctx.save(); moonPath(ctx, mx, my, mr, p); ctx.fillStyle = rgb(col, ma * (hazy ? 0.82 : 1)); ctx.fill(); ctx.clip();
   blob(ctx, mx + mr * 0.3, my - mr * 0.15, mr * 0.32, mr * 0.26, mix(col, [190, 190, 214], 0.45), 0.55 * ma, 79, 0.25); blob(ctx, mx - mr * 0.28, my + mr * 0.3, mr * 0.22, mr * 0.18, mix(col, [200, 200, 220], 0.4), 0.5 * ma, 80, 0.25); blob(ctx, mx - mr * 0.1, my - mr * 0.42, mr * 0.16, mr * 0.12, mix(col, [200, 200, 220], 0.4), 0.4 * ma, 81, 0.25); // 海（暗い模様）
   ctx.restore();
-  if (harvest && ma > 0.5) szSay('moon', 'まんまるの、大きなお月さまです。今夜は、花畑がよく見えます', 'happy');
+  if (eclipse) { ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.clip(); const eg = ctx.createRadialGradient(mx - mr * 0.5, my - mr * 0.4, 0, mx, my, mr * 1.2); eg.addColorStop(0, 'rgba(230,140,96,0.5)'); eg.addColorStop(1, 'rgba(90,40,40,0.5)'); ctx.fillStyle = eg; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2); ctx.restore(); if (ma > 0.5) szSay('eclipse', 'お月さまが、赤黒い色に……。地球の影に入ったんですね。こわいけど、きれいです'); }
+  else if (harvest && ma > 0.5) szSay('moon', 'まんまるの、大きなお月さまです。今夜は、花畑がよく見えます', 'happy');
   return lit;
 }
 
@@ -2872,7 +2900,7 @@ function drawCumulus(ctx, e, dt) {
   const d = f ? 0.55 : e.d, grow = smooth(0.08, 0.66, d), fade = 1 - smooth(0.94, 0.99, d), stage = Math.round(grow * 10);
   if (grow < 0.02 || fade < 0.01) return;
   const seed = (e.year * 4 + ci) % 5, sp = cumulusSprite(stage, Math.round(e.dusk * 4), Math.round(e.night * 3), seed);
-  const sc = (V.W / 390) * 1.05, px = V.W * (0.3 + 0.22 * hash2(e.year, 610 + ci)), by = V.yH - V.H * 0.03;
+  const sc = (V.W / 390) * 1.35, px = V.W * (0.3 + 0.2 * hash2(e.year, 610 + ci)), by = V.yH - V.H * 0.035;
   ctx.globalAlpha = 0.95 * Math.min(1, grow * 4) * fade * (1 - e.cloud * 0.4);
   ctx.drawImage(sp.c, px - sp.CW * 0.5 * sc, by - (sp.CH - 20) * sc, sp.CW * sc, sp.CH * sc); ctx.globalAlpha = 1;
   // 夕立の雲：遠くで音のない稲光が、雲の中をてらす
@@ -2895,8 +2923,56 @@ function drawGeese(ctx, e, dt) {
     ctx.beginPath(); ctx.moveTo(bx - w, by - fl); ctx.quadraticCurveTo(bx - w * 0.4, by - 1.2 * s, bx, by); ctx.quadraticCurveTo(bx + w * 0.4, by - 1.2 * s, bx + w, by - fl); ctx.stroke(); }
 }
 
+
+// ── 季節の雲：夏は入道雲、秋はうろこ雲と筋雲、春は朧雲（おぼろぐも）、冬は空をふさぐ雪雲 ──
+function cloudTint(e) { // buildClouds と同じ、時刻の色
+  const paper = mix(mix(mix(mix([255, 254, 250], [255, 226, 204], e.dusk * 0.75), [255, 238, 230], e.dawn * 0.45), [214, 218, 244], e.night * 0.8), [196, 200, 210], e.storm * 0.6);
+  const cs = mix(mix(mix(mix([150, 168, 204], [206, 140, 150], e.dusk * 0.7), [224, 170, 160], e.dawn * 0.3), [120, 132, 186], e.night * 0.6), [104, 112, 130], e.storm * 0.7);
+  return [paper, cs];
+}
+function skySprite(kind, e, seed) {
+  const key = [kind, Math.round(e.dusk * 4), Math.round(e.night * 3), Math.round(e.dawn * 3), Math.round(e.cloud * 3), seed].join(','), C = SZ.skC || (SZ.skC = new Map());
+  if (C.has(key)) return C.get(key);
+  if (C.size > 30) { for (const v of C.values()) freeCanvas(v.c); C.clear(); }
+  const W = V.W, k = Math.min(V.dpr, 1.5), CW = Math.round(W * 1.4), CH = Math.round(V.yH * 0.75), c = mkCanvas(CW * k, CH * k), x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0);
+  const [paper, cs] = cloudTint(e), u = W / 390, rnd = (i, j) => hash2(i + seed * 131, j);
+  if (kind === 'uroko') { // 小さな雲のかけらが、さざ波のように列になってならぶ。高いところ（上）ほど大きく、地平に近いほど小さく詰まる
+    const cx = CW * (0.45 + 0.1 * rnd(1, 2)), cy = CH * 0.4;
+    for (let r = 0; r < 16; r++) { const v = r / 15, y = CH * (0.04 + 0.8 * Math.pow(v, 0.85)) + (rnd(r, 9) - 0.5) * 6 * u, sc = (1.25 - 0.75 * v) * u, rx = 7 * sc, ry = 3.1 * sc, step = rx * 1.75;
+      for (let px = -step + (r % 2) * step * 0.5; px < CW + step; px += step * (0.85 + 0.3 * rnd(r, px | 0))) {
+        const wy = y + Math.sin(px * 0.035 / sc + r * 0.7) * ry * 1.4, m = 1 - Math.pow((px - cx) / (CW * 0.44), 2) - Math.pow((wy - cy) / (CH * 0.46), 2) + 0.45 * (vnoise2(px * 0.012, wy * 0.02, seed + 5) - 0.5);
+        if (m <= 0) continue; const a = smooth(0, 0.35, m);
+        const rs = 0.6 + 0.7 * rnd(px | 0, r + 40), oy = (rnd(px | 0, r + 41) - 0.5) * ry * 1.6, rot = (rnd(px | 0, r + 42) - 0.5) * 0.5; if (rnd(px | 0, r + 43) < 0.18) continue; // ところどころ欠ける
+        x.fillStyle = rgb(cs, 0.16 * a); x.beginPath(); x.ellipse(px + rx * 0.2, wy + oy + ry * 0.6, rx * rs, ry * 0.8 * rs, rot, 0, TAU); x.fill(); // 下がわの陰
+        x.fillStyle = rgb(paper, 0.32 * a); x.beginPath(); x.ellipse(px, wy + oy, rx * rs * 1.25, ry * rs * 1.3, rot, 0, TAU); x.fill(); // にじんだ縁
+        x.fillStyle = rgb(paper, 0.55 * a); x.beginPath(); x.ellipse(px - rx * 0.1, wy + oy - ry * 0.15, rx * rs * 0.8, ry * rs * 0.8, rot, 0, TAU); x.fill();
+      } }
+  } else if (kind === 'cirrus') { // 筋雲：高い空を、筆ではいたような細い白いすじ。先がくるりと曲がる
+    for (let s2 = 0; s2 < 6; s2++) { const x0 = CW * (0.05 + 0.75 * rnd(s2, 11)), y0 = CH * (0.08 + 0.55 * rnd(s2, 12)), L = CW * (0.18 + 0.22 * rnd(s2, 13)) , bend = (rnd(s2, 14) - 0.5) * CH * 0.2, hook = (rnd(s2, 15) < 0.5 ? -1 : 1) * CH * 0.05;
+      for (let j = 0; j < 9; j++) { const off = (j - 4) * 1.6 * u, a = (0.22 + 0.3 * rnd(s2 * 9 + j, 16)) * (1 - Math.abs(j - 4) / 6);
+        x.strokeStyle = rgb(paper, a); x.lineWidth = (0.8 + 2.4 * rnd(s2 * 9 + j, 17)) * u; x.lineCap = 'round';
+        x.beginPath(); x.moveTo(x0, y0 + off); x.quadraticCurveTo(x0 + L * 0.5, y0 + bend + off, x0 + L, y0 + off * 0.5); x.quadraticCurveTo(x0 + L * 1.12, y0 + hook * 0.4, x0 + L * 1.08, y0 + hook); x.stroke(); } }
+  } else if (kind === 'oboro') { // 朧雲：空いちめんにうすく広がり、輪郭がない。光がやわらかくにじむ
+    for (let i = 0; i < 7; i++) blob(x, CW * (0.1 + 0.8 * rnd(i, 21)), CH * (0.12 + 0.6 * rnd(i, 22)), CW * (0.28 + 0.2 * rnd(i, 23)), CH * (0.05 + 0.05 * rnd(i, 24)), i % 3 ? paper : mix(paper, cs, 0.4), 0.45, i + seed * 7, 0.35);
+  } else if (kind === 'yuki') { // 雪雲：灰色の厚い雲が空をふさぎ、底はでこぼこ
+    const g = x.createLinearGradient(0, 0, 0, CH * 0.62); const dk = mix(cs, [112, 118, 138], 0.5); g.addColorStop(0, rgb(dk, 0.88)); g.addColorStop(0.7, rgb(mix(dk, paper, 0.3), 0.55)); g.addColorStop(1, rgb(paper, 0)); x.fillStyle = g; x.fillRect(0, 0, CW, CH * 0.62);
+    for (let i = 0; i < 26; i++) { const px = (i / 25) * CW + (rnd(i, 31) - 0.5) * 30, py = CH * (0.36 + 0.14 * rnd(i, 32)); blob(x, px, py, (26 + 26 * rnd(i, 33)) * u, (10 + 8 * rnd(i, 34)) * u, mix(dk, paper, 0.25), 0.55, i + seed, 0.3); blob(x, px - 6 * u, py - 8 * u, (16 + 12 * rnd(i, 35)) * u, (5 + 4 * rnd(i, 36)) * u, paper, 0.22, i + seed + 40, 0.3); }
+  }
+  grainOver(x, c.width, c.height, 0.2);
+  const sp = { c, CW, CH }; C.set(key, sp); return sp;
+}
+function seasonClouds(ctx, e) {
+  const t = e.t, ci = dayIdx(e), day = e.year * 4 + ci, h = hash2(day, 640), W = V.W;
+  const put = (kind, a, dy = 0) => { if (a < 0.02) return; const sp = skySprite(kind, e, day % 3); ctx.globalAlpha = a; ctx.drawImage(sp.c, -W * 0.2 + Math.sin(V.time * 0.015 + day) * W * 0.08, dy, sp.CW, sp.CH); ctx.globalAlpha = 1; };
+  const spring = hump(0.02, 0.32, t), autumn = hump(0.56, 0.86, t), winter = Math.max(smooth(0.82, 0.9, t), 1 - smooth(0.04, 0.1, t)), clear = 1 - smooth(0.4, 0.8, e.cloud);
+  const f = typeof HASH !== 'undefined' ? HASH.sz : '';
+  if (f === 'uroko' || (autumn > 0.1 && h < 0.55 && e.rain < 0.3)) put('uroko', (f === 'uroko' ? 1 : autumn) * 0.9 * clear);
+  if (f === 'cirrus' || ((autumn > 0.1 && h >= 0.55) || (winter > 0.1 && e.cloud < 0.45) || (spring > 0.1 && h < 0.3))) put('cirrus', (f === 'cirrus' ? 1 : Math.max(autumn, winter, spring)) * 0.85 * clear);
+  if (f === 'oboro' || (spring > 0.1 && h >= 0.3 && e.rain < 0.4)) put('oboro', f === 'oboro' ? 1 : spring);
+  if (f === 'yuki' || (winter > 0.1 && (e.cloud > 0.45 || e.snowing))) put('yuki', f === 'yuki' ? 1 : winter * smooth(0.3, 0.7, Math.max(e.cloud, e.snowing ? 0.8 : 0)));
+}
 // ── 空（遠い山より奥）──
-function seasonSky(ctx, e, dt) { drawCumulus(ctx, e, dt); drawSanta(ctx, e, dt); } // サンタも空の層：手前の木より奥を飛ぶ
+function seasonSky(ctx, e, dt) { seasonClouds(ctx, e); drawCumulus(ctx, e, dt); drawSanta(ctx, e, dt); } // サンタも空の層：手前の木より奥を飛ぶ
 
 // ── ツバメ：春から初夏、野原の上を低く、すばやく ──
 function drawSwallows(ctx, e, dt) {
@@ -2934,8 +3010,56 @@ function drawMist(ctx, e) {
   }
   ctx.globalAlpha = 1;
 }
+
+// ── 白い鹿：何十年かに一度、明け方か夕方に、丘の上にじっと立っている ──
+function drawDeer(ctx, e, dt) {
+  const on = szForce('deer') || (hash2(e.year, 506) < 0.05 && dayIdx(e) === (e.year % 4) && (e.dawn > 0.2 || e.dusk > 0.3) && e.rain < 0.3);
+  SZ.deerA = clamp((SZ.deerA || 0) + (on ? dt * 0.4 : -dt * 0.6)); const a = SZ.deerA; if (a < 0.01) return;
+  const p = proj(SITE.hill.x + 0.02, SITE.hill.z - 0.12), s = p.ds * V.unit * 3.2, // 鹿は花の何倍も大きい（肩の高さ 90cm ほど）
+    look = Math.sin(V.time * 0.35) > 0.6 ? 1 : 0; // ときどき、こちらへ顔を向ける
+  ctx.save(); ctx.translate(p.sx, p.sy - 2); ctx.scale(s, s); ctx.globalAlpha = a;
+  const body = 'rgba(250,250,246,0.97)', line = 'rgba(150,150,170,0.6)';
+  ctx.fillStyle = 'rgba(60,80,90,0.18)'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 2.4, 0, 0, TAU); ctx.fill(); // 足もとの影
+  ctx.strokeStyle = body; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); for (const lx of [-8, -6, 6, 8]) { const kb = lx > 0 ? 1.4 : -0.6; ctx.moveTo(lx, -11); ctx.lineTo(lx + kb, -5.5); ctx.lineTo(lx + kb * 0.3, 0); } ctx.stroke(); // 細い脚。後ろ脚はひざが後ろへ
+  ctx.fillStyle = body; ctx.beginPath(); ctx.moveTo(-9, -15.5); ctx.bezierCurveTo(-6, -18.2, 4, -17.6, 9.5, -16.4); ctx.quadraticCurveTo(11.6, -14, 9.4, -10.6); ctx.quadraticCurveTo(1, -9.2, -7.6, -10.4); ctx.quadraticCurveTo(-10.4, -12.4, -9, -15.5); ctx.fill(); // 胴：胸が厚く、背はまっすぐ、腹はしまる
+  { const sg = ctx.createLinearGradient(0, -16, 0, -9.5); sg.addColorStop(0, 'rgba(200,206,226,0)'); sg.addColorStop(1, 'rgba(176,184,214,0.55)'); ctx.fillStyle = sg; ctx.fill(); ctx.fillStyle = body; } // 腹がわの陰
+  ctx.beginPath(); ctx.moveTo(-7, -15); ctx.quadraticCurveTo(-10, -20, -11, -25); ctx.lineTo(-8, -25.5); ctx.quadraticCurveTo(-6.5, -20, -4, -16); ctx.fill(); // 首
+  ctx.beginPath(); ctx.ellipse(look ? -9.6 : -12.2, -26, look ? 2.6 : 3.9, 2.4, look ? 0 : -0.35, 0, TAU); ctx.fill(); // 頭
+  for (const sd of [-1, 1]) { ctx.beginPath(); ctx.ellipse(-9.6 + sd * 3, -27.6, 2, 0.9, sd * 0.5, 0, TAU); ctx.fill(); } // 耳
+  ctx.beginPath(); ctx.ellipse(9.5, -15, 2, 1.6, 0.6, 0, TAU); ctx.fill(); // しっぽ
+  ctx.strokeStyle = 'rgba(236,232,220,0.95)'; ctx.lineWidth = 0.8; ctx.beginPath(); // 角
+  for (const sd of [-1, 1]) { const bx = -9.6 + sd * 1.2; ctx.moveTo(bx, -28); ctx.lineTo(bx + sd * 2.5, -33); ctx.lineTo(bx + sd * 4.6, -35); ctx.moveTo(bx + sd * 1.5, -31); ctx.lineTo(bx - sd * 0.4, -35); ctx.moveTo(bx + sd * 3.4, -34); ctx.lineTo(bx + sd * 4.4, -38); }
+  ctx.stroke(); 
+  const g = ctx.createRadialGradient(-2, -18, 0, -2, -18, 30); g.addColorStop(0, `rgba(255,255,240,${0.25})`); g.addColorStop(1, 'rgba(255,255,240,0)'); ctx.fillStyle = g; ctx.fillRect(-32, -48, 60, 60); // うっすら光をまとう
+  ctx.strokeStyle = 'rgba(132,170,104,0.7)'; ctx.lineWidth = 0.6; ctx.beginPath(); for (let i = 0; i < 26; i++) { const gx = -16 + i * 1.3 + (hash2(i, 732) - 0.5), gh = 1.5 + 5 * hash2(i, 730) * hash2(i, 733); ctx.moveTo(gx, 1); ctx.quadraticCurveTo(gx + 0.5, -gh * 0.5, gx + (hash2(i, 731) - 0.5) * 2, -gh); } ctx.stroke(); // 足もとは草にかくれる
+  ctx.restore(); ctx.globalAlpha = 1;
+  if (a > 0.6) szSay('deer', '丘の上に、まっ白な鹿が……。じっと、こっちを見ています');
+}
+// ── 蜘蛛の巣：秋の朝、草のあいだにかかった巣に、露が光る ──
+function drawWeb(ctx, e) {
+  const a = szForce('web') ? 1 : hump(0.56, 0.86, e.t) * (1 - smooth(0.06, 0.34, e.d)) * (1 - e.rain) * (1 - e.night); if (a < 0.03) return;
+  const cx = V.W * 0.8, cy = V.H * 0.6, R = 26 * V.unit, sw = Math.sin(V.time * 0.9) * 0.04 * (0.3 + V.wind);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(sw); ctx.globalAlpha = a; ctx.lineWidth = 0.5; ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath(); ctx.moveTo(-R * 1.8, -R * 1.3); ctx.lineTo(-R * 0.7, -R * 0.5); ctx.moveTo(R * 1.6, -R * 1.5); ctx.lineTo(R * 0.7, -R * 0.55); ctx.moveTo(-R * 0.2, R * 1.9); ctx.lineTo(-R * 0.1, R * 0.95); ctx.stroke(); // 草につなぐ糸
+  const K = 13; ctx.beginPath(); for (let k = 0; k < K; k++) { const an = (k / K) * TAU + 0.2; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(an) * R * (0.9 + 0.12 * hash2(k, 1)), Math.sin(an) * R * 0.92); } ctx.stroke(); // 縦糸
+  ctx.beginPath(); for (let r = 0.22; r < 0.95; r += 0.085) for (let k = 0; k <= K; k++) { const an = (k / K) * TAU + 0.2, rr = R * r * (1 - 0.05 * Math.sin(k * 2)); const px = Math.cos(an) * rr, py = Math.sin(an) * rr * 0.92; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); // 横糸（らせん）
+  for (let i = 0; i < 46; i++) { const k = (hash2(i, 2) * K) | 0, r = 0.2 + 0.75 * hash2(i, 3), an = (k / K) * TAU + 0.2 + (hash2(i, 4) - 0.5) * 0.3, px = Math.cos(an) * R * r, py = Math.sin(an) * R * r * 0.92, tw = 0.5 + 0.5 * Math.sin(V.time * (1 + hash2(i, 5) * 2) + i);
+    ctx.fillStyle = `rgba(255,255,255,${0.65 + 0.35 * tw})`; ctx.beginPath(); ctx.arc(px, py, (0.7 + 0.7 * hash2(i, 6)) * V.unit, 0, TAU); ctx.fill(); if (tw > 0.93) { ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.moveTo(px - 3, py); ctx.lineTo(px + 3, py); ctx.moveTo(px, py - 3); ctx.lineTo(px, py + 3); ctx.stroke(); } } // 露のつぶ
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+// ── 夕立のあと：夏の雨がやむと、日にあたためられた野原から湯気がのぼる ──
+function drawSteam(ctx, e, dt) {
+  const summer = hump(0.3, 0.62, e.t);
+  if (SZ.prevRain > 0.5 && e.rain < 0.2 && summer > 0.3 && e.night < 0.3) SZ.steam = 1;
+  if (szForce('steam')) SZ.steam = 1;
+  SZ.prevRain = e.rain; SZ.steam = Math.max(0, (SZ.steam || 0) - dt / 30); if (SZ.steam < 0.02) return;
+  const c = mistSprite(), a = Math.min(1, SZ.steam * 3) * SZ.steam;
+  for (let i = 0; i < 14; i++) { const z = 0.25 + 0.7 * hash2(i, 720), p = proj(hash2(i, 721), z), ph = (V.time * 0.1 + hash2(i, 722)) % 1, sc = 0.2 + 0.4 * p.ds; // うすい湯気が、地面からゆらゆら立ちのぼって消える
+    ctx.globalAlpha = a * 0.22 * Math.sin(Math.PI * ph); ctx.save(); ctx.translate(p.sx + Math.sin(V.time * 0.8 + i) * 6 * p.ds, p.sy - 10 * p.ds - ph * 50 * p.ds); ctx.rotate(-Math.PI / 2 + 0.35 * Math.sin(V.time * 0.6 + i * 2)); ctx.drawImage(c, -20 * sc, -9 * sc, 110 * sc, 18 * sc); ctx.restore(); }
+  ctx.globalAlpha = 1;
+}
 // ── 野原の上（花より手前、前景の花より奥）──
-function seasonMid(ctx, e, dt) { drawMist(ctx, e); drawSwallows(ctx, e, dt); drawGeese(ctx, e, dt); } // 渡り鳥は高いところを飛ぶので、木の葉にかくれないよう手前に描く
+function seasonMid(ctx, e, dt) { drawMist(ctx, e); drawSteam(ctx, e, dt); drawDeer(ctx, e, dt); drawWeb(ctx, e); drawSwallows(ctx, e, dt); drawGeese(ctx, e, dt); } // 渡り鳥は高いところを飛ぶので、木の葉にかくれないよう手前に描く
 
 // ── 花火：夏の夜に、遠くの町から。光ってから少し遅れて、音がとどく ──
 function drawFireworks(ctx, e, dt) {
@@ -3065,6 +3189,7 @@ function say(text, o = {}) {
   if (tp && Talk.cool[tp] && now() < Talk.cool[tp]) return;
   if (tp) Talk.cool[tp] = now() + (o.cool || 45);
   if (o.diary !== false && o.year) { Talk.diary.push([o.year, text]); if (Talk.diary.length > 160) Talk.diary.shift(); }
+  if (o.quiet) return; // 日記にだけ書く（吹き出しは出さない）
   if (!Talk.on && !o.force) return;
   Talk.q.push({ text, pri, mood: o.mood || 'calm', exp: now() + (o.ttl || 14), force: o.force });
   if (Talk.q.length > 4) { Talk.q.sort((a, b) => b.pri - a.pri); Talk.q.length = 4; }
@@ -3123,12 +3248,12 @@ function onSimEvent(ev, sim) {
       if (p.g._macro) tail = '。親とはまるで違う色です。突然変異ですね';
       else if (mc && dc && mc !== dc && mc !== ev.name) tail = `。${mc}と${dc}のあいだに生まれた子です`;
       else if (mc && mc !== ev.name) tail = `。親は${mc}でした。少しずつ色がずれてきたんです`;
-      say(`おや、はじめて見る${ev.name}の花です${tail}`, { ...base, pri: 3, mood: 'wow', topic: 'novc', cool: 20 });
-    } else say(`${ev.name}の花が、はじめて咲きました。${FORM_WHY[ev.key] || ''}`, { ...base, pri: 3, mood: 'wow', topic: 'novf', cool: 20 });
+      say(`おや、はじめて見る${ev.name}の花です${tail}`, { ...base, quiet: true }); // 新しい花は吹き出しで知らせず、図鑑ボタンの札で知らせる
+    } else say(`${ev.name}の花が、はじめて咲きました。${FORM_WHY[ev.key] || ''}`, { ...base, quiet: true });
     addSketch(p, ev.kind === 'color' ? `はじめての${ev.name}` : `はじめての${ev.name}`);
   } else if (ev.type === 'record') {
-    if (ev.kind === 'sz') say('これまでで一番大きな花が咲きました。よく目立ちますが、水と栄養をたくさん使います', { ...base, pri: 2, mood: 'wow', topic: 'rec', cool: 90 });
-    else say('これまでで一番背の高い株です。日なたは取れますが、嵐が来たら心配です', { ...base, pri: 2, topic: 'rec', cool: 90 });
+    if (ev.kind === 'sz') say('これまでで一番大きな花が咲きました。よく目立ちますが、水と栄養をたくさん使います', { ...base, quiet: true });
+    else say('これまでで一番背の高い株です。日なたは取れますが、嵐が来たら心配です', { ...base, quiet: true });
     addSketch(ev.plant, ev.kind === 'sz' ? '一番大きな花' : '一番背の高い株');
   } else if (ev.type === 'return') {
     say(`${ev.name}が帰ってきました。まわりの野原から、鳥が種を運んでくれたんです`, { ...base, pri: 3, mood: 'happy', topic: 'ret' + ev.line, cool: 60 });
@@ -3288,9 +3413,17 @@ function addSketch(p, note, manual) {
   if (!p) return;
   const nm = varietyName(p.g);
   if (!manual && UI.zukan.some((z) => z.n === nm)) return;
-  UI.zukan.unshift({ g: [Math.round(p.g.h)].concat(GENES.map((k) => +p.g[k].toFixed(3))), n: nm, y: p.born, note, gen: p.gen, id: p.id, star: manual ? 1 : 0 });
+  UI.zukan.unshift({ g: [Math.round(p.g.h)].concat(GENES.map((k) => +p.g[k].toFixed(3))), n: nm, y: p.born, note, gen: p.gen, id: p.id, star: manual ? 1 : 0, nw: manual ? 0 : 1 });
   if (UI.zukan.length > 120) { for (let i = UI.zukan.length - 1; i >= 0; i--) if (!UI.zukan[i].star) { UI.zukan.splice(i, 1); break; } UI.zukan.length = Math.min(UI.zukan.length, 120); }
-  $('bZukan').classList.add('ping'); setTimeout(() => $('bZukan').classList.remove('ping'), 1400);
+  if (!manual) zukanBadge(true);
+}
+// 図鑑ボタンの札：まだ見ていないスケッチの数。増えたときだけ、短く「new」の吹き出し
+function zukanBadge(grew) {
+  const b = $('bZukan'); if (!b) return;
+  let bd = b.querySelector('.badge'); if (!bd) { bd = el('span', 'badge'); b.appendChild(bd); }
+  let tip = b.querySelector('.ztip'); if (!tip) { tip = el('span', 'ztip', 'new'); b.appendChild(tip); }
+  const n = UI.zukan.filter((z) => z.nw).length; bd.textContent = n > 9 ? '9+' : String(n); bd.classList.toggle('on', n > 0);
+  if (grew && n > 0) { bd.classList.remove('bump'); void bd.offsetWidth; bd.classList.add('bump'); tip.classList.add('show'); clearTimeout(zukanBadge.t); zukanBadge.t = setTimeout(() => tip.classList.remove('show'), 4200); }
 }
 const unpackG = (a) => { const g = { h: a[0] }; GENES.forEach((k, i) => (g[k] = a[i + 1] == null ? 0.5 : a[i + 1])); return g; };
 function showZukan() {
@@ -3299,7 +3432,7 @@ function showZukan() {
     b.appendChild(el('p', 'note', UI.zukan.length ? 'はじめて見た花は、エリカが描きとめます。名前はさわると書きかえられます。' : 'まだ何も描いていません。はじめての色や形が咲くと、ここに増えていきます。'));
     const grid = el('div', 'zgrid');
     UI.zukan.forEach((z) => {
-      const c = el('div', 'zcard' + (z.star ? ' star' : '')); const g = unpackG(z.g);
+      const c = el('div', 'zcard' + (z.star ? ' star' : '') + (z.nw ? ' fresh' : '')); const g = unpackG(z.g); if (z.nw) c.appendChild(el('span', 'znew', 'new'));
       c.appendChild(plantPortrait(g, 96, 124, z.id || 5));
       const nm = el('div', 'zname'); nm.textContent = z.n; nm.contentEditable = 'true'; nm.spellcheck = false;
       nm.onblur = () => { z.n = nm.textContent.trim().slice(0, 20) || varietyName(g); nm.textContent = z.n; saveAll(); };
@@ -3308,6 +3441,7 @@ function showZukan() {
       grid.appendChild(c);
     });
     b.appendChild(grid);
+    UI.zukan.forEach((z) => (z.nw = 0)); zukanBadge(); saveAll(); // 開いて見たので、札をはずす
   });
 }
 
@@ -3518,7 +3652,7 @@ function boot() {
   if (!isNew && !HASH.y && !HASH.tk && saved.tick > 0 && snap.v4) { sim.quiet = true; while (sim.tick < Math.min(saved.tick, TICKS - 1)) sim.step(); sim.quiet = false; sim.out.length = 0; } // 年の途中で閉じた人は、閉じたところから
   if (HASH.tk) { sim.quiet = true; while (sim.tick < Math.floor(+HASH.tk)) sim.step(); sim.quiet = false; sim.out.length = 0; acc = +HASH.tk % 1; }
   if (HASH.speed) speedIdx = +HASH.speed;
-  setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on);
+  setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on); zukanBadge();
   // エリカの顔（絵があれば絵、なければ手描き）
   V.erika = (c, e, dt) => drawErikaScene(c, e, dt, !!Talk.cur);
   loadErika(seasonKey(sim.t)); // エリカの絵：いまの季節から先に読む
