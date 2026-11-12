@@ -3155,6 +3155,7 @@ function boot() {
   if (!sim) { sim = Sim.fresh(+HASH.seed || (Date.now() % 1e9)); snap = sim.save(); sim.out.length = 0; }
   if (HASH.y) fastForward(+HASH.y - sim.year, false);
   else if (!isNew && saved.ts) { const yrs = Math.min(400, Math.floor((Date.now() - saved.ts) / 1000 / YEAR_SEC)); if (yrs >= 1) fastForward(yrs, true); }
+  if (isNew && !HASH.tk && !HASH.y) { sim.quiet = true; while (sim.tick < 40) sim.step(); sim.quiet = false; sim.out.length = 0; } // はじめての人は、花のそろいはじめる初夏から
   if (HASH.tk) { sim.quiet = true; while (sim.tick < Math.floor(+HASH.tk)) sim.step(); sim.quiet = false; sim.out.length = 0; acc = +HASH.tk % 1; }
   if (HASH.speed) speedIdx = +HASH.speed;
   setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on);
