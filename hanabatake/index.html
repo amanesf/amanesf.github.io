@@ -1674,7 +1674,7 @@ function resizeView() {
   for (const c of [V.bgA, V.bgB, V.bgC, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); if (V.farSpr) { for (const q of V.farSpr.values()) freeCanvas(q.c); V.farSpr.clear(); } V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
   V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.bgC = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1; V.bgJob = null; V.bgInit = 0; // 大きさが変わったら、最初の 1 枚はその場で描ききる
   for (const v of V.views.values()) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); v.body = null; v.fl = null; v.flB = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
-  V.queue.length = 0; V.lay && V.lay.forEach((l) => freeCanvas(l.c)); V.lay = null; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
+  V.queue.length = 0; V.lay && V.lay.forEach((l) => freeCanvas(l.c)); V.lay = null; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSprOld && V.tuftSprOld.forEach(freeCanvas); V.tuftSpr = null; V.tuftSprOld = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => { freeCanvas(b.c); freeCanvas(b.c2); freeCanvas(b.old); }); buildTufts();
 }
 
 // ── 環境（季節・時刻・天気）から色を決める ──
@@ -1689,7 +1689,7 @@ function computeEnv(sim, frac) {
   let d = (t * 4) % 1; d = lerp(d, 0.36, V.fast);
   const night = smooth(0.86, 0.92, d) * (1 - smooth(0.965, 1, d)), dusk = hump(0.7, 0.92, d), dawn = (1 - smooth(0, 0.11, d)) * (1 - night) + smooth(0.955, 1, d) * 0;
   const onset = w.onset / TICKS;
-  const snow = Math.max(smooth(onset + 0.015, onset + 0.07, t), 1 - smooth(0.02, 0.075 - 0.02 * w.temp, t));
+  const snow = Math.max(smooth(onset + 0.015, onset + 0.1, t), 1 - smooth(0.02, 0.11 - 0.02 * w.temp, t)); // 初雪と雪どけは、7 秒ほどかけて（一気に野原の色が変わらないように）
   const snowing = t > onset && t < 0.985 ? 0.4 + 0.5 * w.sev : 0;
   const longrain = sim.flags.rainNow > tk ? 1 : 0;
   const shower = w.rain > 0.2 && !snowing && hash2(sim.year, (t * 30) | 0) < (w.rain - 0.15) * 0.42 && t > 0.1 ? 0.7 : 0;
@@ -1785,7 +1785,7 @@ function drawPlants(main, sim, dt, e) {
   const tk = sim.tick, onset = sim.w.onset, dpr = V.dpr, time = V.time;
   const wind = V.wind;
   let veil = 0, ti = 0, bi = 0; const hz = e.hazeC || [235, 240, 240], tufts = V.tufts, nt = tufts.length;
-  paintTuftSprites(e); serviceBands(e);
+  paintTuftSprites(e); serviceBands(e); V.tuftFade = Math.min(1, (V.tuftFade ?? 1) + dt / 1.2); V.bandFade = Math.min(1, (V.bandFade ?? 1) + dt / 1.2);
   // どの層を描き直すか：待たせた分（頻度の比 × 経過）がいちばん溜まった層から。余裕のある端末では 2 層、苦しければ 1 層
   const lay = farLayers(), nowMs = performance.now(), fresh = new Array(NL).fill(0);
   V.fc = (V.fc || 0) + 1;
@@ -1799,7 +1799,7 @@ function drawPlants(main, sim, dt, e) {
   const upTo = (z) => { // この奥行きまでの草と、空気の色
     while (true) {
       const vz = veil < NL ? VEIL_Z[veil] : 9;
-      while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); const md = V.dpr; main.setTransform(md, 0, md * sh, md, md * -sh * (bd.y0 + bd.h), 0); main.globalAlpha = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); main.drawImage(bd.c, 0, bd.y0, V.W, bd.h); main.globalAlpha = 1; } } // 地面の草の帯は層に入れず、毎フレームじかに描く（層ごと傾けると、地面までずれて揺れて見える）
+      while (bi < V.bands.length && BAND_Z[bi] <= z && BAND_Z[bi] < vz) { const bd = V.bands[bi++]; if (bd.key && !V.noBand) { const sh = -(windAt(V.W * 0.5, depthScale(BAND_Z[bi])) * 0.1 + Math.sin(V.time * 1.7 + bi) * 0.02); const md = V.dpr, ba = lerp(0.88, 1, clamp(BAND_Z[bi] / 0.8)); main.setTransform(md, 0, md * sh, md, md * -sh * (bd.y0 + bd.h), 0); main.globalAlpha = ba; if (bd.old && V.bandFade < 1) { main.drawImage(bd.old, 0, bd.y0, V.W, bd.h); main.globalAlpha = ba * V.bandFade; } main.drawImage(bd.c, 0, bd.y0, V.W, bd.h); main.globalAlpha = 1; } } // 地面の草の帯は層に入れず、毎フレームじかに描く（層ごと傾けると、地面までずれて揺れて見える）
       while (ti < nt && tufts[ti].z <= Math.min(z, vz)) { if (!V.noTuft) drawTuft(ctx, tufts[ti], e); ti++; }
       if (vz > z) break;
       const L = lay[veil], z0 = veil ? VEIL_Z[veil - 1] : 0, zm = (z0 + VEIL_Z[veil]) / 2, dsm = depthScale(zm), yp = proj(0.5, zm).sy;
@@ -2645,23 +2645,26 @@ const grassGrow = (t) => lerp(0.42, 1, smooth(0.1, 0.46, t));
 function serviceBands(e) {
   const d = Math.min(V.dpr, 1.5);
   if (!V.bands) V.bands = V.tuftFar.map((list, b) => { const y0 = Math.floor(proj(0.5, BAND_Z[b]).sy - 70 * depthScale(BAND_Z[b + 1]) * V.unit - 4), y1 = Math.ceil(proj(0.5, BAND_Z[b + 1]).sy + 4); return { c: mkCanvas(V.W * d, (y1 - y0) * d), y0, h: y1 - y0, key: '' }; });
+  // 草の色や丈が変わったら、帯をすべて裏の絵に描きなおし、そろったところで一斉に溶かして切りかえる
+  // （1 本ずつ表で描きかえると、手前から奥へガタガタと草が生えかわって見える）
   if (V.bandKey !== V.tuftKey) { V.bandKey = V.tuftKey; V.bandJob = V.bands.length; }
   if (V.bandJob > 0) {
-    const b = --V.bandJob, bd = V.bands[b], x = bd.c.getContext('2d');
-    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, bd.c.width, bd.c.height);
+    const b = --V.bandJob, bd = V.bands[b]; if (!bd.c2) bd.c2 = mkCanvas(bd.c.width, bd.c.height); const x = bd.c2.getContext('2d');
+    x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.clearRect(0, 0, bd.c2.width, bd.c2.height);
     for (const tf of V.tuftFar[b]) { if (!tf.pos) tf.pos = proj(tf.x, tf.z); const p = tf.pos, sc = p.ds * V.unit * tf.s * TUFT_SC / V.tuftPx, c = V.tuftSpr[tf.kind], hs = (1 - 0.7 * e.snow) * grassGrow(e.t); x.globalAlpha = 1 - 0.86 * e.snow; x.setTransform(d * sc * tf.flip, 0, 0, d * sc * hs, d * p.sx, d * (p.sy - bd.y0)); x.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); }
-    bd.key = V.tuftKey;
+    if (V.bandJob === 0) { const first = !V.bands.some((q) => q.key); for (const q of V.bands) { const o = q.old || null; q.old = first ? null : q.c; q.c = q.c2; q.c2 = o; q.key = V.tuftKey; } V.bandFade = first ? 1 : 0; }
   }
 }
 function paintTuftSprites(e) {
   const k = [(e.t * 30) | 0, (e.snow * 5) | 0, (e.dry * 4) | 0].join(','); // 草の色は細かい段で（段が大きいと、草がぱっと変わって見える）
   if (k === V.tuftKey && V.tuftSpr) return; V.tuftKey = k;
+  const spare = V.tuftSprOld || []; V.tuftSprOld = V.tuftSpr || null; V.tuftSpr = []; V.tuftFade = V.tuftSprOld ? 0 : 1; // 手前の草も、前の絵から溶かす
   const px = Math.min(V.dpr, 2) * V.unit * S_NEAR * 0.75, t = e.t;
   const ground = mix(mix(mix(ramp(GR_N, t), hex('#c9b266'), e.dry * 0.55), [236, 242, 200], 0.24), hex('#b9ad8c'), e.snow * 0.8);
   const gold = mix(mix([214, 196, 130], mix(ground, [226, 226, 178], 0.4), 1 - smooth(0.6, 0.78, t)), [190, 160, 110], e.snow * 0.5);
-  if (!V.tuftSpr) V.tuftSpr = [];
+
   for (let kd = 0; kd < TUFT_KINDS; kd++) {
-    const Wd = 96, Hd = 92, c = V.tuftSpr[kd] || mkCanvas(Wd * px, Hd * px), x = c.getContext('2d');
+    const Wd = 96, Hd = 92, c = (spare[kd] && spare[kd].width === Math.ceil(Wd * px) ? spare[kd] : mkCanvas(Wd * px, Hd * px)), x = c.getContext('2d');
     x.setTransform(px, 0, 0, px, 0, 0); x.clearRect(0, 0, Wd, Hd); x.lineCap = 'round'; x.lineJoin = 'round';
     const bx = Wd / 2, by = Hd - 3, rn = (i) => hash2(kd * 97 + i, 1010);
     // 草ごとに色みを変える：青みの草、黄みの草、秋でも青い草
@@ -2707,9 +2710,10 @@ function drawTuft(ctx, tf, e) {
   const sway = low ? 0 : -(windAt(p.sx, p.ds) * 0.14 + Math.sin(V.time * 1.9 + tf.ph) * 0.03 * (0.4 + V.wind));
   const hs = (1 - 0.7 * e.snow) * grassGrow(e.t);
   ctx.globalAlpha = 1 - 0.8 * e.snow;
-  const c = V.tuftSpr[tf.kind], d = V.dpr;
+  const c = V.tuftSpr[tf.kind], d = V.dpr, a0 = ctx.globalAlpha;
   ctx.setTransform(d * sc * tf.flip, 0, d * sc * sway * hs, d * sc * hs, d * p.sx, d * p.sy);
-  ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx);
+  if (V.tuftFade < 1 && V.tuftSprOld) { const o = V.tuftSprOld[tf.kind]; if (o && o.width) { ctx.drawImage(o, -o.width / 2, -o.height + 3 * V.tuftPx); ctx.globalAlpha = a0 * V.tuftFade; } }
+  ctx.drawImage(c, -c.width / 2, -c.height + 3 * V.tuftPx); ctx.globalAlpha = a0;
 }
 
 // ── 夜の光：夜の色を掛けたあとに描く（月や窓あかりまで青く沈まないように） ──
