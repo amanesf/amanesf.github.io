@@ -3081,7 +3081,10 @@ function drawFireworks(ctx, e, dt) {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * TAU + q.hue, rr = R * (q.ring ? 1 : 0.75 + 0.25 * hash2(i, q.hue | 0)), px = q.x + Math.cos(a) * rr, py = q.y1 + Math.sin(a) * rr * 0.92 + drop, tl = Math.min(rr * 0.35, 8 * V.unit);
         const col = hslRgb(q.hue + (i % 3 === 0 ? 30 : 0), 0.95, u < 0.4 ? 0.62 : 0.52), tw = u > 0.55 ? (Math.sin(q.t * 40 + i * 1.7) > 0 ? 1 : 0.2) : 1; // 消えぎわに、ちらちら瞬く
-        ctx.strokeStyle = rgb(col, 0.95 * al * tw); ctx.lineWidth = 1.7; ctx.beginPath(); ctx.moveTo(px - Math.cos(a) * tl, py - Math.sin(a) * tl * 0.92 - drop * 0.15); ctx.lineTo(px, py); ctx.stroke();
+        const tl2 = rr * 0.6, sx = q.x + Math.cos(a) * (rr - tl2), sy = q.y1 + Math.sin(a) * (rr - tl2) * 0.92 + drop * 0.3; // 尾は、開いた中心のほうへ長く、重さで少し垂れる
+        ctx.strokeStyle = rgb(col, 0.32 * al * tw); ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + px) / 2, (sy + py) / 2 + drop * 0.25, px, py); ctx.stroke();
+        ctx.strokeStyle = rgb(col, 0.95 * al * tw); ctx.lineWidth = 1.7; ctx.beginPath(); ctx.moveTo(px - Math.cos(a) * tl * 0.6, py - Math.sin(a) * tl * 0.55 - drop * 0.1); ctx.lineTo(px, py); ctx.stroke();
+        ctx.fillStyle = rgb(mix(col, [255, 255, 240], 0.6), 0.9 * al * tw); ctx.beginPath(); ctx.arc(px, py, 1.1, 0, TAU); ctx.fill(); // 星（先の明るい粒）
         if (inner && i % 2 === 0) { const ix = q.x + Math.cos(a) * rr * 0.5, iy = q.y1 + Math.sin(a) * rr * 0.46 + drop; ctx.fillStyle = rgb(hslRgb(q.hue + 160, 0.9, 0.65), 0.9 * al); ctx.beginPath(); ctx.arc(ix, iy, 1.3, 0, TAU); ctx.fill(); } // 芯：内がわに、別の色の小さな輪
       }
     }
