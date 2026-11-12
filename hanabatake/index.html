@@ -1485,7 +1485,7 @@ function plantGeom(p, gr = 1) {
 function leafTone(g, look, j) {
   // lh: 黄緑 → 緑 → 青緑 → 銀葉 → 銅葉
   const c = g.lh;
-  let h = lerp(48, 80, smooth(0, 0.8, c)) + g.dr * 6 + (0.5 - j) * 16, s = 0.36 - 0.2 * smooth(0.5, 0.86, c) - 0.06 * g.dr, l = 0.52 + 0.1 * smooth(0.6, 0.86, c) + j * 0.55; // 日なたの葉は明るく黄みに、陰の葉は暗く青みに（差を広く） // 葉は明るめに（花が主役。葉が濃いと野原が重く沈む）
+  let h = lerp(42, 72, smooth(0, 0.8, c)) + g.dr * 6 + (0.5 - j) * 16, s = 0.44 - 0.2 * smooth(0.5, 0.86, c) - 0.06 * g.dr, l = 0.53 + 0.1 * smooth(0.6, 0.86, c) + j * 0.55; // 日なたの葉は明るく黄みに、陰の葉は暗く青みに（差を広く） // 葉は明るめに（花が主役。葉が濃いと野原が重く沈む）
   if (c > 0.9) { const u = smooth(0.9, 1, c) * 0.6; h = lerp(h, 20, u * 0.6); s = lerp(s, 0.26, u); l = lerp(l, 0.5 + j * 0.08, u); } // 赤みのある葉は、ほんのり色づく程度に
   if (look === 'autumn') { h = lerp(74, 38, (j * 3) % 1); s = 0.38; l = 0.62 + j * 0.1; } // 黄葉：黄緑から山吹へ
   else if (look === 'dry') { h = 42; s = 0.28; l = 0.56 + j * 0.06; }
@@ -1685,7 +1685,7 @@ function resizeView() {
 const SKY_T = [[0, hex('#b6c5d6')], [0.14, hex('#a8d2e4')], [0.3, hex('#9fd0ea')], [0.46, hex('#7dbbe6')], [0.62, hex('#92c1e4')], [0.76, hex('#a6c4dc')], [0.9, hex('#b6c5d6')], [1, hex('#b6c5d6')]];
 const SKY_B = [[0, hex('#edeef0')], [0.14, hex('#eaf3e2')], [0.3, hex('#e2f1ea')], [0.46, hex('#d9eeee')], [0.62, hex('#f1ecd6')], [0.76, hex('#f4e6cf')], [0.9, hex('#edeef0')], [1, hex('#edeef0')]];
 const GR_F = [[0, hex('#dcd8bb')], [0.1, hex('#d9e5ac')], [0.25, hex('#cfe5a2')], [0.45, hex('#bedb92')], [0.62, hex('#d0d78f')], [0.76, hex('#e2cf90')], [0.86, hex('#dccca4')], [1, hex('#dcd8bb')]];
-const GR_N = [[0, hex('#c6c290')], [0.1, hex('#cad884')], [0.25, hex('#c4d274')], [0.45, hex('#bccc68')], [0.62, hex('#c4c668')], [0.76, hex('#ccac5e')], [0.86, hex('#b8a074')], [1, hex('#c6c290')]]; // 緑は黄緑寄りで明るく（トップの絵の緑は色相 70° 前後。青い緑だと重く沈む）
+const GR_N = [[0, hex('#cac08a')], [0.1, hex('#d2da78')], [0.25, hex('#ccd466')], [0.45, hex('#c6cc5a')], [0.62, hex('#ccc65c')], [0.76, hex('#d2aa56')], [0.86, hex('#bea070')], [1, hex('#cac08a')]]; // 緑は温かい黄緑で明るく澄んだ色に（トップの絵：中ほど 61°、手前 69°）
 const TREE_C = [[0, hex('#8c7b6e')], [0.09, hex('#c9c2a0')], [0.16, hex('#f3cfd6')], [0.24, hex('#f0c4d0')], [0.3, hex('#a9d17e')], [0.45, hex('#7fae5a')], [0.6, hex('#8aae54')], [0.7, hex('#e2a445')], [0.78, hex('#d9743c')], [0.85, hex('#a8704c')], [1, hex('#8c7b6e')]];
 
 function computeEnv(sim, frac) {
@@ -1790,7 +1790,7 @@ function farLayers() {
 function drawPlants(main, sim, dt, e) {
   const tk = sim.tick, onset = sim.w.onset, dpr = V.dpr, time = V.time;
   const wind = V.wind;
-  let veil = 0, ti = 0, bi = 0; const hz = mix(e.hazeC || [235, 240, 240], [255, 254, 250], 0.8 * (1 - e.night)), tufts = V.tufts, nt = tufts.length;
+  let veil = 0, ti = 0, bi = 0; const hz = mix(e.hazeC || [235, 240, 240], mix([255, 246, 206], [252, 236, 214], e.dusk), 0.9 * (1 - e.night)), /* かすみは灰色ではなく、日差しの温かいクリーム色（灰色だと遠くが濁る） */ tufts = V.tufts, nt = tufts.length;
   paintTuftSprites(e); serviceBands(e); V.tuftFade = Math.min(1, (V.tuftFade ?? 1) + dt / 1.2); V.bandFade = Math.min(1, (V.bandFade ?? 1) + dt / 1.2);
   // どの層を描き直すか：待たせた分（頻度の比 × 経過）がいちばん溜まった層から。余裕のある端末では 2 層、苦しければ 1 層
   const lay = farLayers(), nowMs = performance.now(), fresh = new Array(NL).fill(0);
@@ -1812,7 +1812,7 @@ function drawPlants(main, sim, dt, e) {
       const sh = -(windAt(V.W * 0.5, dsm) * 0.75 * 0.085 + Math.sin(V.time * 1.3 + veil * 1.7) * 0.012 * (0.4 + V.wind)); // 層ごとの揺れ：毎フレームなめらかに傾ける（層の描き直しを待たない）
       main.setTransform(dpr, 0, dpr * sh, dpr, -dpr * sh * yp, 0); main.globalAlpha = 1; main.drawImage(L.c, 0, L.y0, V.W, L.h); main.setTransform(dpr, 0, 0, dpr, 0, 0); // まとめておいた層を置く
       if (veil < 4) { // 空気遠近：遠くほど白くかすんで、明るく軽く。層ごとに薄く重ね、最後（奥行き 0.87 まで）は地平から画面の中ほどまで、なだらかに薄れる 1 枚
-        const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb), th = (V.yH - y0) / (yb - y0), A = [0.1, 0.07, 0.05, 0.4][veil];
+        const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb), th = (V.yH - y0) / (yb - y0), A = [0.1, 0.07, 0.05, 0.46][veil];
         gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop(th, rgb(hz, A));
         if (veil === 3) for (const [u, k] of [[0.15, 1.15], [0.35, 1.0], [0.55, 0.62], [0.75, 0.26], [0.9, 0.08]]) gr.addColorStop(th + (1 - th) * u, rgb(hz, A * k));
         gr.addColorStop(1, rgb(hz, 0)); main.fillStyle = gr; main.fillRect(0, y0, V.W, yb - y0); }
@@ -2354,7 +2354,7 @@ function* paintBGJob(x, e) {
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
   const airy = 1 - e.night * 0.6 - snowy * 0.5; // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
-  const farL = mix(far, [254, 253, 240], 0.8 * airy), nearL = mix(near, [250, 249, 222], 0.68 * airy); // トップの絵のように、地面は紙の白が透ける明るさ
+  const farL = mix(far, [255, 252, 226], 0.78 * airy), nearL = mix(near, [252, 250, 214], 0.64 * airy); // トップの絵のように、地面は紙の白が透ける明るさ
   const hillC = mix(mix(near, far, 0.45), hazeC, 0.3), hillY = (u) => yH + H * 0.012 - H * 0.04 * (fbm(u * 2.2 + 23, 23) - 0.25);
   { const pts = []; for (let i = 0; i <= 50; i++) pts.push([(i / 50) * W, hillY(i / 50)]); pts.push([W + 4, yH + 40], [-4, yH + 40]);
     wash(x, pts, hillC, 1, { smooth: false, edge: 0.4, ew: 0.8, light: mix(hillC, [255, 252, 214], 0.5), lightA: 0.4, edgeCol: mix(hillC, [40, 80, 70], 0.5) }); }
@@ -2683,7 +2683,7 @@ function paintTuftSprites(e) {
     const bx = Wd / 2, by = Hd - 3, rn = (i) => hash2(kd * 97 + i, 1010);
     // 草ごとに色みを変える：青みの草、黄みの草、秋でも青い草
     const ever = kd % 3 === 0 ? 0.75 : kd % 3 === 1 ? 0.45 : 0.15, eg = mix(ramp(GR_N, 0.45), [120, 150, 68], 0.3);
-    const tint = [[166, 178, 82], [192, 196, 92], [170, 184, 76], [182, 192, 96]][kd % 4], base = mix(mix(ground, eg, ever), tint, 0.3 * (1 - e.snow));
+    const tint = [[172, 184, 66], [200, 204, 78], [178, 190, 60], [190, 198, 82]][kd % 4], base = mix(mix(ground, eg, ever), tint, 0.4 * (1 - e.snow));
     const dark = mix(base, [78, 104, 50], 0.26), light = mix(base, [248, 250, 210], 0.4);
     // 1 枚の葉を、根もとが太く先のとがった面で描く
     const blade = (ox, hgt, lean, w, col, a) => {
