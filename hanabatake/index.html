@@ -2229,7 +2229,15 @@ function paintBG(x, e) {
   const W = V.W, H = V.H, yH = V.yH, t = e.t;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, W, H);
   const [top, bot] = skyCols(e), hazeC = mix(bot, top, 0.25), snowy = e.snow;
-  const ridgeY = (u, base, amp, f, seed) => base + amp * 0.3 - amp * (0.62 * vnoise(u * f + seed, seed) + 0.26 * vnoise(u * f * 2.7 + seed, seed + 4) + 0.12 * vnoise(u * f * 6.3 + seed, seed + 8)) * (0.75 + 0.5 * vnoise(u * f * 0.5 + 3, seed + 2));
+  // 山の形：峰をいくつか決め、それぞれから尾根がすそへ下りる。なだらかな波（ノイズの丘）だけだと、毛布のように見える
+  const peaks = (seed, n) => { const P = []; for (let i = 0; i < n; i++) { const c = -0.08 + (i + 0.2 + 0.6 * hash2(i, seed + 60)) * 1.16 / n; P.push({ c, h: 0.42 + 0.42 * hash2(i, seed + 61), wl: 0.17 + 0.17 * hash2(i, seed + 62), wr: 0.2 + 0.2 * hash2(i, seed + 63) }); } P.sort((a, b) => b.h - a.h); P[0].h = 1; return P; };
+  const PK_CACHE = {};
+  const PK_EXP = { 3: 1.05, 11: 0.85, 17: 0.6 }; // 奥の山ほど鋭く、手前の山ほど丸い
+  const ridgeY = (u, base, amp, f, seed) => { const P = PK_CACHE[seed] || (PK_CACHE[seed] = peaks(seed, Math.round(f))), ex = PK_EXP[seed] || 1; let hgt = 0;
+    for (const p of P) { const d = u - p.c, w = d < 0 ? p.wl : p.wr, q = 1 - Math.abs(d) / w; if (q > 0) hgt = Math.max(hgt, p.h * Math.pow(q, ex)); }
+    const rough = 0.5 - Math.abs(vnoise(u * 38 + seed, seed + 4) - 0.5), fine = vnoise(u * 90 + seed, seed + 8); // 稜線のごつごつ（尖ったノイズ）
+    const shoulder = vnoise(u * 9 + seed * 0.3, seed + 5); // 肩と鞍部：大きな峰の途中にも、こぶとくぼみがある
+    return base + amp * 0.3 - amp * (0.1 + 0.9 * hgt) * (0.84 + 0.2 * shoulder + 0.09 * rough + 0.03 * fine); };
   // 山は奥から 3 枚。重ねるたびに濃く、すそは霧に溶かす
   const ridge = (base, amp, f, seed, col, o = {}) => {
     const N = 90, topL = []; for (let i = 0; i <= N; i++) { const u = i / N; topL.push([u * W, ridgeY(u, base, amp, f, seed)]); }
@@ -2239,9 +2247,14 @@ function paintBG(x, e) {
     x.save(); x.clip();
     // 稜線から下へ、かすれた筆あと（尾根と谷）
     for (let i = 0; i < 0; i++) { const u = hash2(i, seed + 20), px = u * W, py = ridgeY(u, base, amp, f, seed), len = amp * (0.15 + 0.35 * hash2(i, seed + 21)), dk = i % 2; x.strokeStyle = rgb(dk ? mix(col, [44, 58, 120], 0.5) : mix(col, [255, 255, 255], 0.6), dk ? 0.09 : 0.12); x.lineWidth = 1.5 + 5 * hash2(i, seed + 22); x.beginPath(); x.moveTo(px, py + 1); x.quadraticCurveTo(px + (hash2(i, seed + 23) - 0.3) * len * 0.5, py + len * 0.5, px + (hash2(i, seed + 24) - 0.3) * len * 0.9, py + len); x.stroke(); }
-    for (let i = 1; i < 89; i++) { const u0 = (i - 1) / 90, u1 = i / 90, u2 = (i + 1) / 90, y0 = ridgeY(u0, base, amp, f, seed), y1 = ridgeY(u1, base, amp, f, seed), y2 = ridgeY(u2, base, amp, f, seed); if (!(y1 < y0 && y1 <= y2)) continue; // 峰ごとに、日かげの斜面へ影をひと刷け
-      const px = u1 * W, sh = mix(col, [48, 62, 124], 0.42); blob(x, px + W * 0.035, y1 + amp * 0.32, W * 0.045, amp * 0.34, sh, 0.22, i + seed, 0.35); blob(x, px - W * 0.03, y1 + amp * 0.22, W * 0.03, amp * 0.22, mix(col, [255, 255, 250], 0.5), 0.2, i + seed + 50, 0.35); }
-    for (let i = 0; i < 7; i++) { const u = hash2(i, seed + 30); blob(x, u * W, ridgeY(u, base, amp, f, seed) + amp * (0.2 + 0.3 * hash2(i, seed + 31)), W * (0.08 + 0.08 * hash2(i, seed + 32)), amp * 0.2, i % 2 ? mix(col, [50, 64, 128], 0.45) : mix(col, hazeC, 0.6), 0.28, i + seed, 0.3); }
+    { const P = PK_CACHE[seed], sh = mix(col, [52, 64, 126], 0.38), lt = mix(col, [255, 252, 244], 0.35); // 峰ごとに、日かげの斜面（右）を面で塗り、日なたの斜面（左）を少し明るく
+      for (const p of P) { const sx = p.c * W, sy = ridgeY(p.c, base, amp, f, seed), foot = base + amp * 0.35;
+        const R = []; for (let k = 0; k <= 16; k++) { const u = p.c + (p.wr * k) / 16; R.push([u * W, ridgeY(u, base, amp, f, seed)]); }
+        const gully = []; for (let k = 16; k >= 0; k--) { const v = k / 16; gully.push([sx + W * p.wr * (0.12 + 0.3 * v) + W * 0.012 * Math.sin(v * 9 + seed), sy + (foot - sy) * v]); } // 尾根から下りる谷の線
+        tracePoly(x, R.concat(gully)); x.fillStyle = rgb(sh, 0.3); x.fill();
+        const L = []; for (let k = 0; k <= 12; k++) { const u = p.c - (p.wl * k) / 12; L.push([u * W, ridgeY(u, base, amp, f, seed) + 1.5]); }
+        tracePoly(x, L.concat([[sx - W * p.wl * 0.25, sy + (foot - sy) * 0.6], [sx, sy + 2]])); x.fillStyle = rgb(lt, 0.18); x.fill(); } }
+    for (let i = 0; i < 4; i++) { const u = hash2(i, seed + 30); blob(x, u * W, ridgeY(u, base, amp, f, seed) + amp * (0.35 + 0.3 * hash2(i, seed + 31)), W * (0.1 + 0.08 * hash2(i, seed + 32)), amp * 0.14, mix(col, hazeC, 0.6), 0.16, i + seed, 0.3); } // 中腹にかかるうすい雲
     if (o.snow > 0.02) { const sgd = x.createLinearGradient(0, base - amp * 0.7, 0, base - amp * 0.25); sgd.addColorStop(0, `rgba(253,254,255,${0.95 * o.snow})`); sgd.addColorStop(0.6, `rgba(253,254,255,${0.5 * o.snow})`); sgd.addColorStop(1, 'rgba(253,254,255,0)'); x.fillStyle = sgd; x.fillRect(0, base - amp * 0.9, W, amp); }
     if (o.trees) for (let i = 0; i < 220; i++) { const u = hash2(i, seed + 40), py = ridgeY(u, base, amp, f, seed) + amp * (0.02 + 0.5 * Math.pow(hash2(i, seed + 41), 1.5)); dab(x, u * W, py, 1.3 + hash2(i, seed + 42), 1.6 + 1.4 * hash2(i, seed + 43), -Math.PI / 2, mix(o.trees, [30, 50, 70], 0.3 * hash2(i, seed + 44)), 0.5); }
     const ec = mix(col, [40, 52, 110], 0.5); x.lineJoin = 'round';
@@ -2252,9 +2265,9 @@ function paintBG(x, e) {
     x.restore();
   };
   const mt = mix(mix(hex('#8ea6d4'), hex('#dfe6f2'), snowy * 0.6), hex('#56619c'), e.night * 0.6), cap = Math.max(snowy, 1 - smooth(0.1, 0.3, t), smooth(0.74, 0.86, t) * 0.7);
-  ridge(yH - H * 0.045, H * 0.17, 3.4, 3, mix(mt, hazeC, 0.6), { snow: cap, streaks: 60 });
-  ridge(yH - H * 0.02, H * 0.11, 4.6, 11, mix(mt, hazeC, 0.32), { snow: cap * 0.6 });
-  ridge(yH - H * 0.002, H * 0.06, 6.2, 17, mix(mix(mt, [86, 128, 140], 0.45), hazeC, 0.12), { snow: snowy * 0.5, trees: mix(mix(ramp(TREE_C, t), [70, 110, 130], 0.6), [240, 244, 250], snowy * 0.6), mist: 0.5 });
+  ridge(yH - H * 0.04, H * 0.15, 3, 3, mix(mt, hazeC, 0.62), { snow: cap, streaks: 60 }); // いちばん奥：高い峰の連なり（白くかすむ）
+  ridge(yH - H * 0.018, H * 0.085, 4, 11, mix(mt, hazeC, 0.34), { snow: cap * 0.6 });
+  ridge(yH - H * 0.002, H * 0.045, 6, 17, mix(mix(mt, [86, 128, 140], 0.45), hazeC, 0.12), { snow: snowy * 0.5, trees: mix(mix(ramp(TREE_C, t), [70, 110, 130], 0.6), [240, 244, 250], snowy * 0.6), mist: 0.5 });
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
   const airy = 1 - e.night * 0.6 - snowy * 0.5; // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
