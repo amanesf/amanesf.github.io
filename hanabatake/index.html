@@ -299,6 +299,7 @@ function mutate(g, rng, rate = 1) {
     else { const k = rng.pick(GENES); c[k] = clamp(c[k] + (rng.chance(0.5) ? 1 : -1) * rng.range(0.15, 0.4)); }
     c._macro = 1;
   }
+  for (const k of GENES) c[k] = Math.round(c[k] * 1000) / 1000; c.h = Math.round(c.h * 10) / 10; // 保存と同じ細かさにそろえる（読みこみ直しても、同じ年を同じとおりにたどれるように）
   return c;
 }
 
@@ -592,7 +593,7 @@ class Sim {
     const winterAnnual = p.age === 0 && g.bt < 0.32; // 春に咲く草の多くは、秋に芽を出して、葉を広げたまま冬を越す（越年草）
     p.bio = p.age > 0 ? 0.5 - 0.26 * smooth(0.28, 0.55, G.bloomStart(g)) : winterAnnual ? 0.3 + 0.1 * g.sd : 0.09 + 0.14 * g.sd; // 多年草は根の蓄えで、春いちばんに動ける
     p.R = p.age > 0 ? 9 : 0; p.stress = 0; p.state = 0; p.open = 0; p.nOpen = 0; p.fert = []; p.visits = 0; p.seeds = 0;
-    p.lodged = 0; p.frost = 0; p.aphid = 0; p.rot = 0; p.light = 1; p.dead = 0; p.bloomed = 0; p.ripen = 0;
+    p.lodged = 0; p.frost = 0; p.aphid = 0; p.rot = 0; p.light = 1; p.dead = 0; p.bloomed = 0; p.ripen = 0; p.ovules = 0; p.nec = 0; p.cause = null; // 去年の分は持ちこさない（読みこみ直しと同じ姿から年をはじめる）
     p.sprout = Math.max(1, Math.round((p.age > 0 || winterAnnual ? 2 : 6 + Math.max(0, G.bloomStart(g) - 0.3) * TICKS * 0.45) + (1 - g.cd) * 8 - w.temp * 4 + r.range(-2, 4))); // 夏や秋に咲く一年草は、遅れて芽を出す（春の野原は、春の花のもの）
     p.bs = Math.round(TICKS * (G.bloomStart(g) - 0.025 * w.temp)) + r.int(3);
     p.be = Math.min(p.bs + Math.round(TICKS * G.bloomDur(g)), w.onset - 4); // 秋の花は、霜の来る直前まで咲く // 冬の手前で咲き終えて、実を熟させる
@@ -633,7 +634,7 @@ class Sim {
     const share = this.share || {}; // 前の年の夏の株で数えた割合（endYear で数える）
     // 芽生えのくじ引き：種が大きいほど当たりやすい
     const bank = this.bank;
-    for (const s of bank) s.k = Math.pow(r.next(), 1 / s.w);
+    for (const s of bank) { s.x = +s.x.toFixed(4); s.z = +s.z.toFixed(4); s.w = +s.w.toFixed(2); s.k = Math.pow(r.next(), 1 / s.w); } // 位置と重みは、保存と同じ細かさで
     bank.sort((a, b) => b.k - a.k);
     const keep = [];
     for (const s of bank) {
@@ -927,7 +928,9 @@ class Sim {
     const aid = (anc) => { let i = ai.get(anc); if (i === undefined) { i = at.length; ai.set(anc, i); at.push(anc.map((s) => [gid(s.g), s.y, s.gen])); } return i; };
     const pk = (o) => [gid(o.g), +o.x.toFixed(4), +o.z.toFixed(4), o.gen, o.line, gid(o.momG), gid(o.dadG), aid(o.anc)];
     return {
-      v: 3, seed0: this.seed0, rs: this.rng.s, year: this.year, nextId: this.nextId,
+      v: 3, v4: 1, seed0: this.seed0, rs: this.rng.s, year: this.year, nextId: this.nextId,
+      // 年のはじめの天気と、各株の芽吹き・開花の予定も残す。これがあれば、読みこんだあと同じ年を同じとおりに進め直せる（年の途中から再開）
+      ...JSON.parse(JSON.stringify({ w: this.w, flags: this.flags, sched: this.sched, share: this.share || {} })), pt: this.plants.map((p) => [p.sprout, p.bs, p.be]),
       c: [this.cPeriod, this.cPhase, this.cDrift, this.rPeriod, this.rPhase],
       sp: Object.fromEntries(SP_KEYS.map((k) => [k, [this.sp[k].pop, this.sp[k].pref]])),
       plants: this.plants.map((p) => pk(p).concat([p.id, p.born, p.age])), bank: this.bank.filter((s, i) => this.bank.length <= 2200 || hash1(i * 31 + this.year) < 2200 / this.bank.length).map((s) => pk(s).concat([s.age, +s.w.toFixed(2)])),
@@ -948,9 +951,11 @@ class Sim {
     s.plants = [];
     const born = d.plants.map((a) => Object.assign(un(a), { id: a[8], born: a[9], age: a[10] }));
     s._restore = born;
+    if (d.v4 && d.w && d.pt && d.pt.length === born.length) s._exact = { w: d.w, flags: d.flags || {}, sched: d.sched || [], pt: d.pt }; if (d.share) s.share = d.share;
     return s;
   }
   resume() { // load のあとに 1 回だけ呼ぶ
+    if (this._exact) return this.resumeExact();
     const born = this._restore; delete this._restore;
     this.tick = 0;
     // 保存時点の株をそのまま置く（芽生えのくじはもう済んでいる）
@@ -969,6 +974,23 @@ class Sim {
     for (const k of SP_KEYS) { const n = Math.round(this.sp[k].pop * this.sp[k].mul); for (let i = 0; i < n; i++) this.agents.push({ id: k + i, sp: k, at: null, pollen: null }); }
     this.yr = { died: { dry: 0, frost: 0, storm: 0 }, lodged: 0, frostbit: 0, aphid: 0, rot: 0, sprouts: this.plants.length };
     this.emit('newyear', { w: this.w });
+  }
+  // 保存した年のはじめを、そのとおりに組み立て直す（乱数を1つも使わない）。このあと step を回せば、保存前と同じ年をたどる
+  resumeExact() {
+    const born = this._restore, ex = this._exact; delete this._restore; delete this._exact;
+    const rs = this.rng.s;
+    this.tick = 0; this.w = ex.w; this.flags = ex.flags; this.sched = ex.sched.map((e) => Object.assign({}, e));
+    for (const k of SP_KEYS) { const s = this.sp[k]; s.food = 0; s.act = 0; s.visits = 0; s.bins.fill(0); s.mul = 1; }
+    if (this.flags.butterflies) this.sp.butterfly.mul = 2.6;
+    if (this.flags.fewbugs) { this.sp.bee.mul = 0.3; this.sp.fly.mul = 0.35; this.sp.butterfly.mul = 0.5; }
+    const real = this.rng, id0 = this.nextId; this.rng = new RNG(1); // mkPlant と resetPlant のくじは、保存した予定で上書きする
+    this.plants = born;
+    born.forEach((p, i) => { const q = this.mkPlant(p); p.hab = q.hab; this.resetPlant(p); [p.sprout, p.bs, p.be] = ex.pt[i]; });
+    this.rng = real; this.rng.s = rs; this.nextId = id0;
+    this.buildGrid();
+    this.agents = [];
+    for (const k of SP_KEYS) { const n = Math.round(this.sp[k].pop * this.sp[k].mul); for (let i = 0; i < n; i++) this.agents.push({ id: k + i, sp: k, at: null, pollen: null }); }
+    this.yr = { died: { dry: 0, frost: 0, storm: 0 }, lodged: 0, frostbit: 0, aphid: 0, rot: 0, sprouts: this.plants.length };
   }
 }
 
@@ -3117,7 +3139,7 @@ let sim = null, snap = null, acc = 0, lastT = 0, speedIdx = 1, hiddenAt = 0, fac
 
 function saveAll() {
   if (HASH.nosave) return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ sim: snap, zukan: UI.zukan, diary: Talk.diary, coolY: Talk.coolY, opt: { speed: speedIdx, talk: Talk.on }, ts: Date.now() })); } catch (e) { /* 容量いっぱいなら諦める */ }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ sim: snap, tick: sim ? sim.tick : 0, zukan: UI.zukan, diary: Talk.diary, coolY: Talk.coolY, opt: { speed: speedIdx, talk: Talk.on }, ts: Date.now() })); } catch (e) { /* 容量いっぱいなら諦める */ }
 }
 function resetAll() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.hash = ''; location.reload(); }
 
@@ -3202,6 +3224,7 @@ function boot() {
   if (HASH.y) fastForward(+HASH.y - sim.year, false);
   // 閉じているあいだ・画面を離れているあいだは、花畑の時間を進めない（開いたら、保存したところから）
   if (isNew && !HASH.tk && !HASH.y) { sim.quiet = true; while (sim.tick < 40) sim.step(); sim.quiet = false; sim.out.length = 0; } // はじめての人は、花のそろいはじめる初夏から
+  if (!isNew && !HASH.y && !HASH.tk && saved.tick > 0 && snap.v4) { sim.quiet = true; while (sim.tick < Math.min(saved.tick, TICKS - 1)) sim.step(); sim.quiet = false; sim.out.length = 0; } // 年の途中で閉じた人は、閉じたところから
   if (HASH.tk) { sim.quiet = true; while (sim.tick < Math.floor(+HASH.tk)) sim.step(); sim.quiet = false; sim.out.length = 0; acc = +HASH.tk % 1; }
   if (HASH.speed) speedIdx = +HASH.speed;
   setSpeed(speedIdx); $('bTalk').classList.toggle('off', !Talk.on);
@@ -3236,7 +3259,7 @@ function boot() {
     if (document.hidden) { hiddenAt = Date.now(); saveAll(); }
     else if (hiddenAt) { hiddenAt = 0; lastT = performance.now(); }
   });
-  addEventListener('pagehide', saveAll);
+  addEventListener('pagehide', saveAll); setInterval(() => { if (!titleOn) saveAll(); }, 20000); // スマホは前触れなく閉じられるので、ときどき残しておく
   if (HASH.panel === 'hist') showHistory(sim); else if (HASH.panel === 'zukan') showZukan(); else if (HASH.panel === 'plant') setTimeout(() => { const p = sim.plants.find((q) => q.state === 1) || sim.plants[0]; if (p) showPlant(p, sim); }, 600);
   if (HASH.storm) setTimeout(() => { V.storm = 6; }, 300);
   if (HASH.say) setTimeout(() => say(decodeURIComponent(HASH.say), { pri: 9, force: true, mood: HASH.mood || 'calm' }), 400);
