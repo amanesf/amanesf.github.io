@@ -1673,6 +1673,13 @@ function proj(x, z) {
   return { ds, sx: V.W * (0.5 + (x - 0.5) * 1.06), sy: V.yH + (V.H * 1.05 - V.yH) * fy - SITE.elev(x, z) * V.H * 0.03 * ds };
 }
 function resizeView() {
+  // 大きさを変えると、絵を一から作り直すあいだ花や草が欠けて点滅して見える。直前の絵をかぶせておき、そろってから溶かして外す
+  if (V.cv && V.cv.width > 1 && V.bgInit) {
+    const sn = document.createElement('canvas'); sn.width = V.cv.width; sn.height = V.cv.height; sn.getContext('2d').drawImage(V.cv, 0, 0);
+    sn.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .7s;z-index:1'; V.cv.after(sn);
+    const t0 = performance.now(), wait = () => { const ok = V.bands && V.bands.every((b) => b.key) && V.lay && V.lay.every((l) => l.t >= 0) && V.queue.length < 20 && !V.bgJob; if (!ok && performance.now() - t0 < 5000) return setTimeout(wait, 150); sn.style.opacity = '0'; setTimeout(() => sn.remove(), 800); };
+    setTimeout(wait, 300);
+  }
   const st = V.cv.parentElement.getBoundingClientRect();
   V.W = Math.round(st.width); V.H = Math.round(st.height); V.dpr = Math.min(window.devicePixelRatio || 1, V.dprCap || 2);
   V.cv.width = V.W * V.dpr; V.cv.height = V.H * V.dpr;
@@ -1815,7 +1822,7 @@ function drawPlants(main, sim, dt, e) {
       const sh = -(windAt(V.W * 0.5, dsm) * 0.75 * 0.085 + Math.sin(V.time * 1.3 + veil * 1.7) * 0.012 * (0.4 + V.wind)); // 層ごとの揺れ：毎フレームなめらかに傾ける（層の描き直しを待たない）
       main.setTransform(dpr, 0, dpr * sh, dpr, -dpr * sh * yp, 0); main.globalAlpha = 1; main.drawImage(L.c, 0, L.y0, V.W, L.h); main.setTransform(dpr, 0, 0, dpr, 0, 0); // まとめておいた層を置く
       if (veil < 4) { // 空気遠近：遠くほど白くかすんで、明るく軽く。層ごとに薄く重ね、最後（奥行き 0.87 まで）は地平から画面の中ほどまで、なだらかに薄れる 1 枚
-        const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb), th = (V.yH - y0) / (yb - y0), A = [0.1, 0.07, 0.05, 0.46][veil];
+        const yb = proj(0.5, vz).sy + 6, y0 = V.yH - 46, gr = main.createLinearGradient(0, y0, 0, yb), th = (V.yH - y0) / (yb - y0), A = [0.05, 0.04, 0.03, 0.16][veil];
         gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop(th, rgb(hz, A));
         if (veil === 3) for (const [u, k] of [[0.15, 1.15], [0.35, 1.0], [0.55, 0.62], [0.75, 0.26], [0.9, 0.08]]) gr.addColorStop(th + (1 - th) * u, rgb(hz, A * k));
         gr.addColorStop(1, rgb(hz, 0)); main.fillStyle = gr; main.fillRect(0, y0, V.W, yb - y0); }
@@ -1970,10 +1977,10 @@ function drawBugs(ctx, sim, dt, e) {
       b.x += (b.vx + jx + V.wind * 6 * near) * dt; b.y += (b.vy + jy) * dt;
       if (Math.abs(b.vx) > 6) b.face = b.vx > 0 ? 1 : -1;
     } else { b.x += (b.tx - b.x) * Math.min(1, dt * 6); b.y += (b.ty - b.y) * Math.min(1, dt * 6); if (sp === 'moth') { b.x += Math.sin(time * 11 + b.ph) * 0.3; b.y += Math.cos(time * 13 + b.ph) * 0.3; } } // とまっているあいだは、ゆれる花といっしょに
-    b.ds += ((b.tds || 0.6) - b.ds) * Math.min(1, dt * 2);
+    { const dsAt = (y) => { const fy = clamp((y - V.yH) / (V.H * 1.05 - V.yH), 0.01, 1); return S_NEAR * (fy * (1 - S_FAR) + S_FAR); }, d0 = dsAt(b.y); b.ds += (dsAt(b.y + 40 * d0 * V.unit) - b.ds) * Math.min(1, dt * 6); } // 虫の大きさは、いまいる高さの下の地面の奥行きから（行き先の大きさに引きずられて、遠くで大きく見えないように）
     if (b.alpha < 0.02) continue;
     const sitting = b.sit > 0, kind = b.kind === undefined ? (b.kind = (hash1((b.ph * 1e4) | 0) * 5) | 0) : b.kind;
-    const s = b.ds * V.unit * (sp === 'bee' ? 0.86 : sp === 'butterfly' ? [0.92, 0.9, 0.66, 1.3, 0.62][kind] : sp === 'fly' ? 0.8 : 0.95);
+    const s = b.ds * V.unit * (sp === 'bee' ? 0.86 : sp === 'butterfly' ? [0.92, 0.9, 0.66, 1.3, 0.62][kind] : sp === 'fly' ? 0.8 : 0.66);
     ctx.save(); ctx.translate(b.x, b.y); ctx.scale(s * b.face, s); ctx.globalAlpha = b.alpha;
     if (sp === 'bee') drawBee(ctx, time, b.ph, sitting, b.a && b.a.pollen);
     else if (sp === 'butterfly') drawButterfly(ctx, time, b.ph, sitting, kind);
@@ -1988,7 +1995,7 @@ function drawBugs(ctx, sim, dt, e) {
   const akane = hump(0.6, 0.84, e.t) > 0.3 && e.night < 0.3 && e.rain < 0.5; // 秋は赤とんぼの群れが、野原じゅうに
   if (akane) szSay('akane', '赤いトンボが、たくさん飛んでいます。秋が来たんですね', 'happy');
   V.dragons.forEach((d, di) => {
-    d.a += ((season > 0.3 && (di < 2 || akane) ? 1 : 0) - d.a) * Math.min(1, dt); d.t -= dt;
+    d.a += ((season > 0.3 && (di < 1 || (akane && di < 5)) ? 1 : 0) - d.a) * Math.min(1, dt); d.t -= dt;
     if (d.t <= 0 && di >= 2) { const z = 0.45 + Math.random() * 0.53, p = proj(0.05 + Math.random() * 0.9, z); d.tx = p.sx; d.ty = p.sy - (40 + Math.random() * 70) * p.ds; d.ds = p.ds; d.t = 0.6 + Math.random() * 2; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
     if (d.t <= 0) { d.z = clamp(d.z + (Math.random() - 0.5) * 0.3, 0.3, 0.97); const c = brookAt(d.z, e.dry); d.tx = c.x + (Math.random() - 0.5) * c.hw * 5; d.ty = c.y - (14 + Math.random() * 30) * c.ds; d.ds = c.ds; d.t = 0.8 + Math.random() * 2.6; if (!d.x) { d.x = d.tx; d.y = d.ty; } }
     const dx = d.tx - d.x, dy = d.ty - d.y; d.x += dx * Math.min(1, dt * 4.5); d.y += dy * Math.min(1, dt * 4.5); if (Math.abs(dx) > 3) d.face = dx > 0 ? 1 : -1;
@@ -2115,7 +2122,7 @@ function buildVignette() {
 // ── 1 フレーム ──
 function drawScene(sim, frac, dt) {
   const ctx = V.ctx, dpr = V.dpr, W = V.W, H = V.H;
-  V.time += dt;
+  V.time += dt; V.lastDt = dt;
   // 端末が苦しそうなら、解像度を下げて軽くする
   const nowT = performance.now(), real = V.lastReal ? nowT - V.lastReal : 16; V.lastReal = nowT;
   V.ft = (V.ft || 16) * 0.95 + Math.min(200, real) * 0.05; V.ftT = (V.ftT || 0) + real;
@@ -2602,7 +2609,8 @@ function drawLight(ctx, e) {
   const W = V.W, H = V.H, day = (1 - e.night) * (1 - e.storm);
   if (e.cloud > 0.12 && day > 0.2) {
     ctx.globalCompositeOperation = 'multiply';
-    for (let i = 0; i < 4; i++) { const z = [0.2, 0.5, 0.78, 0.94][i], p = proj(0.5, z), u = ((V.time * (0.006 + 0.004 * i) * (0.6 + V.wind) + hash2(i, 990)) % 1.6) - 0.3; blob(ctx, u * W, p.sy - 10 * p.ds, W * (0.3 + 0.25 * p.ds), 16 + 60 * p.ds, [150, 166, 200], 0.3 * Math.min(1, e.cloud * 2) * day * (1 - 0.7 * e.snow), i + 7, 0.25); }
+    const co = V.cloudOff || (V.cloudOff = [0, 1, 2, 3].map((i) => hash2(i, 990) * 2.4)), dtc = Math.min(0.1, V.lastDt || 0.016);
+    for (let i = 0; i < 4; i++) { co[i] = (co[i] + dtc * (0.006 + 0.004 * i) * (0.6 + V.wind)) % 2.4; const z = [0.2, 0.5, 0.78, 0.94][i], p = proj(0.5, z), u = co[i] - 0.7; blob(ctx, u * W, p.sy - 10 * p.ds, W * (0.3 + 0.25 * p.ds), 16 + 60 * p.ds, [150, 166, 200], 0.3 * Math.min(1, e.cloud * 2) * day * (1 - 0.7 * e.snow), i + 7, 0.25); } // 雲の影：位置は足し合わせる（時刻×風だと、風が変わるたびに跳ぶ）。画面の外で折り返す
     ctx.globalCompositeOperation = 'source-over';
   }
   if (V.sun && day > 0.2) { const ox = V.sun[0] < W / 2 ? W * 1.05 : -W * 0.05, g = ctx.createRadialGradient(ox, H * 1.02, 0, ox, H * 1.02, H * 0.75); g.addColorStop(0, rgb([170, 186, 220], 0.14 * day)); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; } // お日さまの反対側は、青みのある陰
@@ -2883,7 +2891,7 @@ function drawHawkmoth(ctx, time, ph, sitting) {
   ctx.fillStyle = '#8e7e66'; ctx.beginPath(); ctx.ellipse(5.4, -0.2, 3, 2.9, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = '#2f2826'; ctx.beginPath(); ctx.ellipse(6.6, -0.6, 1.5, 1.7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(7, -1.2, 0.5, 0, TAU); ctx.fill();
   ctx.strokeStyle = '#5a4c44'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(6.4, -2.6); ctx.quadraticCurveTo(8.4, -5.4, 10.4, -5); ctx.stroke();
-  ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(8.2, 0.6); if (sitting) ctx.quadraticCurveTo(12, 1.2, 15.4, 2.6); else ctx.bezierCurveTo(10.4, 1, 11.4, 3, 10, 3.4); ctx.stroke(); // 口吻：蜜を吸うときは、花へまっすぐのばす（ふだんは巻いている）
+  ctx.strokeStyle = 'rgba(120,100,84,0.75)'; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.moveTo(8.2, 0.6); if (sitting) ctx.quadraticCurveTo(12, 1.2, 15.4, 2.6); else ctx.bezierCurveTo(10.4, 1, 11.4, 3, 10, 3.4); ctx.stroke(); // 口吻：蜜を吸うときは、花へまっすぐのばす（ふだんは巻いている）
 }
 function drawDragonfly(ctx, time, ph, red) {
   ctx.lineCap = 'round';
