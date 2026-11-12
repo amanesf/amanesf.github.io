@@ -2841,9 +2841,12 @@ function erikaFlowers(cols) { EK.flowers = (cols || []).slice(0, 3).map((c, i) =
 const SZ = { fw: [], met: [], glit: [], said: {}, sw: null, geese: null };
 const dayIdx = (e) => Math.min(3, Math.floor(e.t * 4));
 const szForce = (k) => typeof HASH !== 'undefined' && HASH.sz === k;
-function szSay(key, text, mood = 'wow') { // その年に 1 回だけ、エリカが気づく
-  const k = key + ':' + V.env.year; if (SZ.said[k]) return; SZ.said[k] = 1;
-  if (typeof say === 'function') say(text, { pri: 7, mood, year: V.env.year, ttl: 30 });
+const SZ_RARE = { aurora: 1, eclipse: 1, deer: 1, santa: 1, meteor: 1, hotaru: 1 };
+function szSay(key, text, mood = 'wow') { // 季節のことは、主役の花より控えめに。毎年あることは、一度言ったら何年かは言わない（まれなことは毎回）
+  const y = V.env.year, k = key + ':' + y; if (SZ.said[k]) return; SZ.said[k] = 1;
+  const rare = SZ_RARE[key], ck = 'sz:' + key, last = Talk.coolY[ck];
+  if (!rare && last != null && y - last < 7) return; Talk.coolY[ck] = y;
+  if (typeof say === 'function') say(text, { pri: rare ? 4 : 2, mood, year: y, ttl: 20 });
 }
 
 // ── 月の満ち欠け ──
@@ -3251,12 +3254,12 @@ function onSimEvent(ev, sim) {
       if (p.g._macro) tail = '。親とはまるで違う色です。突然変異ですね';
       else if (mc && dc && mc !== dc && mc !== ev.name) tail = `。${mc}と${dc}のあいだに生まれた子です`;
       else if (mc && mc !== ev.name) tail = `。親は${mc}でした。少しずつ色がずれてきたんです`;
-      say(`おや、はじめて見る${ev.name}の花です${tail}`, { ...base, quiet: true }); // 新しい花は吹き出しで知らせず、図鑑ボタンの札で知らせる
-    } else say(`${ev.name}の花が、はじめて咲きました。${FORM_WHY[ev.key] || ''}`, { ...base, quiet: true });
+      say(`おや、はじめて見る${ev.name}の花です${tail}`, { ...base, pri: 3, mood: 'wow', topic: 'novc', cool: 20 }); // エリカが気づいて話し、スケッチは図鑑ボタンの札で知らせる
+    } else say(`${ev.name}の花が、はじめて咲きました。${FORM_WHY[ev.key] || ''}`, { ...base, pri: 3, mood: 'wow', topic: 'novf', cool: 20 });
     addSketch(p, ev.kind === 'color' ? `はじめての${ev.name}` : `はじめての${ev.name}`);
   } else if (ev.type === 'record') {
-    if (ev.kind === 'sz') say('これまでで一番大きな花が咲きました。よく目立ちますが、水と栄養をたくさん使います', { ...base, quiet: true });
-    else say('これまでで一番背の高い株です。日なたは取れますが、嵐が来たら心配です', { ...base, quiet: true });
+    if (ev.kind === 'sz') say('これまでで一番大きな花が咲きました。よく目立ちますが、水と栄養をたくさん使います', { ...base, pri: 2, mood: 'wow', topic: 'rec', cool: 90 });
+    else say('これまでで一番背の高い株です。日なたは取れますが、嵐が来たら心配です', { ...base, pri: 2, topic: 'rec', cool: 90 });
     addSketch(ev.plant, ev.kind === 'sz' ? '一番大きな花' : '一番背の高い株');
   } else if (ev.type === 'return') {
     say(`${ev.name}が帰ってきました。まわりの野原から、鳥が種を運んでくれたんです`, { ...base, pri: 3, mood: 'happy', topic: 'ret' + ev.line, cool: 60 });
