@@ -2677,14 +2677,14 @@ function drawErikaScene(ctx, e, dt, talking) {
   const cx = W * 0.22, by = H - bh * 0.1 + hop - breath - talkBob; // 胸のあたりまで見せて、下は草にうもれる
   const sway = Math.sin(EK.bob * 0.8) * 0.012 + windAt(cx, 1.3) * 0.006;
   ctx.save(); ctx.setTransform(d, 0, 0, d, d * cx, d * by); ctx.rotate(sway);
-  ctx.globalAlpha = 0.16; ctx.fillStyle = '#2f5a48'; ctx.beginPath(); ctx.ellipse(bw * 0.06, -bh * 0.35, bw * 0.48, bh * 0.42, 0, 0, TAU); ctx.fill(); // うしろの花に落ちるかげ
+  ctx.globalAlpha = 0.16 * (1 - 0.7 * e.snow); ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.beginPath(); ctx.ellipse(bw * 0.06, -bh * 0.35, bw * 0.48, bh * 0.42, 0, 0, TAU); ctx.fill(); // うしろの花に落ちるかげ
   if (EK.prev && EK.fade < 1) { const p = EK.img[EK.prev]; if (p && p.complete && p.naturalWidth) { ctx.globalAlpha = 1 - EK.fade; ctx.drawImage(p, -bw / 2, -bh, bw, bh); } }
   ctx.globalAlpha = EK.prev ? EK.fade : 1; ctx.drawImage(im, -bw / 2, -bh, bw, bh);
   ctx.restore(); ctx.globalAlpha = 1;
   // 手前の草と花：胸もとにかかって、野原の中にいるように
   ctx.save(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.lineCap = 'round';
   const gc = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), e.snow), base = H + 4;
-  { const g = ctx.createLinearGradient(0, by - bh * 0.22, 0, H); g.addColorStop(0, rgb(gc, 0)); g.addColorStop(0.7, rgb(mix(gc, [60, 100, 70], 0.2), 0.75)); g.addColorStop(1, rgb(mix(gc, [60, 100, 70], 0.2), 0.9)); ctx.fillStyle = g; ctx.fillRect(cx - bw * 0.62, by - bh * 0.22, bw * 1.24, H - by + bh * 0.22); } // 胸から下は、草むらに沈む
+  { const g = ctx.createLinearGradient(0, by - bh * 0.22, 0, H); g.addColorStop(0, rgb(gc, 0)); const gb = mix(gc, [60, 100, 70], 0.2 * (1 - e.snow)); g.addColorStop(0.7, rgb(gb, 0.75)); g.addColorStop(1, rgb(gb, 0.9)); /* 雪の日は、雪の色に沈む */ ctx.fillStyle = g; ctx.fillRect(cx - bw * 0.62, by - bh * 0.22, bw * 1.24, H - by + bh * 0.22); } // 胸から下は、草むらに沈む
   for (let i = 0; i < 34; i++) {
     const u = hash2(i, 1201), gx = cx - bw * 0.62 + u * bw * 1.3, mid = Math.abs(u - 0.47) < 0.22, hgt = (bh * 0.1 + bh * (mid ? 0.1 : 0.2) * hash2(i, 1202)) * (1 - 0.65 * e.snow), /* 顔にはかからない高さで */ lean = (hash2(i, 1203) - 0.5) * 18 + windAt(gx, 1.3) * 6;
     ctx.strokeStyle = rgb(mix(gc, i % 3 ? [40, 92, 64] : [236, 240, 190], 0.28), 0.9); ctx.lineWidth = 1.6 + 2.2 * hash2(i, 1204);
