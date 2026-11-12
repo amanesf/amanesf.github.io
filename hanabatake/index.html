@@ -1695,7 +1695,7 @@ function resizeView() {
 const SKY_T = [[0, hex('#b6c5d6')], [0.14, hex('#a8d2e4')], [0.3, hex('#9fd0ea')], [0.46, hex('#7dbbe6')], [0.62, hex('#92c1e4')], [0.76, hex('#a6c4dc')], [0.9, hex('#b6c5d6')], [1, hex('#b6c5d6')]];
 const SKY_B = [[0, hex('#edeef0')], [0.14, hex('#eaf3e2')], [0.3, hex('#e2f1ea')], [0.46, hex('#d9eeee')], [0.62, hex('#f1ecd6')], [0.76, hex('#f4e6cf')], [0.9, hex('#edeef0')], [1, hex('#edeef0')]];
 const GR_F = [[0, hex('#dcd8bb')], [0.1, hex('#d9e5ac')], [0.25, hex('#cfe5a2')], [0.45, hex('#bedb92')], [0.62, hex('#d0d78f')], [0.76, hex('#e2cf90')], [0.86, hex('#dccca4')], [1, hex('#dcd8bb')]];
-const GR_N = [[0, hex('#cac08a')], [0.1, hex('#d2da78')], [0.25, hex('#ccd466')], [0.45, hex('#c6cc5a')], [0.62, hex('#ccc65c')], [0.76, hex('#d2aa56')], [0.86, hex('#bea070')], [1, hex('#cac08a')]]; // 緑は温かい黄緑で明るく澄んだ色に（トップの絵：中ほど 61°、手前 69°）
+const GR_N = [[0, hex('#b8ae7c')], [0.1, hex('#b8d468')], [0.25, hex('#b6d05c')], [0.45, hex('#c6cc5a')], [0.62, hex('#ccc65c')], [0.76, hex('#d2aa56')], [0.86, hex('#b89a64')], [1, hex('#b8ae7c')]]; // 緑は温かい黄緑で明るく澄んだ色に（トップの絵：中ほど 61°、手前 69°）
 const TREE_C = [[0, hex('#8c7b6e')], [0.09, hex('#c9c2a0')], [0.16, hex('#f3cfd6')], [0.24, hex('#f0c4d0')], [0.3, hex('#a9d17e')], [0.45, hex('#7fae5a')], [0.6, hex('#8aae54')], [0.7, hex('#e2a445')], [0.78, hex('#d9743c')], [0.85, hex('#a8704c')], [1, hex('#8c7b6e')]];
 
 function computeEnv(sim, frac) {
@@ -1710,7 +1710,7 @@ function computeEnv(sim, frac) {
   const rain = Math.max(longrain, shower, V.storm > 0 ? 1 : 0);
   const cloud = clamp(0.22 + 0.25 * w.rain + 0.55 * rain + 0.3 * (snowing ? 1 : 0) + (V.storm > 0 ? 0.5 : 0));
   const dry = (sim.flags.drought ? 1 : clamp(-w.rain * 0.7)) * hump(0.26, 0.8, t);
-  const hazeC = mix(mix(mix(ramp(SKY_B, t), [251, 214, 180], dusk * 0.6), [176, 180, 222], night * 0.8), [226, 230, 232], cloud * 0.4);
+  const hazeC = mix(mix(mix(ramp(SKY_B, t), [251, 214, 180], dusk * 0.6), [60, 72, 120], night * 0.9), [226, 230, 232], cloud * 0.4);
   return { t, d, night, dusk, dawn, snow, snowing, rain, cloud, dry, storm: V.storm > 0 ? 1 : 0, year: sim.year, warm: w.temp, hazeC };
 }
 
@@ -1799,6 +1799,11 @@ function farLayers() {
   return V.lay;
 }
 // 地面の草の帯（11 本）は、変わったときだけ 1 枚の絵にまとめる。毎フレーム 11 本描くと重い
+function driftSpr(b) { // 色ごとの、ふちのにじんだ丸い色の絵
+  const D = V.driftC || (V.driftC = []); if (D[b]) return D[b];
+  const c = mkCanvas(64, 64), x = c.getContext('2d'), col = binRgb(b), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, rgb(mix(col, [255, 255, 255], 0.15), 0.8)); g.addColorStop(0.5, rgb(mix(col, [255, 255, 255], 0.3), 0.35)); g.addColorStop(1, rgb(col, 0)); x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return (D[b] = c);
+}
 function drawGround(ctx) {
   if (!V.bands || V.noBand) return; const W = V.W, H = V.H, dpr = V.dpr;
   const key = V.bands.map((b) => (b.key ? 1 : 0)).join('') + '|' + V.bandKey + '|' + (V.bandFade < 1 ? 'f' : '');
@@ -1822,7 +1827,13 @@ function drawPlants(main, sim, dt, e) {
     if (V.layerFreeze) left = 0;
     while (left-- > 0) { let b = -1; for (let i = 0; i < NL; i++) if (!fresh[i] && (b < 0 || lay[i].debt > lay[b].debt)) b = i; if (b < 0) break; fresh[b] = 1; lay[b].debt = 0; } }
   let ctx = main, oy = 0;
-  const openLayer = (i) => { if (i >= NL) { ctx = main; oy = 0; return; } const L = lay[i]; oy = L.y0; if (!fresh[i]) { ctx = NOCTX; return; } ctx = L.x; L.t = nowMs; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, L.c.width, L.c.height); };
+  const openLayer = (i) => { if (i >= NL) { ctx = main; oy = 0; return; } const L = lay[i]; oy = L.y0; if (!fresh[i]) { ctx = NOCTX; return; } ctx = L.x; L.t = nowMs; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, L.c.width, L.c.height);
+    // 花の帯：この層の株を描く前に、咲いている株の足もとへ、その花の色を地面にうすく敷く（同じ色の株が集まると、色のかたまりになる）
+    const z0 = i ? VEIL_Z[i - 1] : 0, z1 = VEIL_Z[i];
+    for (const v of V.order) { const p = v.p; if (p.z < z0) continue; if (p.z >= z1) break; if (p.state !== 1 || !(p.nOpen > 0) || v.alpha < 0.3 || Math.abs(p.x - SITE.brookX(p.z)) * persA(p.z) < 0.16) continue; // 小川のそばの株は敷かない（水の上に色がかかる）
+      const pos = v.pos, w = (110 + 60 * hash1(p.id * 11)) * pos.ds * V.unit * (0.7 + 0.5 * Math.min(1, p.nOpen / 6));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, -dpr * oy); ctx.globalAlpha = v.alpha * 0.55 * p.open; ctx.drawImage(driftSpr(G.hueBin(p.g)), pos.sx - w / 2, pos.sy - w * 0.12, w, w * 0.24); }
+    ctx.globalAlpha = 1; };
   openLayer(0);
   const upTo = (z) => { // この奥行きまでの草と、空気の色
     while (true) {
@@ -2188,11 +2199,11 @@ function drawScene(sim, frac, dt) {
   if (!V.noFg) ctx.drawImage(V.fg, 0, 0, W, H); T('fgx');
   if (V.erika) V.erika(ctx, e, dt); T('erika'); // エリカ（足もとの草は自分で重ねる）
   // 時刻の光
-  const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [120, 136, 196], e.night * 0.92); // 夜は青く沈む
+  const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [86, 100, 168], e.night * 0.94); // 夜は深い藍に沈む
   const dim = mix(tint, [190, 198, 212], e.storm * 0.55 + e.rain * 0.12);
   if (dim[0] < 250 || dim[1] < 250 || dim[2] < 250) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgb(dim); ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
   if (e.night > 0.05) { // 月あかり：月のほうから斜めに、花の白さだけがほのかに浮く
-    ctx.globalCompositeOperation = 'screen'; const mg = ctx.createRadialGradient(W * 0.22, V.yH * 0.52, 0, W * 0.22, V.yH * 0.52, H * 0.9); mg.addColorStop(0, `rgba(170,184,236,${0.32 * e.night})`); mg.addColorStop(0.5, `rgba(120,140,210,${0.12 * e.night})`); mg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'screen'; const mg = ctx.createRadialGradient(W * 0.22, V.yH * 0.52, 0, W * 0.22, V.yH * 0.52, H * 0.6); mg.addColorStop(0, `rgba(170,184,236,${0.22 * e.night})`); mg.addColorStop(0.5, `rgba(120,140,210,${0.05 * e.night})`); mg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
   }
   T('tint'); drawNightLights(ctx, e); seasonNight(ctx, e, dt); T('night');
   if (e.dusk > 0.05) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(255,190,120,${0.1 * e.dusk})`); g.addColorStop(1, 'rgba(255,190,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
@@ -2215,7 +2226,7 @@ function skyCols(e) {
   top = mix(top, hex('#cfd8e2'), e.cloud * 0.5); bot = mix(bot, hex('#eceeec'), e.cloud * 0.45);
   top = mix(top, hex('#7c8698'), e.storm * 0.7); bot = mix(bot, hex('#b4bac2'), e.storm * 0.6);
   const clr = 1 - e.cloud * 0.6; // 晴れた夜ほど、空は深い藍に（花火や月や星が映える）
-  top = mix(top, mix(hex('#8792cc'), hex('#4c5596'), clr), e.night * 0.88); bot = mix(bot, mix(hex('#cfd0ee'), hex('#9da2d2'), clr), e.night * 0.85);
+  top = mix(top, mix(hex('#5a6aa8'), hex('#26305e'), clr), e.night * 0.92); bot = mix(bot, mix(hex('#8c96c4'), hex('#4e5a8e'), clr), e.night * 0.9); // 夜空は深い紺。地平にかけて、少しだけ明るく
   return [top, bot];
 }
 
@@ -2276,8 +2287,8 @@ function buildClouds(e) {
     const body = topE.concat([[304, baseY + 4], [270, baseY + 12], [160, baseY + 14], [50, baseY + 12], [16, baseY + 4]]);
     tracePts(x, body); x.fillStyle = rgb(paper, 0.985); x.fill();
     x.save(); x.clip();
-    const ug = x.createLinearGradient(0, baseY - 62, 0, baseY + 12); ug.addColorStop(0, rgb(cs, 0)); ug.addColorStop(0.55, rgb(cs, 0.2)); ug.addColorStop(1, rgb(mix(cs, [244, 128, 100], e.dusk * 0.7 + e.dawn * 0.35), 0.74)); // 夕焼けと朝焼けは、雲の底を染める x.fillStyle = ug; x.fillRect(0, 0, CW, CH);
-    for (const [lx, ly, lr] of lobes) { blob(x, lx + lr * 0.34, ly + lr * 0.34, lr * 0.8, lr * 0.52, cs, 0.3, i + lx, 0.25); blob(x, lx - lr * 0.3, ly - lr * 0.36, lr * 0.6, lr * 0.4, [255, 255, 255], 0.7 * (1 - e.night * 0.5), i + lx + 3, 0.2); }
+    const ug = x.createLinearGradient(0, baseY - 62, 0, baseY + 12); ug.addColorStop(0, rgb(cs, 0)); ug.addColorStop(0.5, rgb(cs, 0.28)); ug.addColorStop(1, rgb(mix(cs, [244, 128, 100], e.dusk * 0.7 + e.dawn * 0.35), 0.74)); // 夕焼けと朝焼けは、雲の底を染める x.fillStyle = ug; x.fillRect(0, 0, CW, CH);
+    for (const [lx, ly, lr] of lobes) { blob(x, lx + lr * 0.34, ly + lr * 0.34, lr * 0.8, lr * 0.52, cs, 0.3, i + lx, 0.25); blob(x, lx - lr * 0.3, ly - lr * 0.36, lr * 0.6, lr * 0.4, mix([255, 255, 252], [255, 226, 190], e.dusk * 0.8), 0.9 * (1 - e.night * 0.5), i + lx + 3, 0.2); } // 日の当たる頭は明るく、夕方は染まる
     for (let j = 0; j < 3; j++) wash(x, noisyBlob(60 + hash2(i * 9 + j, 925) * 200, baseY - 6 + hash2(i * 9 + j, 926) * 10, 36 + 36 * hash2(i * 9 + j, 927), 9, i * 9 + j, 0.3, 22, 7, 0.3), cs, 0.06, { edge: 0.2, ew: 0.6 });
     x.restore();
     x.globalCompositeOperation = 'destination-out'; const fg = x.createLinearGradient(0, baseY - 8, 0, baseY + 14); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = fg; x.fillRect(0, baseY - 10, CW, 60); x.globalCompositeOperation = 'source-over';
@@ -2392,7 +2403,7 @@ function* paintBGJob(x, e) {
   yield;
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
-  const airy = 1 - e.night * 0.6 - snowy * 0.5; // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
+  const airy = (1 - e.night * 0.6 - snowy * 0.5) * (1 - 0.45 * hump(0.02, 0.32, t)) * (1 - 0.5 * smooth(0.8, 0.88, t)); /* 晩秋〜冬の枯れ野は、枯れ草の色をはっきり */ /* 春は若草の色をはっきり（白く褪せない） */ // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
   const farL = mix(far, [255, 252, 226], 0.78 * airy), nearL = mix(near, [252, 250, 214], 0.64 * airy); // トップの絵のように、地面は紙の白が透ける明るさ
   const hillC = mix(mix(near, far, 0.45), hazeC, 0.3), hillY = (u) => yH + H * 0.012 - H * 0.04 * (fbm(u * 2.2 + 23, 23) - 0.25);
   { const pts = []; for (let i = 0; i <= 50; i++) pts.push([(i / 50) * W, hillY(i / 50)]); pts.push([W + 4, yH + 40], [-4, yH + 40]);
@@ -2501,7 +2512,7 @@ function* paintTreeJob(e) {
   const clump = (tp, i, tone, sc) => {
     const r = W * (0.036 + 0.026 * hash2(i, 83)) * sc * (tp.d >= 4 ? 0.95 : 1.15), cx = tp.x + (hash2(i, 84) - 0.5) * r * 0.8 - (tone > 0 ? r * 0.3 : 0), cy = tp.y - r * 0.2 + (tone < 0 ? r * 0.35 : tone > 0 ? -r * 0.3 : 0), col = clumpCol(i, tone, tp);
     // 輪郭は描かない。ぬれた紙にのせた色が、縁でやわらかく消える
-    blob(x, cx, cy, r, r * 0.78, col, (tone > 0 ? 0.26 : tone < 0 ? 0.55 : 0.62) * leafA, i * 7 + tone * 3 + 9, 0.32);
+    blob(x, cx, cy, r * 0.85, r * 0.66, col, (tone > 0 ? 0.2 : tone < 0 ? 0.42 : 0.42) * leafA, i * 7 + tone * 3 + 9, 0.32); // 下塗りは控えめに（塊に見えないように。葉の形は一筆で出す）
     if (tone < 0) for (let j = 0; j < 40; j++) { const a = hash2(i * 40 + j, 140) * TAU, rr = r * (0.3 + 0.8 * hash2(i * 40 + j, 141)); dab(x, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.76, 1.6 + 2 * hash2(i * 40 + j, 142), 0.9, a * 0.4 + 1.2, jit(col, i * 40 + j), 0.6 * leafA); } // 奥の葉にも葉の形を
     blob(x, cx - r * 0.1, cy - r * 0.08, r * 0.7, r * 0.52, col, (tone > 0 ? 0.16 : 0.4) * leafA, i * 7 + tone * 3 + 19, 0.35);
     if (tone >= 0) blob(x, cx + r * 0.3, cy + r * 0.3, r * 0.55, r * 0.35, mix(col, [24, 50, 76], 0.45), 0.3 * leafA, i * 7 + 29, 0.3); // 下がわの影
@@ -2529,9 +2540,9 @@ function* paintTreeJob(e) {
     tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); }); yield;
     // 葉の一筆：かたまりの縁から外へこぼれる葉で、輪郭をくずす。光の側は明るく小さく、影の側は濃く
     for (let i = 0; i < cl.length; i++) { const [cx, cy, r, tp0] = cl[i], cMid = clumpCol(i, 0, tp0), cLit = clumpCol(i, 1, tp0), cSh = clumpCol(i, -1, tp0); if (i % 3 === 2) yield;
-      for (let j = 0; j < 110; j++) {
+      for (let j = 0; j < 190; j++) {
         const q = i * 70 + j, a = hash2(q, 96) * TAU, out = hash2(q, 97), rr = r * (0.55 + 0.62 * Math.pow(out, 0.7)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.76, lit = Math.sin(a) < -0.1 && Math.cos(a) < 0.5;
-        const len = (1.6 + 2.6 * hash2(q, 98)) * (out > 0.8 ? 0.85 : 1), tilt = a * 0.4 + 1.2 + (hash2(q, 99) - 0.5) * 1.6;
+        const len = (2 + 3 * hash2(q, 98)) * (out > 0.8 ? 0.85 : 1), tilt = a * 0.4 + 1.2 + (hash2(q, 99) - 0.5) * 1.6;
         dab(x, dx, dy, len, len * 0.45, tilt, jit(lit ? cLit : out < 0.5 ? cSh : cMid, q), (lit ? 0.8 : 0.62) * leafA);
       }
     }
@@ -2545,7 +2556,7 @@ function* paintTreeJob(e) {
 // ── 小川 ──
 function brookAt(z, dry = 0) {
   const zc = clamp(z, 0, 1), p = proj(SITE.brookX(zc), zc), fy = depthY(z);
-  return { x: p.sx + (z > 1 ? (z - 1) * V.W * 0.6 : 0), y: V.yH + (V.H * 1.05 - V.yH) * fy, hw: V.W * 1.06 * SITE.brookW(zc) * (1 - 0.4 * dry), ds: p.ds };
+  return { x: p.sx + (z > 1 ? (z - 1) * V.W * 0.6 : 0), y: V.yH + (V.H * 1.05 - V.yH) * fy, hw: Math.max(2.4 * (1 - 0.4 * dry), V.W * 1.06 * SITE.brookW(zc) * (1 - 0.4 * dry)), ds: p.ds }; // 遠くでも 2〜3px の幅は残す（細すぎると草にかくれて、途切れ途切れに見える）
 }
 // 岸は定規の線にしない：左右べつべつに、ゆるい出入りをつける（えぐれた岸、張り出した草）
 function bankJit(z, side) { return 1 + 0.22 * (vnoise(z * 34 + side * 7, 611 + side) - 0.5) * 2 + 0.1 * (vnoise(z * 90 + side * 3, 613 + side) - 0.5) * 2; }
@@ -2630,7 +2641,7 @@ function drawLight(ctx, e) {
   if (e.cloud > 0.12 && day > 0.2) {
     ctx.globalCompositeOperation = 'multiply';
     const co = V.cloudOff || (V.cloudOff = [0, 1, 2, 3].map((i) => hash2(i, 990) * 2.4)), dtc = Math.min(0.1, V.lastDt || 0.016);
-    for (let i = 0; i < 4; i++) { co[i] = (co[i] + dtc * (0.006 + 0.004 * i) * (0.6 + V.wind)) % 2.4; const z = [0.2, 0.5, 0.78, 0.94][i], p = proj(0.5, z), u = co[i] - 0.7; blob(ctx, u * W, p.sy - 10 * p.ds, W * (0.3 + 0.25 * p.ds), 16 + 60 * p.ds, [150, 166, 200], 0.3 * Math.min(1, e.cloud * 2) * day * (1 - 0.7 * e.snow), i + 7, 0.25); } // 雲の影：位置は足し合わせる（時刻×風だと、風が変わるたびに跳ぶ）。画面の外で折り返す
+    for (let i = 0; i < 4; i++) { co[i] = (co[i] + dtc * (0.006 + 0.004 * i) * (0.6 + V.wind)) % 2.4; const z = [0.2, 0.5, 0.78, 0.94][i], p = proj(0.5, z), u = co[i] - 0.7; if (!V.cshC) { const c = (V.cshC = mkCanvas(128, 64)), q = c.getContext('2d'), g = q.createRadialGradient(64, 32, 0, 64, 32, 64); g.addColorStop(0, 'rgba(150,166,200,1)'); g.addColorStop(0.55, 'rgba(150,166,200,0.55)'); g.addColorStop(1, 'rgba(150,166,200,0)'); q.fillStyle = g; q.fillRect(0, 0, 128, 64); } { const rw = W * (0.3 + 0.25 * p.ds), rh = 16 + 60 * p.ds; ctx.globalAlpha = 0.24 * Math.min(1, e.cloud * 2) * day * (1 - 0.7 * e.snow); ctx.drawImage(V.cshC, u * W - rw, p.sy - 10 * p.ds - rh, rw * 2, rh * 2); ctx.globalAlpha = 1; } /* 雲の影はふちのない丸いぼかし（四角い帯にしない） */ } // 雲の影：位置は足し合わせる（時刻×風だと、風が変わるたびに跳ぶ）。画面の外で折り返す
     ctx.globalCompositeOperation = 'source-over';
   }
   if (V.sun && day > 0.2) { const ox = V.sun[0] < W / 2 ? W * 1.05 : -W * 0.05, g = ctx.createRadialGradient(ox, H * 1.02, 0, ox, H * 1.02, H * 0.75); g.addColorStop(0, rgb([170, 186, 220], 0.14 * day)); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; } // お日さまの反対側は、青みのある陰
@@ -2647,17 +2658,16 @@ function paintFG(x, e, gens) {
     const c = mix(near, i % 3 === 0 ? [240, 244, 190] : [30, 78, 54], 0.3 + 0.25 * hash2(i, 982));
     for (let k = 0; k < 3; k++) { x.strokeStyle = rgb(c, 0.2); x.lineWidth = (9 + 9 * hash2(i, 983)) * (1 - k * 0.25); x.beginPath(); x.moveTo(bx, H + 6); x.quadraticCurveTo(bx + lean * 0.2, H - hgt * 0.6, bx + lean, H - hgt); x.stroke(); }
   }
-  // 前ぼけの花：いま花畑にいちばん多く咲いている花を、目の前の一輪として大きく描く（ピントの外）
+  // 手前の花の群れ：いま花畑に多い花を、目の前にはっきり大きく。画面の下の右がわ（エリカの反対）に、下の縁で切れるように置く。絵の入り口になる
   if (gens && gens.length && e.snow < 0.5) {
-    const spots = [[1.0, 0.92, 0.13, -0.35], [0.7, 1.02, 0.1, 0.2]];
-    gens.slice(0, spots.length).forEach((g, i) => {
-      const [px, py, rr, lean] = spots[i], R = W * rr, cx = px * W, cy = py * H, fl = paintFlower(g, R * 2, 900 + i);
-      x.save(); if ('filter' in x) x.filter = `blur(${(1.6 + i * 0.6).toFixed(1)}px)`;
-      x.strokeStyle = rgb(mix(near, [40, 90, 60], 0.4), 0.55); x.lineWidth = R * 0.12; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx + lean * R * 2, H + 10); x.quadraticCurveTo(cx + lean * R, cy + R * 1.4, cx, cy + R * 0.2); x.stroke();
-      for (const sg of [-1, 1]) { x.fillStyle = rgb(mix(near, [50, 100, 70], 0.3), 0.4); x.beginPath(); x.ellipse(cx + lean * R * 1.4 + sg * R * 0.5, cy + R * 1.8, R * 0.7, R * 0.2, sg * 0.6 + lean, 0, TAU); x.fill(); }
-      x.globalAlpha = 0.72; x.translate(cx, cy); x.rotate(lean * 0.4); const sc = 0.5, th = fl.kind === 'face' ? 0.72 : 1; x.scale(sc, sc * th); x.drawImage(fl.c, -fl.ax, fl.kind === 'face' ? -fl.ay : -fl.ay - (fl.kind === 'top' ? R * 1.6 : -R * 1.6));
-      x.restore(); freeCanvas(fl.c);
-    });
+    const spots = [[0.64, 0.945, 0.11, -0.2, 0], [0.82, 0.915, 0.085, 0.15, 1], [0.52, 0.975, 0.09, 0.1, 2], [0.95, 0.975, 0.1, -0.1, 0], [0.74, 0.99, 0.08, 0.3, 1], [0.47, 0.925, 0.06, -0.3, 1], [0.58, 0.9, 0.05, 0.2, 2]];
+    for (const [px, py, rr, lean, gi] of spots) {
+      const g = gens[gi % gens.length], R = W * rr, cx = px * W, cy = py * H, fl = paintFlower(g, R * 2, 900 + (px * 100 | 0));
+      const leafC = mix(near, [46, 98, 58], 0.6), litC = mix(near, [150, 190, 80], 0.5);
+      x.strokeStyle = rgb(leafC, 0.9); x.lineWidth = Math.max(1.4, R * 0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(cx + lean * R * 2, H + 10); x.quadraticCurveTo(cx + lean * R, cy + R * 1.2, cx, cy + R * 0.25); x.stroke(); // 茎
+      for (const sg of [-1, 1]) { const lx = cx + lean * R * 1.3, ly = cy + R * (1.5 + 0.3 * sg); x.save(); x.translate(lx, ly); x.rotate(sg * 0.9 + lean); x.fillStyle = rgb(sg > 0 ? leafC : litC, 0.85); x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(R * 0.45, -R * 0.22, R * 1.0, 0); x.quadraticCurveTo(R * 0.45, R * 0.22, 0, 0); x.fill(); x.strokeStyle = rgb(mix(leafC, [30, 60, 40], 0.4), 0.5); x.lineWidth = 0.7; x.stroke(); x.restore(); } // 葉
+      x.save(); x.translate(cx, cy); x.rotate(lean * 0.3); const sc = 0.5, th = fl.kind === 'face' ? 0.82 : 1; x.scale(sc, sc * th); x.drawImage(fl.c, -fl.ax, fl.kind === 'face' ? -fl.ay : -fl.ay - (fl.kind === 'top' ? R * 1.6 : -R * 1.6)); x.restore(); freeCanvas(fl.c);
+    }
   }
   for (let i = 0; i < 70; i++) { // 手前の細い草
     const u = hash2(i, 990), bx = u * W, hgt = H * (0.015 + 0.04 * hash2(i, 991)) * (1 + 0.8 * Math.pow(Math.abs(u - 0.5) * 2, 2)) * (1 - 0.5 * e.snow);
