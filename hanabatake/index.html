@@ -97,7 +97,7 @@ body{font-family:'Klee One','Hiragino Maru Gothic ProN','Yu Gothic',sans-serif;c
 #sheet h2{font-family:'Kaisei Decol',serif;font-size:21px;font-weight:700;letter-spacing:.04em;margin:2px 70px 8px 0;line-height:1.35;color:#5a4650}
 #sheet h3{font-family:'Kaisei Decol',serif;font-size:14.5px;font-weight:700;margin:20px 0 8px;display:flex;align-items:center;gap:8px;color:#6a5460}
 #sheet h3::after{content:'';flex:1;height:5px;border-radius:5px;background:linear-gradient(90deg,rgba(234,163,184,.5),rgba(134,207,220,.38),transparent)}
-#sheet canvas{display:block}
+#sheet canvas{display:block;max-width:100%}
 .note{font-size:12.5px;line-height:1.85;color:#7a6860}
 .note s{opacity:.55}
 .phead{display:flex;gap:14px;align-items:flex-end}
@@ -3719,7 +3719,7 @@ function showHistory(sim) {
     const H = sim.hist;
     if (H.length < 2) { b.appendChild(el('p', 'note', 'まだ1年目です。年がめぐると、ここに色の移り変わりが残ります。')); }
     else {
-      const w = Math.min(b.clientWidth || 340, 520), dp = Math.min(window.devicePixelRatio || 1, 2);
+      const cs = getComputedStyle(b), w = Math.min((b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) || 340, 520), dp /* clientWidth は左右の余白込み。そのまま使うと余白のぶん（40px）右にはみ出した（2026-11-12、Pixel 10 Pro XL） */ = Math.min(window.devicePixelRatio || 1, 2);
       const mk = (h) => { const c = mkCanvas(w * dp, h * dp); c.style.width = w + 'px'; c.style.height = h + 'px'; const x = c.getContext('2d'); x.scale(dp, dp); return [c, x]; };
       const n = H.length, X = (i) => 6 + ((w - 12) * i) / (n - 1);
       // 色の帯
