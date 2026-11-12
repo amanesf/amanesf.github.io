@@ -2674,24 +2674,13 @@ function drawErikaScene(ctx, e, dt, talking) {
   const bw = clamp(W * 0.46, 150, 250), bh = im.naturalHeight * (bw / im.naturalWidth);
   const hop = E.hop > 0 ? -Math.sin(Math.min(1, E.hop) * Math.PI) * 6 : 0;
   EK.bob += dt; const breath = Math.sin(EK.bob * 1.5) * 1.4, talkBob = talking ? Math.abs(Math.sin(EK.bob * 7)) * 1.6 : 0;
-  const cx = W * 0.22, by = H - bh * 0.1 + hop - breath - talkBob; // 胸のあたりまで見せて、下は草にうもれる
+  const cx = W * 0.22, by = H; // 絵の下端は、画面の枠の下端にそろえる（上下には動かさない）
   const sway = Math.sin(EK.bob * 0.8) * 0.012 + windAt(cx, 1.3) * 0.006;
-  ctx.save(); ctx.setTransform(d, 0, 0, d, d * cx, d * by); ctx.rotate(sway);
+  ctx.save(); ctx.setTransform(d, 0, 0, d, d * cx, d * by); ctx.rotate(sway); const sq = 1 + (breath + talkBob - hop * 0.5) * 0.004; ctx.scale(1, sq); // 息や話すときは、下端を支点にわずかに伸び縮み
   ctx.globalAlpha = 0.16 * (1 - 0.7 * e.snow); ctx.fillStyle = e.snow > 0.5 ? '#8fa0c0' : '#2f5a48'; ctx.beginPath(); ctx.ellipse(bw * 0.06, -bh * 0.35, bw * 0.48, bh * 0.42, 0, 0, TAU); ctx.fill(); // うしろの花に落ちるかげ
   if (EK.prev && EK.fade < 1) { const p = EK.img[EK.prev]; if (p && p.complete && p.naturalWidth) { ctx.globalAlpha = 1 - EK.fade; ctx.drawImage(p, -bw / 2, -bh, bw, bh); } }
   ctx.globalAlpha = EK.prev ? EK.fade : 1; ctx.drawImage(im, -bw / 2, -bh, bw, bh);
   ctx.restore(); ctx.globalAlpha = 1;
-  // 手前の草と花：胸もとにかかって、野原の中にいるように
-  ctx.save(); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.lineCap = 'round';
-  const gc = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), e.snow), base = H + 4;
-  { const g = ctx.createLinearGradient(0, by - bh * 0.22, 0, H); g.addColorStop(0, rgb(gc, 0)); const gb = mix(gc, [60, 100, 70], 0.2 * (1 - e.snow)); g.addColorStop(0.7, rgb(gb, 0.75)); g.addColorStop(1, rgb(gb, 0.9)); /* 雪の日は、雪の色に沈む */ ctx.fillStyle = g; ctx.fillRect(cx - bw * 0.62, by - bh * 0.22, bw * 1.24, H - by + bh * 0.22); } // 胸から下は、草むらに沈む
-  for (let i = 0; i < 34; i++) {
-    const u = hash2(i, 1201), gx = cx - bw * 0.62 + u * bw * 1.3, mid = Math.abs(u - 0.47) < 0.22, hgt = (bh * 0.1 + bh * (mid ? 0.1 : 0.2) * hash2(i, 1202)) * (1 - 0.65 * e.snow), /* 顔にはかからない高さで */ lean = (hash2(i, 1203) - 0.5) * 18 + windAt(gx, 1.3) * 6;
-    ctx.strokeStyle = rgb(mix(gc, i % 3 ? [40, 92, 64] : [236, 240, 190], 0.28), 0.9); ctx.lineWidth = 1.6 + 2.2 * hash2(i, 1204);
-    ctx.beginPath(); ctx.moveTo(gx, base); ctx.quadraticCurveTo(gx + lean * 0.3, base - hgt * 0.6, gx + lean, base - hgt); ctx.stroke();
-  }
-  if (e.snow < 0.4 && EK.flowers) for (const [fx, fy, fr, col] of EK.flowers.map((q) => [q[0], q[1] * 0.6, q[2], q[3]])) { blob(ctx, cx + fx * bw, base - fy * bh, fr * bw, fr * bw * 0.8, col, 0.85, (fx * 999) | 0, 0.25); blob(ctx, cx + fx * bw, base - fy * bh, fr * bw * 0.3, fr * bw * 0.26, [246, 214, 110], 0.9, 5, 0.2); }
-  ctx.restore();
   EK.head = [cx, by - bh]; EK.box = [cx - bw / 2, by - bh, cx + bw / 2, H];
 }
 // 手前の小さな花は、いま野原で多い色から（季節が変わったら選びなおす）
