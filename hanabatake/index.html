@@ -133,7 +133,7 @@ button.ink.quiet{display:block;margin:30px auto 0;background:none;border-color:v
 .diary b{font-family:'Kaisei Decol',serif;color:#d0708e;margin-right:8px;font-size:12px}
 
 /* 扉 */
-#title{position:absolute;inset:0;z-index:55;background:var(--paper) url(title.jpg) center/cover no-repeat;display:flex;justify-content:center;transition:opacity 1.7s ease,transform 2.4s ease}
+#title{position:absolute;inset:0;z-index:55;background:var(--paper) url(title.webp) center/cover no-repeat;display:flex;justify-content:center;transition:opacity 1.7s ease,transform 2.4s ease}
 .go{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 7.5vh);display:grid;justify-items:center;gap:9px;animation:ttIn 1.4s 1s both}
 #start{font:inherit;font-family:'Kaisei Decol',serif;font-size:19px;font-weight:700;letter-spacing:.3em;text-indent:.3em;color:#6a4650;padding:13px 40px 15px;cursor:pointer;border:1.6px solid rgba(150,90,108,.55);border-radius:var(--hand);background:radial-gradient(ellipse at 34% 22%,#fffefa,#fdeef0 58%,#f8d6df);box-shadow:0 0 0 5px rgba(255,253,246,.62),2px 3px 0 rgba(140,80,100,.16),0 10px 26px rgba(90,60,50,.24);animation:breathe 3.2s ease-in-out 2.4s infinite;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
 #start:active{transform:scale(.93) rotate(-1.5deg);animation:none}
@@ -1672,7 +1672,7 @@ function resizeView() {
   V.yH = Math.round(V.H * 0.335);
   V.unit = clamp(V.H / 844, 0.7, 1.35) * clamp(V.W / 390, 0.85, 1.25) * 0.95;
   for (const c of [V.bgA, V.bgB, V.bgC, V.skA, V.skB, V.fg, V.treeC]) freeCanvas(c); if (V.farSpr) { for (const q of V.farSpr.values()) freeCanvas(q.c); V.farSpr.clear(); } V.treeC = null; V.treeSk = null; V.clouds && V.clouds.forEach((c) => freeCanvas(c.c)); V.clouds = null; V.cloudKey = '';
-  V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.bgC = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1;
+  V.bgA = mkCanvas(V.W, V.H); V.bgB = mkCanvas(V.W, V.H); V.bgC = mkCanvas(V.W, V.H); V.skA = mkCanvas(V.W, V.yH + 40); V.skB = mkCanvas(V.W, V.yH + 40); V.fg = mkCanvas(V.W, V.H); V.cl = null; V.bgKey = ''; V.fgKey = ''; V.bgMix = 1; V.bgJob = null; V.bgInit = 0; // 大きさが変わったら、最初の 1 枚はその場で描ききる
   for (const v of V.views.values()) { freeCanvas(v.body && !v.body.shared && v.body.c); freeCanvas(v.fl && v.fl.c); freeCanvas(v.flB && v.flB.c); v.body = null; v.fl = null; v.flB = null; v.pos = proj(v.p.x, v.p.z); v.queued = 0; }
   V.queue.length = 0; V.lay && V.lay.forEach((l) => freeCanvas(l.c)); V.lay = null; V.tuftSpr && V.tuftSpr.forEach(freeCanvas); V.tuftSpr = null; V.tuftKey = ''; freeCanvas(V.vig); V.vig = null; V.bands && V.bands.forEach((b) => freeCanvas(b.c)); buildTufts();
 }
@@ -1764,7 +1764,7 @@ function bakeFlowers(v, sp, k, dsb) { // 遠くの株は、花ごと 1 枚の絵
 // 育ちの段階。段階ごとに株を描き直し、あいだは少しだけ伸び縮みさせてつなぐ
 const STAGES = [0.07, 0.15, 0.24, 0.34, 0.45, 0.56, 0.67, 0.78, 0.89, 1];
 const sizeOf = (gr) => 0.35 + 0.65 * gr;
-const LOD_DS = 0.75; // これより小さく見える株は簡略に描く
+const LOD_DS = 1.1; // これより小さく見える株は、花ごと 1 枚の絵（使い回し）で描く。中ほどの株の花を 1 輪ずつ描くと、層の描き直しが重い
 const easeBack = (t) => { const c = 1.6; t = clamp(t) - 1; return 1 + (c + 1) * t * t * t + c * t * t; };
 
 // 株と草は、奥行きごとの層の絵にまとめておき、1 フレームに 1〜2 層ずつ描き直す。
@@ -1783,6 +1783,7 @@ function drawPlants(main, sim, dt, e) {
   // どの層を描き直すか：待たせた分（頻度の比 × 経過）がいちばん溜まった層から。余裕のある端末では 2 層、苦しければ 1 層
   const lay = farLayers(), nowMs = performance.now(), fresh = new Array(NL).fill(0);
   { let left = V.ft < 21 ? 2 : 1; for (let i = 0; i < NL; i++) { const L = lay[i]; L.debt += LAYER_W[i]; if (L.t < 0 || V.noLayer) { fresh[i] = 1; L.debt = 0; } }
+    if (V.layerFreeze) left = 0;
     while (left-- > 0) { let b = -1; for (let i = 0; i < NL; i++) if (!fresh[i] && (b < 0 || lay[i].debt > lay[b].debt)) b = i; if (b < 0) break; fresh[b] = 1; lay[b].debt = 0; } }
   let ctx = main, oy = 0;
   const openLayer = (i) => { if (i >= NL) { ctx = main; oy = 0; return; } const L = lay[i]; oy = L.y0; if (!fresh[i]) { ctx = NOCTX; return; } ctx = L.x; L.t = nowMs; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, L.c.width, L.c.height); };
@@ -2077,7 +2078,12 @@ function drawScene(sim, frac, dt) {
   // 端末が苦しそうなら、解像度を下げて軽くする
   const nowT = performance.now(), real = V.lastReal ? nowT - V.lastReal : 16; V.lastReal = nowT;
   V.ft = (V.ft || 16) * 0.95 + Math.min(200, real) * 0.05; V.ftT = (V.ftT || 0) + real;
-  if (V.ftT > 3500 && V.ft > 30 && V.dpr > 1 && !V.dprLock) { V.dprCap = Math.max(1, V.dpr - 0.5); V.ftT = 0; V.ft = 16; resizeView(); }
+  // ヌルヌル動かすために：1 コマが 20ms を超える（50 コマ/秒を切る）状態が続いたら、解像度を 0.25 ずつ下げる。余裕が戻ったら、ゆっくり上げなおす
+  const devMax = Math.min(window.devicePixelRatio || 1, 2);
+  if (!V.dprLock && V.ftT > 2500 && V.ft > 20 && V.dpr > 1.25) { V.dprCap = Math.max(1.25, V.dpr - 0.25); V.ftT = 0; V.ft = 16; V.calmT = 0; V.noUp = V.time + 60; resizeView(); }
+  else if (!V.dprLock && V.ft < 18 && (V.jsMs || 99) < 7 && V.time > (V.noUp || 0) && V.dpr < devMax) { V.calmT = (V.calmT || 0) + real; if (V.calmT > 8000) { V.dprCap = Math.min(devMax, V.dpr + 0.25); V.calmT = 0; V.ftT = 0; resizeView(); } } // 60 コマ出ていて、計算にも余裕があるときだけ上げる
+  else V.calmT = 0;
+  if (V.ftT > 2500) V.ftT = 0;
   V.storm = Math.max(0, V.storm - dt); V.flash = Math.max(0, V.flash - dt * 2.5); V.frost = Math.max(0, V.frost - dt * 0.25);
   const e = (V.env = computeEnv(sim, frac));
   const gust = vnoise(V.time * 0.23, 3) * vnoise(V.time * 0.71, 9);
@@ -2085,20 +2091,23 @@ function drawScene(sim, frac, dt) {
   V.wind += (tw - V.wind) * Math.min(1, dt * 1.5);
   // 背景は少しずつ描き替えて、前の絵と溶け合わせる
   V.bgMix = Math.min(1, V.bgMix + dt / 0.5);
-  const key = [(e.t * 96) | 0, (e.d * 40) | 0, (e.cloud * 8) | 0, (e.snow * 10) | 0, e.storm, (e.dry * 6) | 0].join(',');
-  if (key !== V.bgKey && V.bgMix >= 1) {
+  const key = [(e.t * 48) | 0, (e.d * 20) | 0, (e.cloud * 6) | 0, (e.snow * 8) | 0, e.storm, (e.dry * 5) | 0].join(','); // 描き直しの間隔：時刻と季節の色のこまかい変化は、毎フレームの色かけと、0.5 秒の溶かしで足りる
+  // 新しい背景は、見えていないほうの絵（A）に何フレームかに分けて描き、描きあがったら入れかえて溶かす
+  if (V.bgJob) { const t0 = performance.now(); let r; do r = V.bgJob.next(); while (!r.done && performance.now() - t0 < (V.bgInit ? 3 : 1e9)); if (r.done) { V.bgJob = null; let tmp = V.bgA; V.bgA = V.bgB; V.bgB = tmp; tmp = V.skA; V.skA = V.skB; V.skB = tmp; V.bgMix = V.bgInit ? 0 : 1; V.bgInit = 1; } }
+  else if (key !== V.bgKey && V.bgMix >= 1) {
     V.bgKey = key; V.bgT = V.time;
-    let tmp = V.bgA; V.bgA = V.bgB; V.bgB = tmp; tmp = V.skA; V.skA = V.skB; V.skB = tmp;
-    paintSky(V.skB.getContext('2d'), e); paintBG(V.bgB.getContext('2d'), e); V.bgMix = V.bgInit ? 0 : 1; V.bgInit = 1;
+    const skx = V.skA.getContext('2d'), bgx = V.bgA.getContext('2d'), e0 = e;
+    V.bgJob = (function* () { paintSky(skx, e0); yield; yield* paintBGJob(bgx, e0); })();
+    { const t0 = performance.now(); let r; do r = V.bgJob.next(); while (!r.done && performance.now() - t0 < (V.bgInit ? 3 : 1e9)); if (r.done) { V.bgJob = null; let tmp = V.bgA; V.bgA = V.bgB; V.bgB = tmp; tmp = V.skA; V.skA = V.skB; V.skB = tmp; V.bgMix = V.bgInit ? 0 : 1; V.bgInit = 1; } }
     // 前景のぼけた花は、いま花畑でいちばん多い色から取る
     const st = sim.nowStats(), tb = st.bins.map((v, i) => [v, i]).filter((q) => q[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, 3).map((q) => q[1]);
-    const fk = [(e.t * 40) | 0, (e.snow * 5) | 0, (e.dry * 3) | 0, tb.join('')].join(',');
+    const fk = [(e.t * 16) | 0, (e.snow * 4) | 0, (e.dry * 3) | 0, tb.join('')].join(',');
     if (fk !== V.fgKey) { V.fgKey = fk; if (typeof erikaFlowers === 'function') erikaFlowers(tb.map(binRgb)); const gens = tb.map((b) => { let best = null, bz = -1; for (const p of sim.plants) if (p.state === 1 && G.hueBin(p.g) === b && p.z > bz) { bz = p.z; best = p.g; } return best; }).filter(Boolean); paintFG(V.fg.getContext('2d'), e, gens); }
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  const P = V.prof || (V.prof = {}), T = (k) => { const n = performance.now(); P[k] = (P[k] || 0) * 0.95 + (n - P._l) * 0.05; P._l = n; }; P._l = performance.now();
+  const P = V.prof || (V.prof = {}), R = V.raw = {}, T = (k) => { const n = performance.now(); R[k] = n - P._l; P[k] = (P[k] || 0) * 0.95 + (n - P._l) * 0.05; P._l = n; }; P._l = performance.now();
   ctx.drawImage(V.skA, 0, 0); if (V.bgMix > 0) { ctx.globalAlpha = V.bgMix; ctx.drawImage(V.skB, 0, 0); ctx.globalAlpha = 1; }
-  seasonSky(ctx, e, dt); drawSkyLife(ctx, e, dt);
+  T('sky0'); seasonSky(ctx, e, dt); drawSkyLife(ctx, e, dt); T('sky');
   // 前の絵と次の絵は、足して 1 になるように混ぜる。重ねるだけだと、木の葉のような半透明のところが、混ぜている間だけ濃くなって点滅して見える
   if (V.bgMix >= 1) ctx.drawImage(V.bgB, 0, 0, W, H);
   else { const m = V.bgC.getContext('2d'); m.globalCompositeOperation = 'source-over'; m.clearRect(0, 0, V.bgC.width, V.bgC.height); m.globalAlpha = 1 - V.bgMix; m.drawImage(V.bgA, 0, 0); m.globalCompositeOperation = 'lighter'; m.globalAlpha = V.bgMix; m.drawImage(V.bgB, 0, 0); ctx.drawImage(V.bgC, 0, 0, W, H); }
@@ -2108,9 +2117,9 @@ function drawScene(sim, frac, dt) {
   serviceQueue(V.time < 2.5 ? 45 : V.queue.length > 60 ? (V.fast > 0.5 ? 14 : 9) : 4); T('queue'); // 開いた直後は、絵を埋めるのを最優先に
   drawPlants(ctx, sim, dt, e); T('plants');
   drawLight(ctx, e);
-  drawBugs(ctx, sim, dt, e); seasonMid(ctx, e, dt); T('bugs');
-  ctx.drawImage(V.fg, 0, 0, W, H);
-  if (V.erika) V.erika(ctx, e, dt); // エリカ（足もとの草は自分で重ねる）
+  drawBugs(ctx, sim, dt, e); T('bugs'); seasonMid(ctx, e, dt); T('mid');
+  ctx.drawImage(V.fg, 0, 0, W, H); T('fgx');
+  if (V.erika) V.erika(ctx, e, dt); T('erika'); // エリカ（足もとの草は自分で重ねる）
   // 時刻の光
   const tint = mix(mix(mix([255, 255, 255], [255, 232, 212], e.dusk * 0.55), [255, 232, 222], e.dawn * 0.5), [120, 136, 196], e.night * 0.92); // 夜は青く沈む
   const dim = mix(tint, [190, 198, 212], e.storm * 0.55 + e.rain * 0.12);
@@ -2118,12 +2127,12 @@ function drawScene(sim, frac, dt) {
   if (e.night > 0.05) { // 月あかり：月のほうから斜めに、花の白さだけがほのかに浮く
     ctx.globalCompositeOperation = 'screen'; const mg = ctx.createRadialGradient(W * 0.22, V.yH * 0.52, 0, W * 0.22, V.yH * 0.52, H * 0.9); mg.addColorStop(0, `rgba(170,184,236,${0.32 * e.night})`); mg.addColorStop(0.5, `rgba(120,140,210,${0.12 * e.night})`); mg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
   }
-  drawNightLights(ctx, e); seasonNight(ctx, e, dt);
+  T('tint'); drawNightLights(ctx, e); seasonNight(ctx, e, dt); T('night');
   if (e.dusk > 0.05) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(255,190,120,${0.1 * e.dusk})`); g.addColorStop(1, 'rgba(255,190,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   T('light'); drawParts(ctx, dt, e); T('parts');
   if (V.frost > 0) { ctx.fillStyle = `rgba(236,246,255,${0.3 * Math.min(1, V.frost * 2)})`; ctx.fillRect(0, V.yH, W, H); }
   if (!V.vig) buildVignette();
-  ctx.drawImage(V.vig, 0, 0, W, H);
+  ctx.drawImage(V.vig, 0, 0, W, H); T('vig');
   if (e.storm > 0 || e.rain > 0.5) { const sg = ctx.createLinearGradient(0, 0, 0, H * 0.6); const a = 0.28 * Math.max(e.storm, (e.rain - 0.5) * 0.8); sg.addColorStop(0, `rgba(70,82,104,${a})`); sg.addColorStop(1, 'rgba(70,82,104,0)'); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H * 0.6); ctx.globalCompositeOperation = 'source-over'; } // 雨雲の下は、上から暗い
   if (V.flash > 0) { ctx.fillStyle = `rgba(255,255,250,${0.5 * V.flash})`; ctx.fillRect(0, 0, W, H); }
   return e;
@@ -2249,7 +2258,8 @@ function drawSmoke(ctx, e) {
 }
 
 // ── 陸地：遠い山から野原まで ──
-function paintBG(x, e) {
+function paintBG(x, e) { const g = paintBGJob(x, e); while (!g.next().done); }
+function* paintBGJob(x, e) {
   const W = V.W, H = V.H, yH = V.yH, t = e.t;
   x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, W, H);
   const [top, bot] = skyCols(e), hazeC = mix(bot, top, 0.25), snowy = e.snow;
@@ -2304,9 +2314,13 @@ function paintBG(x, e) {
     x.restore();
   };
   const mt = mix(mix(mix(mix(hex('#8ea6d4'), hex('#dfe6f2'), snowy * 0.6), hex('#a892c0'), e.dusk * 0.5), hex('#b4a8cc'), e.dawn * 0.35), hex('#56619c'), e.night * 0.6), cap = Math.max(snowy, 1 - smooth(0.1, 0.3, t), smooth(0.74, 0.86, t) * 0.7); // 山の色は時刻で：昼は青、夕方は藤色
+  yield;
   ridge(yH - H * 0.045, H * 0.085, 3, 3, mix(mix(mt, [92, 104, 160], 0.25), hazeC, 0.4), { snow: cap, sekkei: 0.45 * (1 - smooth(0.45, 0.66, t)) + 0.15, streaks: 60 }); // いちばん奥：立山のような峰の屏風。夏も谷すじに雪渓が残る
+  yield;
   ridge(yH - H * 0.016, H * 0.06, 4, 11, mix(mix(mt, [70, 104, 120], 0.3), hazeC, 0.3), { snow: snowy * 0.7, trees: mix(mix(ramp(TREE_C, t), [60, 96, 110], 0.55), [236, 240, 248], snowy * 0.6) }); // 前山：森の色
+  yield;
   ridge(yH - H * 0.002, H * 0.045, 6, 17, mix(mix(mt, [86, 128, 140], 0.45), hazeC, 0.12), { snow: snowy * 0.5, trees: mix(mix(ramp(TREE_C, t), [70, 110, 130], 0.6), [240, 244, 250], snowy * 0.6), mist: 0.5 });
+  yield;
   // 近くの丘と林
   const far = mix(mix(ramp(GR_F, t), hex('#e3d49a'), e.dry * 0.5), hex('#fbfcfd'), snowy), near = mix(mix(ramp(GR_N, t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), snowy);
   const airy = 1 - e.night * 0.6 - snowy * 0.5; // 地面は淡く：紙の白が透ける明るさにして、濃い色は花にゆずる
@@ -2341,6 +2355,7 @@ function paintBG(x, e) {
     x.strokeStyle = rgb(wall, 0.9); x.lineWidth = 0.6; x.beginPath(); x.moveTo(hx - s * 0.45, hy - s * 0.82); x.lineTo(hx - s * 0.45, hy - s * 0.37); x.moveTo(hx - s * 0.7, hy - s * 0.6); x.lineTo(hx - s * 0.2, hy - s * 0.6); x.stroke();
     x.fillStyle = rgb([128, 94, 78]); x.fillRect(hx - s * 0.08, hy - s * 0.62, s * 0.36, s * 0.62);
     pencil(x, [[hx - s, hy], [hx - s, hy - s * 1.1], [hx - s * 1.3, hy - s * 1.02], [hx - s * 0.1, hy - s * 2.1], [hx + s * 0.25, hy - s * 2.1], [hx + s * 1.3, hy - s * 1.02], [hx + s, hy - s * 1.1], [hx + s, hy]], 0.45, 0.6, 5); }
+  yield;
   // 野原
   const gg = x.createLinearGradient(0, yH, 0, H);
   gg.addColorStop(0, rgb(farL)); gg.addColorStop(0.3, rgb(mix(farL, nearL, 0.5))); gg.addColorStop(0.75, rgb(nearL)); gg.addColorStop(1, rgb(mix(nearL, [30, 74, 60], 0.3 * airy)));
@@ -2361,11 +2376,12 @@ function paintBG(x, e) {
   }
   if (snowy > 0.3) for (let i = 0; i < 26; i++) { const p = proj(hash2(i, 630), Math.pow(hash2(i, 631), 0.5)); blob(x, p.sx, p.sy, W * (0.06 + 0.1 * p.ds), H * 0.004 + H * 0.016 * p.ds, i % 2 ? [176, 196, 232] : [255, 255, 255], (i % 2 ? 0.3 : 0.6) * snowy, i + 630, 0.3); } // 雪のうねりと、青い陰
   { const p = proj(SITE.hill.x, SITE.hill.z); blob(x, p.sx, p.sy - H * 0.01, W * 0.3, H * 0.06, mix(far, [255, 250, 215], 0.45), 0.5, 601, 0.12); blob(x, p.sx + W * 0.05, p.sy + H * 0.05, W * 0.3, H * 0.025, mix(near, [40, 80, 70], 0.3), 0.22, 602, 0.15); }
+  yield;
   // 大きな木と木かげ
   { const sp = proj(SITE.shade.x, SITE.shade.z);
     blob(x, sp.sx, sp.sy, W * 0.34, H * 0.04, mix(near, [36, 66, 110], 0.55), 0.36 * (1 - e.night * 0.5) * (1 - 0.6 * snowy), 610, 0.2);
     for (let i = 0; i < 14; i++) blob(x, sp.sx + (hash2(i, 611) - 0.5) * W * 0.5, sp.sy + (hash2(i, 612) - 0.5) * H * 0.05, W * 0.03, H * 0.006, mix(far, [255, 252, 200], 0.6), 0.4 * (1 - e.cloud) * (1 - e.night), i + 612, 0.3); // 木もれ日
-    paintTree(e); x.drawImage(V.treeC, 0, 0, W, V.treeC.height / V.treeC._k); }
+    yield* paintTreeJob(e); x.drawImage(V.treeC, 0, 0, W, V.treeC.height / V.treeC._k); }
 }
 
 // ── 大きな木：枝ぶりを先に作り、その先に葉のかたまりを重ねる ──
@@ -2383,11 +2399,13 @@ function treeSkeleton() {
   grow(base.sx - W * 0.035, base.sy + 6, -0.1, th * 0.56, W * 0.064, 0, 1);
   return (V.treeSk = { segs, tips, base, th });
 }
-function paintTree(e) {
-  const t = e.t, snowy = e.snow, k = Math.min(V.dpr, 1.5), key = [(t * 40) | 0, (snowy * 4) | 0].join(',');
+// 背景の大きな絵は、何フレームかに分けて少しずつ描く（1 回にまとめて描くと、数秒ごとに画面が引っかかる）。yield のところで、次のフレームへゆずる
+function paintTree(e) { const g = paintTreeJob(e); while (!g.next().done); }
+function* paintTreeJob(e) {
+  const t = e.t, snowy = e.snow, k = Math.min(V.dpr, 1.5), key = [(t * 16) | 0, (snowy * 4) | 0].join(','); // 木の色は 1 年に 16 段。あいだは背景の溶かしでつなぐ
   const W = V.W, hC = Math.ceil(V.yH + V.H * 0.12);
   if (!V.treeC) { V.treeC = mkCanvas(W * k, hC * k); V.treeC._k = k; V.treeKey = ''; }
-  if (key === V.treeKey) return; V.treeKey = key;
+  if (key === V.treeKey) return;
   const x = V.treeC.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0); x.clearRect(0, 0, W, hC); x.lineCap = 'round'; x.lineJoin = 'round';
   const { segs, tips, th } = treeSkeleton();
   const leafA = clamp(1 - smooth(0.82, 0.9, t) - (1 - smooth(0.07, 0.14, t)));
@@ -2430,25 +2448,26 @@ function paintTree(e) {
     tracePoly(x, poly); x.strokeStyle = rgb(mix(bark, [50, 36, 50], 0.5), 0.5); x.lineWidth = 0.6; x.stroke();
     if (snowy > 0.3 && s.d >= 1 && Math.abs(s.x1 - s.x0) > Math.abs(s.y1 - s.y0) * 0.5) { x.strokeStyle = `rgba(252,253,255,${0.92 * snowy})`; x.lineWidth = Math.max(1, s.w * 0.45); x.beginPath(); x.moveTo(s.x0, s.y0 - s.w * 0.4); x.quadraticCurveTo(s.cx, s.cy - s.w * 0.42, s.x1, s.y1 - s.w1 * 0.4); x.stroke(); }
   };
-  if (leafA > 0.02) tips.forEach((tp, i) => clump(tp, i, -1, 1.15)); // 陰のかたまりは、どの枝先にも置く（離れて浮く影のかたまりを作らない）
-  segs.slice().sort((a, b) => b.d - a.d).forEach(limb);
+  if (leafA > 0.02) for (let i = 0; i < tips.length; i++) { clump(tips[i], i, -1, 1.15); if (i % 6 === 5) yield; } // 陰のかたまりは、どの枝先にも置く（離れて浮く影のかたまりを作らない）
+  yield; segs.slice().sort((a, b) => b.d - a.d).forEach(limb); yield;
   { const s0 = segs[0], bw = s0.w; // 根張り
     wash(x, [[s0.x0 - bw * 1.1, s0.y0 + 3], [s0.x0 - bw * 0.56, s0.y0 - th * 0.03], [s0.x0 - bw * 0.48, s0.y0 - th * 0.1], [s0.x0 + bw * 0.48, s0.y0 - th * 0.1], [s0.x0 + bw * 0.6, s0.y0 - th * 0.03], [s0.x0 + bw * 1.15, s0.y0 + 3]], bark, 1, { edge: 0.6, ew: 0.6, light: [255, 238, 214], lightA: 0.4, shade: [50, 40, 60], shadeA: 0.3 }); }
   if (leafA > 0.02) {
-    const cl = []; tips.forEach((tp, i) => cl.push(clump(tp, i + 100, 0, 1)));
-    tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); });
+    const cl = []; for (let i = 0; i < tips.length; i++) { cl.push(clump(tips[i], i + 100, 0, 1)); if (i % 6 === 5) yield; }
+    tips.forEach((tp, i) => { if (i % 3 === 0) clump(tp, i + 200, 1, 0.7); }); yield;
     // 葉の一筆：かたまりの縁から外へこぼれる葉で、輪郭をくずす。光の側は明るく小さく、影の側は濃く
-    cl.forEach(([cx, cy, r, tp0], i) => { const cMid = clumpCol(i, 0, tp0), cLit = clumpCol(i, 1, tp0), cSh = clumpCol(i, -1, tp0);
+    for (let i = 0; i < cl.length; i++) { const [cx, cy, r, tp0] = cl[i], cMid = clumpCol(i, 0, tp0), cLit = clumpCol(i, 1, tp0), cSh = clumpCol(i, -1, tp0); if (i % 3 === 2) yield;
       for (let j = 0; j < 110; j++) {
         const q = i * 70 + j, a = hash2(q, 96) * TAU, out = hash2(q, 97), rr = r * (0.55 + 0.62 * Math.pow(out, 0.7)), dx = cx + Math.cos(a) * rr, dy = cy + Math.sin(a) * rr * 0.76, lit = Math.sin(a) < -0.1 && Math.cos(a) < 0.5;
         const len = (1.6 + 2.6 * hash2(q, 98)) * (out > 0.8 ? 0.85 : 1), tilt = a * 0.4 + 1.2 + (hash2(q, 99) - 0.5) * 1.6;
         dab(x, dx, dy, len, len * 0.45, tilt, jit(lit ? cLit : out < 0.5 ? cSh : cMid, q), (lit ? 0.8 : 0.62) * leafA);
       }
-    });
+    }
     if (blossom > 0.3) for (let i = 0; i < 120; i++) { const tp = tips[(hash2(i, 85) * tips.length) | 0]; x.fillStyle = `rgba(255,${232 + ((hash2(i, 86) * 20) | 0)},240,${0.85 * blossom})`; x.beginPath(); x.arc(tp.x + (hash2(i, 87) - 0.5) * W * 0.13, tp.y + (hash2(i, 88) - 0.5) * W * 0.1, 0.9 + hash2(i, 89) * 1.4, 0, TAU); x.fill(); }
   }
   if (snowy > 0.4 && leafA < 0.3) tips.forEach((tp, i) => { if (i % 3 === 0) wash(x, noisyBlob(tp.x, tp.y - 2, W * 0.03, W * 0.011, i + 400, 0.3, 14), [252, 253, 255], 0.85 * snowy, { edge: 0.4, ew: 0.5, edgeCol: [150, 170, 210] }); });
   grainOver(x, V.treeC.width, V.treeC.height, 0.25);
+  V.treeKey = key; // 描き終えてから印をつける（途中で止まっても、次に描きなおせるように）
 }
 
 // ── 小川 ──
@@ -2460,6 +2479,50 @@ function brookAt(z, dry = 0) {
 function bankJit(z, side) { return 1 + 0.22 * (vnoise(z * 34 + side * 7, 611 + side) - 0.5) * 2 + 0.1 * (vnoise(z * 90 + side * 3, 613 + side) - 0.5) * 2; }
 function brookPoly(wmul, dry, off = 0, jit = 1) { const Lp = [], Rp = []; for (let i = 0; i <= 80; i++) { const z = 0.004 + (i / 80) * 1.05, c = brookAt(z, dry), jl = 1 + (bankJit(z, -1) - 1) * jit, jr = 1 + (bankJit(z, 1) - 1) * jit; Lp.push([c.x - c.hw * wmul * jl + c.hw * off, c.y]); Rp.push([c.x + c.hw * wmul * jr + c.hw * off, c.y]); } Rp.reverse(); return Lp.concat(Rp); }
 function drawBrook(ctx, e) {
+  // 動かない部分（水の色・岸の影・深み・小石・石）は、時刻と季節の色が変わったときだけ 1 枚の絵に描きなおす。毎フレーム描くのは、ゆらぐものだけ
+  const bkey = [V.bgKey, V.W, V.H, V.dpr].join('|');
+  if (V.brookKey !== bkey || !V.brookC) { V.brookKey = bkey; if (!V.brookC || V.brookC.width !== Math.round(V.W * V.dpr) || V.brookC.height !== Math.round(V.H * V.dpr)) { freeCanvas(V.brookC); V.brookC = mkCanvas(V.W * V.dpr, V.H * V.dpr); }
+    const bx = V.brookC.getContext('2d'); bx.setTransform(1, 0, 0, 1, 0, 0); bx.clearRect(0, 0, V.brookC.width, V.brookC.height); bx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0); paintBrookStatic(bx, e); }
+  ctx.drawImage(V.brookC, 0, 0, V.W, V.H);
+  const [top, bot] = skyCols(e), time = V.time, frozen = smooth(0.55, 0.9, e.snow), dry = e.dry, H = V.H;
+  const landN = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), e.snow);
+  // 水の色は空の映りこみ：遠くは空の地平の色、手前は空の高いところの色（水面に空が斜めに映る）
+  const skyFar = mix(bot, [255, 255, 255], 0.25), skyNear = mix(mix(top, [70, 140, 200], 0.3), [235, 242, 250], frozen);
+  const greenRef = mix(landN, [40, 90, 70], 0.35); // 岸の草の緑が映る
+  const vg = (cFar, cNear, a) => { const g = ctx.createLinearGradient(0, V.yH, 0, H); g.addColorStop(0, rgb(cFar, 0)); g.addColorStop(0.04, rgb(cFar, a * 0.8)); g.addColorStop(0.25, rgb(mix(cFar, cNear, 0.4), a)); g.addColorStop(1, rgb(cNear, a)); return g; };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const water = brookPoly(1, dry), flow = (1 - frozen) * (1 - 0.5 * dry);
+  ctx.save(); tracePts(ctx, water); ctx.clip();
+  // 岸に咲く花が、ゆらいで映る
+  let nr = 0;
+  for (const v of V.order) {
+    if (nr > 50) break; const p = v.p; if (p.state !== 1 || v.alpha < 0.5 || p.z < 0.2) continue;
+    const dxw = (p.x - SITE.brookX(p.z)) * persA(p.z); if (Math.abs(dxw) > 0.32) continue; nr++;
+    const c = brookAt(p.z, dry), wob = Math.sin(time * 1.6 + p.id) * c.hw * 0.06;
+    blob(ctx, c.x + Math.sign(dxw) * c.hw * (0.72 - Math.abs(dxw) * 0.6) + wob, c.y + 5 * c.ds, c.hw * 0.18 + 1.5, (4 + 8 * p.g.ht) * c.ds, toneRgb(p.g), 0.28 * (1 - frozen), p.id, 0.3);
+  }
+  // 空の明るさが、流れを横切る帯になってゆれる（水面のさざ波）
+  for (let i = 0; i < 46; i++) { const z = ((hash2(i, 975) + time * 0.012 * flow * (0.6 + 0.8 * hash2(i, 974))) % 1) * 1.03, c = brookAt(z, dry), w = c.hw * (0.25 + 0.6 * hash2(i, 976)), cx = c.x + c.hw * (hash2(i, 978) - 0.45) * 1.2, a = (0.35 + 0.4 * hash2(i, 977)) * Math.min(1, z * 8) * (0.6 + 0.4 * Math.sin(time * 2 + i));
+    ctx.strokeStyle = `rgba(255,255,255,${a * (0.5 + 0.5 * (1 - frozen))})`; ctx.lineWidth = Math.max(0.6, c.ds * (0.8 + 1.4 * hash2(i, 979))); ctx.beginPath(); ctx.moveTo(cx - w, c.y); ctx.quadraticCurveTo(cx, c.y - c.ds * 1.5, cx + w, c.y + c.ds * 0.6); ctx.stroke(); }
+  // 花いかだ：散った木の花びらが、水面に浮いて流れてくる
+  const raft = hump(0.17, 0.42, e.t) * (1 - frozen);
+  if (raft > 0.03) for (let i = 0; i < 40; i++) { const z = ((hash2(i, 990) + time * 0.01 * flow * (0.7 + 0.5 * hash2(i, 991))) % 1) * 1.02, c = brookAt(z, dry), cx = c.x + c.hw * (hash2(i, 992) - 0.5) * 1.3 + Math.sin(time * 0.8 + i) * c.hw * 0.05;
+    for (let k = 0; k < 3; k++) { ctx.fillStyle = `rgba(252,${222 + k * 8},${232 + k * 4},${0.85 * raft * Math.min(1, z * 6)})`; ctx.beginPath(); ctx.ellipse(cx + (hash2(i * 3 + k, 993) - 0.5) * 6 * c.ds, c.y + (hash2(i * 3 + k, 994) - 0.5) * 1.8 * c.ds, 2.4 * c.ds, 1.1 * c.ds, hash2(i * 3 + k, 995) * 3, 0, TAU); ctx.fill(); } }
+  // 瀬：石のまわりで白くほどける
+  if (flow > 0.2) for (let r = 0; r < 3; r++) { const z = [0.62, 0.82, 0.95][r], c = brookAt(z, dry); for (let i = 0; i < 7; i++) { const u = (i + 0.5) / 7 - 0.5, ph = (time * (0.7 + 0.5 * hash2(i, 981 + r)) + i * 0.3) % 1, px = c.x + c.hw * u * 1.6, py = c.y + (ph * 8 - 2) * c.ds; ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - ph) * flow})`; ctx.lineWidth = (0.8 + 0.6 * ph) * c.ds; ctx.beginPath(); ctx.moveTo(px - c.hw * 0.1, py); ctx.quadraticCurveTo(px, py - 0.8 * c.ds, px + c.hw * 0.1, py + 0.4 * c.ds); ctx.stroke(); } }
+  ctx.restore();
+  // 石のまわりの波紋
+  for (let i = 0; i < 9; i++) {
+    const z = 0.4 + hash2(i, 955) * 0.6, sd = i % 2 ? 1 : -1, c = brookAt(z, dry), sx = c.x + sd * c.hw * (0.55 + 0.4 * hash2(i, 956)), r = (4 + 5 * hash2(i, 957)) * c.ds;
+    if (flow > 0.2) { const ph = (time * 0.7 + i * 0.37) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.45, r * (1.2 + ph * 1.6), r * (0.35 + ph * 0.45), 0, 0, Math.PI); ctx.stroke(); }
+  }
+  if (e.night < 0.7 && frozen < 0.6) for (let i = 0; i < 18; i++) { // きらめき
+    const tw = Math.sin(time * (2.4 + hash2(i, 961) * 3) + i * 2.1); if (tw < 0.55) continue;
+    const z = 0.12 + hash2(i + ((time * 0.5 + hash2(i, 962)) | 0) * 17, 960) * 0.88, c = brookAt(z, dry), sx = c.x + (hash2(i, 963) - 0.5) * c.hw * 1.2, s2 = (1.4 + 2.2 * (tw - 0.55) * 2.2) * c.ds;
+    ctx.strokeStyle = `rgba(255,255,255,${0.95 * (tw - 0.55) * 2.2})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - s2, c.y); ctx.lineTo(sx + s2, c.y); ctx.moveTo(sx, c.y - s2 * 0.8); ctx.lineTo(sx, c.y + s2 * 0.8); ctx.stroke();
+  }
+}
+function paintBrookStatic(ctx, e) {
   const [top, bot] = skyCols(e), time = V.time, frozen = smooth(0.55, 0.9, e.snow), dry = e.dry, H = V.H;
   const landN = mix(mix(ramp(GR_N, e.t), hex('#c2ab63'), e.dry * 0.5), hex('#e9f0f7'), e.snow);
   // 水の色は空の映りこみ：遠くは空の地平の色、手前は空の高いところの色（水面に空が斜めに映る）
@@ -2471,7 +2534,7 @@ function drawBrook(ctx, e) {
   const mud = mix(mix([128, 104, 80], landN, 0.35), [236, 240, 246], e.snow * 0.8);
   tracePts(ctx, brookPoly(1.16, dry, 0, 1.3)); ctx.fillStyle = vg(mix(landN, [60, 90, 70], 0.3), mix(mud, [60, 50, 40], 0.2), 0.5); ctx.fill();
   // 水
-  const water = brookPoly(1, dry);
+  const water = brookPoly(1, dry), flow = (1 - frozen) * (1 - 0.5 * dry);
   tracePts(ctx, water); ctx.fillStyle = vg(skyFar, skyNear, 0.95); ctx.fill();
   ctx.save(); tracePts(ctx, water); ctx.clip();
   // 岸ぞいは、草の影と緑の映りこみで暗い（両岸とも。日の反対側がとくに）
@@ -2480,35 +2543,11 @@ function drawBrook(ctx, e) {
   for (let i = 0; i < 40; i++) { const z = 0.02 + (i / 40) * 1.02, c = brookAt(z, dry); blob(ctx, c.x - c.hw * 0.12, c.y, c.hw * 0.4 + 1, 2 + c.hw * 0.3, mix(skyNear, [36, 92, 140], 0.35), 0.3 * (1 - frozen), i + 440, 0.3); }
   // 浅瀬に透ける小石
   for (let i = 0; i < 36; i++) { const z = 0.5 + hash2(i, 970) * 0.52, c = brookAt(z, dry), sd = i % 2 ? 1 : -1; ctx.fillStyle = rgb(i % 3 ? [170, 146, 116] : [146, 146, 140], 0.28 * (1 - frozen)); ctx.beginPath(); ctx.ellipse(c.x + sd * c.hw * (0.55 + 0.35 * hash2(i, 971)), c.y, (3 + 4 * hash2(i, 972)) * c.ds * 0.6, (1.4 + 1.6 * hash2(i, 973)) * c.ds * 0.6, 0, 0, TAU); ctx.fill(); }
-  // 岸に咲く花が、ゆらいで映る
-  let nr = 0;
-  for (const v of V.order) {
-    if (nr > 50) break; const p = v.p; if (p.state !== 1 || v.alpha < 0.5 || p.z < 0.2) continue;
-    const dxw = (p.x - SITE.brookX(p.z)) * persA(p.z); if (Math.abs(dxw) > 0.32) continue; nr++;
-    const c = brookAt(p.z, dry), wob = Math.sin(time * 1.6 + p.id) * c.hw * 0.06;
-    blob(ctx, c.x + Math.sign(dxw) * c.hw * (0.72 - Math.abs(dxw) * 0.6) + wob, c.y + 5 * c.ds, c.hw * 0.18 + 1.5, (4 + 8 * p.g.ht) * c.ds, toneRgb(p.g), 0.28 * (1 - frozen), p.id, 0.3);
-  }
-  // 空の明るさが、流れを横切る帯になってゆれる（水面のさざ波）
-  const flow = (1 - frozen) * (1 - 0.5 * dry);
-  for (let i = 0; i < 46; i++) { const z = ((hash2(i, 975) + time * 0.012 * flow * (0.6 + 0.8 * hash2(i, 974))) % 1) * 1.03, c = brookAt(z, dry), w = c.hw * (0.25 + 0.6 * hash2(i, 976)), cx = c.x + c.hw * (hash2(i, 978) - 0.45) * 1.2, a = (0.35 + 0.4 * hash2(i, 977)) * Math.min(1, z * 8) * (0.6 + 0.4 * Math.sin(time * 2 + i));
-    ctx.strokeStyle = `rgba(255,255,255,${a * (0.5 + 0.5 * (1 - frozen))})`; ctx.lineWidth = Math.max(0.6, c.ds * (0.8 + 1.4 * hash2(i, 979))); ctx.beginPath(); ctx.moveTo(cx - w, c.y); ctx.quadraticCurveTo(cx, c.y - c.ds * 1.5, cx + w, c.y + c.ds * 0.6); ctx.stroke(); }
-  // 花いかだ：散った木の花びらが、水面に浮いて流れてくる
-  const raft = hump(0.17, 0.42, e.t) * (1 - frozen);
-  if (raft > 0.03) for (let i = 0; i < 40; i++) { const z = ((hash2(i, 990) + time * 0.01 * flow * (0.7 + 0.5 * hash2(i, 991))) % 1) * 1.02, c = brookAt(z, dry), cx = c.x + c.hw * (hash2(i, 992) - 0.5) * 1.3 + Math.sin(time * 0.8 + i) * c.hw * 0.05;
-    for (let k = 0; k < 3; k++) { ctx.fillStyle = `rgba(252,${222 + k * 8},${232 + k * 4},${0.85 * raft * Math.min(1, z * 6)})`; ctx.beginPath(); ctx.ellipse(cx + (hash2(i * 3 + k, 993) - 0.5) * 6 * c.ds, c.y + (hash2(i * 3 + k, 994) - 0.5) * 1.8 * c.ds, 2.4 * c.ds, 1.1 * c.ds, hash2(i * 3 + k, 995) * 3, 0, TAU); ctx.fill(); } }
-  // 瀬：石のまわりで白くほどける
-  if (flow > 0.2) for (let r = 0; r < 3; r++) { const z = [0.62, 0.82, 0.95][r], c = brookAt(z, dry); for (let i = 0; i < 7; i++) { const u = (i + 0.5) / 7 - 0.5, ph = (time * (0.7 + 0.5 * hash2(i, 981 + r)) + i * 0.3) % 1, px = c.x + c.hw * u * 1.6, py = c.y + (ph * 8 - 2) * c.ds; ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - ph) * flow})`; ctx.lineWidth = (0.8 + 0.6 * ph) * c.ds; ctx.beginPath(); ctx.moveTo(px - c.hw * 0.1, py); ctx.quadraticCurveTo(px, py - 0.8 * c.ds, px + c.hw * 0.1, py + 0.4 * c.ds); ctx.stroke(); } }
   ctx.restore();
-  // 石と波紋
   for (let i = 0; i < 9; i++) {
     const z = 0.4 + hash2(i, 955) * 0.6, sd = i % 2 ? 1 : -1, c = brookAt(z, dry), sx = c.x + sd * c.hw * (0.55 + 0.4 * hash2(i, 956)), r = (4 + 5 * hash2(i, 957)) * c.ds;
-    if (flow > 0.2) { const ph = (time * 0.7 + i * 0.37) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.45, r * (1.2 + ph * 1.6), r * (0.35 + ph * 0.45), 0, 0, Math.PI); ctx.stroke(); }
+    if (false) { ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph) * flow})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sx, c.y + r * 0.45, r * (1.2 + ph * 1.6), r * (0.35 + ph * 0.45), 0, 0, Math.PI); ctx.stroke(); }
     wash(ctx, noisyBlob(sx, c.y, r, r * 0.55, i + 660, 0.22, 14), mix([168, 160, 150], [248, 249, 252], e.snow * 0.8), 0.95, { edge: 0.5, ew: 0.5, light: [250, 246, 236], lightA: 0.6, shade: [70, 72, 90], shadeA: 0.42 });
-  }
-  if (e.night < 0.7 && frozen < 0.6) for (let i = 0; i < 18; i++) { // きらめき
-    const tw = Math.sin(time * (2.4 + hash2(i, 961) * 3) + i * 2.1); if (tw < 0.55) continue;
-    const z = 0.12 + hash2(i + ((time * 0.5 + hash2(i, 962)) | 0) * 17, 960) * 0.88, c = brookAt(z, dry), sx = c.x + (hash2(i, 963) - 0.5) * c.hw * 1.2, s2 = (1.4 + 2.2 * (tw - 0.55) * 2.2) * c.ds;
-    ctx.strokeStyle = `rgba(255,255,255,${0.95 * (tw - 0.55) * 2.2})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(sx - s2, c.y); ctx.lineTo(sx + s2, c.y); ctx.moveTo(sx, c.y - s2 * 0.8); ctx.lineTo(sx, c.y + s2 * 0.8); ctx.stroke();
   }
 }
 function hslRgb(h, s, l) { const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + hueWrap(h) / 30) % 12; return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))); }; return [f(0), f(8), f(4)]; }
@@ -2582,7 +2621,7 @@ function buildTufts() {
     put(SITE.brookX(z) + sd * SITE.brookW(z) * (1.22 + 0.3 * hash2(i, 1012)), clamp(z, 0.004, 1), hash2(i, 1013) < 0.6 ? 0 : 6, 0.6 + 0.5 * hash2(i, 1014), i + 9000);
   }
   V.tufts.sort((a, b) => a.z - b.z); V.tuftFar.forEach((l) => l.sort((a, b) => a.z - b.z));
-  V.bands = null; V.bandJob = 0;
+  V.bands = null; V.bandJob = 0; V.bandKey = ''; // 大きさが変わったら、草の帯も描きなおす（印が残ったままだと、新しい帯が白紙のまま）
 }
 const TUFT_SC = 0.55;
 // 草も一年かけて伸びる：春は短く、背の低い春の花がよく見える
@@ -2599,7 +2638,7 @@ function serviceBands(e) {
   }
 }
 function paintTuftSprites(e) {
-  const k = [(e.t * 24) | 0, (e.snow * 3) | 0, (e.dry * 3) | 0].join(',');
+  const k = [(e.t * 12) | 0, (e.snow * 3) | 0, (e.dry * 3) | 0].join(',');
   if (k === V.tuftKey && V.tuftSpr) return; V.tuftKey = k;
   const px = Math.min(V.dpr, 2) * V.unit * S_NEAR * 0.75, t = e.t;
   const ground = mix(mix(mix(ramp(GR_N, t), hex('#c9b266'), e.dry * 0.55), [236, 242, 200], 0.24), hex('#b9ad8c'), e.snow * 0.8);
@@ -3623,13 +3662,13 @@ function setSpeed(i) { speedIdx = i; $('bSpeed').dataset.i = i; $('bSpeed').quer
 function setFace(m) { if (!faceOK) return; for (const im of $('erika').children) im.classList.toggle('on', im.dataset.m === m); }
 
 function frame(ts) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); const js0 = performance.now();
   const dt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
   const mult = SPEEDS[speedIdx][0];
   V.fast += ((mult >= 4 ? 1 : 0) - V.fast) * Math.min(1, dt * 1.5);
   if (!titleOn && !UI.paused && !HASH.freeze) {
     acc += (dt * TICKS * mult) / YEAR_SEC;
-    let n = 0; while (acc >= 1 && n < 10) { sim.step(); acc -= 1; n++; handleEvents(true); }
+    let n = 0; const ts0 = performance.now(); while (acc >= 1 && n < 10) { sim.step(); acc -= 1; n++; handleEvents(true); } V.raw0 = performance.now() - ts0;
     if (acc > 3) acc = 0;
   }
   syncViews(sim); syncBugs(sim);
@@ -3637,6 +3676,8 @@ function frame(ts) {
   const ctx = V.ctx;
   talkTick(dt); idleTalk(sim);
   setHud(sim); audioTick(dt, e);
+  if (HASH.fps) { const fe = $('fpsBox') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'fpsBox' })); fe.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;font:12px/1.3 monospace;background:rgba(255,255,255,.85);padding:3px 6px;border-radius:6px;color:#333;pointer-events:none'; if (!(frame.fc = (frame.fc || 0) + 1) || frame.fc % 15 === 0) fe.textContent = `${(1000 / V.ft).toFixed(0)} コマ/秒  計算 ${(V.jsMs || 0).toFixed(1)}ms  解像度 ${V.dpr}`; } // 確認用：#fps=1 で、1 秒に何コマ出ているかを出す
+  const jsT = performance.now() - js0; V.jsMs = (V.jsMs || 0) * 0.95 + jsT * 0.05; if (V.jsLog) { V.jsLog.push(jsT); if (jsT > 50) (V.spikes || (V.spikes = [])).push([jsT | 0, 'sim:' + ((V.raw0 || 0) | 0), Object.entries(V.raw || {}).filter(([, v]) => v > 8).map(([k, v]) => k + ':' + (v | 0)).join(' '), sim.tick]); } // 1 フレームの JavaScript の時間（描画命令を出すまで）
 }
 
 function boot() {
@@ -3694,7 +3735,7 @@ function boot() {
   if (HASH.panel === 'hist') showHistory(sim); else if (HASH.panel === 'zukan') showZukan(); else if (HASH.panel === 'plant') setTimeout(() => { const p = sim.plants.find((q) => q.state === 1) || sim.plants[0]; if (p) showPlant(p, sim); }, 600);
   if (HASH.storm) setTimeout(() => { V.storm = 6; }, 300);
   if (HASH.say) setTimeout(() => say(decodeURIComponent(HASH.say), { pri: 9, force: true, mood: HASH.mood || 'calm' }), 400);
-  if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.nolayer) V.noLayer = 1; if (HASH.zmin) V.zMin = +HASH.zmin; if (HASH.zmax) V.zMax = +HASH.zmax; if (HASH.noflower) V.noFlower = 1; if (HASH.noroot) V.noRoot = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
+  if (HASH.nopaper) $('paper').style.display = 'none'; if (HASH.notuft) V.noTuft = 1; if (HASH.noband) V.noBand = 1; if (HASH.noplant) V.noPlant = 1; if (HASH.nolayer) V.noLayer = 1; if (HASH.layerfreeze) V.layerFreeze = 1; if (HASH.zmin) V.zMin = +HASH.zmin; if (HASH.zmax) V.zMax = +HASH.zmax; if (HASH.noflower) V.noFlower = 1; if (HASH.noroot) V.noRoot = 1; if (HASH.dpr) V.dprLock = 1; if (HASH.dpr) { V.dprCap = +HASH.dpr; resizeView(); }
   window.__hana = { get sim() { return sim; }, V, Talk, say };
   requestAnimationFrame(frame);
 }
